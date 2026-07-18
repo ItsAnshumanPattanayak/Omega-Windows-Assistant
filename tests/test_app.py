@@ -8,13 +8,15 @@ def test_application_initializes_and_runs() -> None:
     app = OmegaApplication()
 
     assert app.settings.application_name == "Omega"
-    assert app.run() is None
+    assert (
+        app.run(input_func=lambda _: "Shut down Omega", output_func=lambda _: None) == 0
+    )
 
 
 def test_main_returns_zero_when_application_runs(monkeypatch) -> None:
     class SuccessfulApplication:
-        def run(self) -> None:
-            return None
+        def run(self) -> int:
+            return 0
 
     monkeypatch.setattr("omega.__main__.OmegaApplication", SuccessfulApplication)
 

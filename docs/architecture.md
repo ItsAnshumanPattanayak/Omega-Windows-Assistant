@@ -30,6 +30,15 @@ ActionResult
 
 Creating any Phase 1 model cannot execute an operation. Execution is deliberately deferred to later, safety-reviewed phases.
 
+## Text session lifecycle
+
+Phase 2 keeps terminal I/O in `TerminalInterface` and state management in `OmegaSession`. The terminal adapter collects text and displays responses; the session validates transitions, captures active commands as `UserCommand` records, and uses a monotonic timeout clock. No terminal input can execute an action.
+
+```text
+Process starts → Omega inactive → “Hello Omega” → time-based greeting → Omega active
+→ commands captured as UserCommand models → “Shut down Omega” → safe termination
+```
+
 ## Planned layers
 
 The following components are planned, not implemented:

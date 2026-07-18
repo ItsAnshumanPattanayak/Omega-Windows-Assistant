@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 from omega.config.settings import Settings, load_settings
 from omega.core.exceptions import InitializationError, UnsupportedPlatformError
+from omega.interfaces.terminal import TerminalInterface
+from omega.session.session import OmegaSession
 from omega.utils.constants import MINIMUM_PYTHON_VERSION
 from omega.utils.logger import configure_logging, get_logger
 from omega.utils.paths import log_dir
@@ -28,6 +31,11 @@ class OmegaApplication:
         )
         self._validate_python_version()
         self.logger = get_logger("app")
+        self.session = OmegaSession(
+            self.settings.user,
+            self.settings.assistant,
+            logger=get_logger("session"),
+        )
         self.logger.info(
             "%s %s initialized in %s mode.",
             self.settings.application_name,
@@ -43,11 +51,18 @@ class OmegaApplication:
                 f"Omega requires Python {required} or newer."
             )
 
-    def run(self) -> None:
-        """Report successful foundation startup and exit cleanly."""
+    def run(
+        self,
+        *,
+        input_func: Callable[[str], str] = input,
+        output_func: Callable[[str], None] = print,
+    ) -> int:
+        """Run the Phase 2 terminal session without executing user commands."""
         try:
             self.logger.info("Omega project foundation initialized successfully.")
-            self.logger.info("Phase 0 is ready.")
+            return TerminalInterface(
+                self.session, input_func=input_func, output_func=output_func
+            ).run()
         except OSError as error:
             raise InitializationError(
                 "Omega could not complete startup logging."

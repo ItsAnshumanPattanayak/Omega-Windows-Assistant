@@ -19,3 +19,11 @@ class UnsupportedPlatformError(OmegaError):
 
 class ModelValidationError(OmegaError):
     """Raised when a typed Omega model contains an invalid state or value."""
+
+
+class SessionError(OmegaError):
+    """Base exception for invalid Omega text-session behavior."""
+
+
+class InvalidSessionTransitionError(SessionError):
+    """Raised when a session state transition is not permitted."""
