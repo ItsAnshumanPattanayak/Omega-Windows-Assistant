@@ -77,7 +77,6 @@ class FileOperationSettings:
     maximum_display_characters: int = 10_000
     maximum_write_size_bytes: int = 1_048_576
     maximum_resulting_file_size_bytes: int = 5_242_880
-    confirmation_timeout_seconds: float = 30
     search_max_depth: int = 5
     search_max_results: int = 50
     allow_absolute_paths: bool = False
@@ -91,7 +90,6 @@ class FileOperationSettings:
             self.maximum_display_characters,
             self.maximum_write_size_bytes,
             self.maximum_resulting_file_size_bytes,
-            self.confirmation_timeout_seconds,
             self.search_max_results,
         )
         if any(isinstance(value, bool) or value <= 0 for value in positive):
@@ -123,9 +121,6 @@ class FileOperationSettings:
             ),
             maximum_resulting_file_size_bytes=int(
                 values.get("maximum_resulting_file_size_bytes", 5_242_880)
-            ),
-            confirmation_timeout_seconds=float(
-                values.get("confirmation_timeout_seconds", 30)
             ),
             search_max_depth=int(values.get("search_max_depth", 5)),
             search_max_results=int(values.get("search_max_results", 50)),

@@ -220,7 +220,7 @@ def test_status_reports_running_not_running_and_incomplete_visibility() -> None:
     )
 
 
-def test_close_requires_exact_confirmation_and_can_be_cancelled() -> None:
+def test_legacy_close_confirmation_methods_fail_closed() -> None:
     definition = _definition(confirmation=True)
     process = ApplicationProcess(5, "sample.exe", "sample", created_at=1.0)
     manager, _, service = _manager(
@@ -229,26 +229,26 @@ def test_close_requires_exact_confirmation_and_can_be_cancelled() -> None:
     )
 
     requested = manager.request_close_application("sample", uuid4())
-    assert "confirm close Sample" in requested.user_message
+    assert "central safety confirmation" in requested.user_message
     assert service.terminated == ()
     confirmed = manager.confirm_close_application("sample", uuid4())
-    assert confirmed.success is True
-    assert service.terminated == (process,)
+    assert confirmed.success is False
+    assert service.terminated == ()
 
     manager.request_close_application("sample", uuid4())
     cancelled = manager.cancel_close_application("sample", uuid4())
-    assert "cancelled" in cancelled.user_message
+    assert "central safety confirmation" in cancelled.user_message
     assert manager.confirm_close_application("sample", uuid4()).success is False
 
 
-def test_confirmation_expires_without_closing() -> None:
+def test_legacy_confirmation_never_creates_expiring_state() -> None:
     clock = [0.0]
     definition = _definition(confirmation=True)
     process = ApplicationProcess(5, "sample.exe", "sample", created_at=1.0)
     manager, _, service = _manager(
         definition,
         processes=FakeProcessService(ProcessInspectionResult((process,))),
-        settings=ApplicationOperationSettings(confirmation_timeout_seconds=2),
+        settings=ApplicationOperationSettings(),
         clock=lambda: clock[0],
     )
     manager.request_close_application("sample", uuid4())
@@ -256,7 +256,7 @@ def test_confirmation_expires_without_closing() -> None:
 
     result = manager.confirm_close_application("sample", uuid4())
 
-    assert "expired" in result.user_message
+    assert "central safety confirmation" in result.user_message
     assert service.terminated == ()
 
 
@@ -278,10 +278,10 @@ def test_confirmation_for_one_application_cannot_close_another() -> None:
 
     assert wrong.success is False
     assert service.terminated == ()
-    assert manager.confirm_close_application("sample", uuid4()).success is True
+    assert manager.confirm_close_application("sample", uuid4()).success is False
 
 
-def test_low_risk_close_is_immediate_and_timeout_never_forces() -> None:
+def test_direct_close_request_never_executes_or_forces() -> None:
     process = ApplicationProcess(5, "sample.exe", "sample", created_at=1.0)
     service = FakeProcessService(
         ProcessInspectionResult((process,)),
@@ -292,22 +292,23 @@ def test_low_risk_close_is_immediate_and_timeout_never_forces() -> None:
     result = manager.request_close_application("sample", uuid4())
 
     assert result.success is False
-    assert "could not be closed" in result.user_message
+    assert "central safety confirmation" in result.user_message
+    assert service.terminated == ()
     assert service.killed == ()
 
 
-def test_close_refuses_to_guess_when_process_visibility_is_incomplete() -> None:
+def test_direct_close_does_not_inspect_incomplete_process_visibility() -> None:
     service = FakeProcessService(ProcessInspectionResult((), 1))
     manager, _, service = _manager(_definition(), processes=service)
 
     result = manager.request_close_application("sample", uuid4())
 
     assert result.success is False
-    assert "safely determine" in result.user_message
+    assert "central safety confirmation" in result.user_message
     assert service.terminated == ()
 
 
-def test_force_close_requires_global_app_policy_failure_and_confirmation() -> None:
+def test_force_close_remains_impossible_even_if_legacy_settings_enable_it() -> None:
     process = ApplicationProcess(5, "sample.exe", "sample", created_at=1.0)
     service = FakeProcessService(
         ProcessInspectionResult((process,)),
@@ -321,10 +322,10 @@ def test_force_close_requires_global_app_policy_failure_and_confirmation() -> No
     assert manager.request_force_close_application("sample", uuid4()).success is False
     manager.request_close_application("sample", uuid4())
     requested = manager.request_force_close_application("sample", uuid4())
-    assert "confirm force close Sample" in requested.user_message
+    assert "does not force close" in requested.user_message
     confirmed = manager.confirm_force_close_application("sample", uuid4())
-    assert confirmed.success is True
-    assert service.killed == (process,)
+    assert confirmed.success is False
+    assert service.killed == ()
 
     disabled, _, _ = _manager(
         _definition(force=True),
@@ -334,7 +335,7 @@ def test_force_close_requires_global_app_policy_failure_and_confirmation() -> No
     assert disabled.request_force_close_application("sample", uuid4()).success is False
 
 
-def test_file_explorer_close_is_blocked_before_process_mutation() -> None:
+def test_file_explorer_direct_close_is_blocked_before_process_mutation() -> None:
     explorer = _definition("file_explorer", close=False, process_name="explorer.exe")
     process = ApplicationProcess(5, "explorer.exe", "file_explorer", created_at=1.0)
     manager, _, service = _manager(
@@ -344,7 +345,7 @@ def test_file_explorer_close_is_blocked_before_process_mutation() -> None:
 
     result = manager.request_close_application("file_explorer", uuid4())
 
-    assert "Windows desktop" in result.user_message
+    assert "central safety confirmation" in result.user_message
     assert service.terminated == ()
     assert service.killed == ()
 
@@ -352,7 +353,7 @@ def test_file_explorer_close_is_blocked_before_process_mutation() -> None:
 @pytest.mark.parametrize(
     "values",
     [
-        {"confirmation_timeout_seconds": 0},
+        {"launch_verification_timeout_seconds": 0},
         {"graceful_close_timeout_seconds": -1},
         {"allow_force_close": "yes"},
     ],

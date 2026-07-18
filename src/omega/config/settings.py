@@ -94,12 +94,21 @@ def _defaults() -> dict[str, dict[str, Any]]:
             "allow_administrator_operations": False,
             "allow_arbitrary_shell_commands": False,
             "permanent_deletion_enabled": False,
+            "default_decision": "deny",
+            "confirmation_timeout_seconds": 30,
+            "maximum_confirmation_attempts": 3,
+            "allow_force_close": False,
+            "allow_absolute_paths": False,
+            "allow_network_paths": False,
+            "allow_device_paths": False,
+            "allow_destination_replace": False,
+            "allow_folder_merge": False,
+            "allow_cross_volume_destructive_move": False,
         },
         "applications": {
             "launch_verification_timeout_seconds": 5,
             "graceful_close_timeout_seconds": 5,
             "force_close_timeout_seconds": 3,
-            "confirmation_timeout_seconds": 30,
             "allow_force_close": False,
         },
         "files": {
@@ -108,7 +117,6 @@ def _defaults() -> dict[str, dict[str, Any]]:
             "maximum_display_characters": 10_000,
             "maximum_write_size_bytes": 1_048_576,
             "maximum_resulting_file_size_bytes": 5_242_880,
-            "confirmation_timeout_seconds": 30,
             "search_max_depth": 5,
             "search_max_results": 50,
             "allow_absolute_paths": False,
@@ -142,7 +150,6 @@ def _validate_files(values: Mapping[str, Any]) -> None:
         "maximum_display_characters",
         "maximum_write_size_bytes",
         "maximum_resulting_file_size_bytes",
-        "confirmation_timeout_seconds",
         "search_max_results",
     )
     for key in positive:
@@ -200,6 +207,46 @@ def _validate_folders(values: Mapping[str, Any]) -> None:
         )
 
 
+def _validate_safety(values: Mapping[str, Any]) -> None:
+    """Enforce immutable Phase 7 boundaries before any service is created."""
+    disabled = (
+        "allow_administrator_operations",
+        "allow_arbitrary_shell_commands",
+        "permanent_deletion_enabled",
+        "allow_force_close",
+        "allow_absolute_paths",
+        "allow_network_paths",
+        "allow_device_paths",
+        "allow_destination_replace",
+        "allow_folder_merge",
+        "allow_cross_volume_destructive_move",
+    )
+    if any(values.get(name) is not False for name in disabled):
+        raise ConfigurationError(
+            "Phase 7 hard safety-boundary settings must remain disabled."
+        )
+    if values.get("default_decision") != "deny":
+        raise ConfigurationError("safety.default_decision must be deny.")
+    timeout = values.get("confirmation_timeout_seconds")
+    if (
+        isinstance(timeout, bool)
+        or not isinstance(timeout, (int, float))
+        or not 0 < timeout <= 300
+    ):
+        raise ConfigurationError(
+            "safety.confirmation_timeout_seconds must be between 0 and 300."
+        )
+    attempts = values.get("maximum_confirmation_attempts")
+    if (
+        isinstance(attempts, bool)
+        or not isinstance(attempts, int)
+        or not 1 <= attempts <= 10
+    ):
+        raise ConfigurationError(
+            "safety.maximum_confirmation_attempts must be between 1 and 10."
+        )
+
+
 def _merge_defaults(raw: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
     merged: dict[str, Mapping[str, Any]] = {}
     for section, values in _defaults().items():
@@ -234,6 +281,7 @@ def load_settings(config_path: Path | None = None) -> Settings:
         raise ConfigurationError(message)
 
     values = _merge_defaults(raw)
+    _validate_safety(values["safety"])
     _validate_files(values["files"])
     _validate_folders(values["folders"])
     return Settings(**values)

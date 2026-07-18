@@ -14,6 +14,7 @@ from omega.execution.dispatcher import ApplicationActionDispatcher
 from omega.execution.file_dispatcher import FileActionDispatcher
 from omega.execution.folder_dispatcher import FolderActionDispatcher
 from omega.models import UserCommand
+from omega.safety import SafeExecutionGateway
 from omega.session.greeting import greeting_for
 from omega.session.state import SessionState
 from omega.understanding.parser import CommandParser
@@ -46,6 +47,7 @@ class OmegaSession:
         application_dispatcher: ApplicationActionDispatcher | None = None,
         file_dispatcher: FileActionDispatcher | None = None,
         folder_dispatcher: FolderActionDispatcher | None = None,
+        safety_gateway: SafeExecutionGateway | None = None,
     ) -> None:
         self.display_name = self._required_text(user_settings, "display_name")
         self.activation_phrase = self._required_text(
@@ -62,6 +64,12 @@ class OmegaSession:
         self._application_dispatcher = application_dispatcher
         self._file_dispatcher = file_dispatcher
         self._folder_dispatcher = folder_dispatcher
+        self._safety_gateway = (
+            safety_gateway
+            or getattr(application_dispatcher, "gateway", None)
+            or getattr(file_dispatcher, "gateway", None)
+            or getattr(folder_dispatcher, "gateway", None)
+        )
         self.state = SessionState.INACTIVE
         self.session_id: UUID | None = None
         self.activated_at: float | None = None
@@ -127,10 +135,7 @@ class OmegaSession:
 
     def shutdown(self) -> str:
         """Safely terminate this terminal session."""
-        if self._application_dispatcher is not None:
-            self._application_dispatcher.clear_pending_confirmations()
-        if self._file_dispatcher is not None:
-            self._file_dispatcher.clear_pending_confirmations()
+        self._clear_confirmations()
         if self.state is SessionState.INACTIVE:
             self.transition_to(SessionState.TERMINATED)
             self._logger.info("Omega terminated while inactive.")
@@ -147,10 +152,7 @@ class OmegaSession:
 
     def interrupt(self) -> str:
         """Terminate gracefully in response to Ctrl+C or EOF."""
-        if self._application_dispatcher is not None:
-            self._application_dispatcher.clear_pending_confirmations()
-        if self._file_dispatcher is not None:
-            self._file_dispatcher.clear_pending_confirmations()
+        self._clear_confirmations()
         if self.state is not SessionState.TERMINATED:
             if self.state is SessionState.ACTIVE:
                 self.transition_to(SessionState.TERMINATED)
@@ -168,10 +170,7 @@ class OmegaSession:
         if self._clock() - self.last_activity_at <= self.timeout_seconds:
             return None
         self.transition_to(SessionState.INACTIVE)
-        if self._application_dispatcher is not None:
-            self._application_dispatcher.clear_pending_confirmations()
-        if self._file_dispatcher is not None:
-            self._file_dispatcher.clear_pending_confirmations()
+        self._clear_confirmations()
         self.session_id = None
         self.activated_at = None
         self.last_activity_at = None
@@ -190,7 +189,11 @@ class OmegaSession:
         if self.matches_phrase(text, "help") or self.matches_phrase(text, "show help"):
             return (
                 'Say "Hello Omega" to activate Omega. After activation, enter '
-                'commands normally. Say "Shut down Omega" to exit.'
+                'commands normally. Say "Shut down Omega" to exit. Low- and '
+                "medium-risk actions run only after validation. High-risk actions "
+                "require an exact scoped confirmation; generic yes is not accepted, "
+                "and confirmations expire. Critical or unsupported actions are "
+                "denied. File and folder deletion remain unavailable until Phase 8."
             )
         if self.matches_phrase(text, "status"):
             return f"Omega is {self.state.value}."
@@ -208,22 +211,14 @@ class OmegaSession:
                     "\n".join(command.original_text for command in self._history)
                     or "No commands received yet."
                 )
-            if self._application_dispatcher is not None:
-                controlled = self._application_dispatcher.dispatch_control(
+            if self._safety_gateway is not None:
+                controlled = self._safety_gateway.handle_confirmation(
                     text, self.session_id
                 )
                 if controlled is not None:
                     self._history.append(controlled.command)
                     self.last_activity_at = self._clock()
                     return controlled.user_message
-            if self._file_dispatcher is not None:
-                controlled_file = self._file_dispatcher.dispatch_control(
-                    text, self.session_id
-                )
-                if controlled_file is not None:
-                    self._history.append(controlled_file.command)
-                    self.last_activity_at = self._clock()
-                    return controlled_file.user_message
             result = self._parser.parse(text, self.session_id)
             self._history.append(result.command)
             self.last_activity_at = self._clock()
@@ -239,7 +234,21 @@ class OmegaSession:
                 dispatched_folder = self._folder_dispatcher.dispatch(result)
                 if dispatched_folder is not None:
                     return dispatched_folder.user_message
+            if self._safety_gateway is not None:
+                denied = self._safety_gateway.handle_unrecognized(
+                    result.command, self.session_id
+                )
+                if denied is not None:
+                    return denied.user_message
             return format_parse_response(result)
         raise InvalidSessionTransitionError(
             "Session cannot accept input while shutting down."
         )
+
+    def _clear_confirmations(self) -> None:
+        if self._safety_gateway is not None:
+            self._safety_gateway.clear_confirmations()
+        if self._application_dispatcher is not None:
+            self._application_dispatcher.clear_pending_confirmations()
+        if self._file_dispatcher is not None:
+            self._file_dispatcher.clear_pending_confirmations()

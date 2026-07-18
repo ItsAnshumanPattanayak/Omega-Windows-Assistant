@@ -44,6 +44,13 @@ from omega.folders import (
     WindowsFolderOpener,
 )
 from omega.interfaces.terminal import TerminalInterface
+from omega.safety import (
+    ConfirmationManager,
+    PermissionConfiguration,
+    PermissionPolicyEngine,
+    ProtectedResourceEvaluator,
+    SafeExecutionGateway,
+)
 from omega.session.session import OmegaSession
 from omega.utils.constants import MINIMUM_PYTHON_VERSION
 from omega.utils.logger import configure_logging, get_logger
@@ -112,13 +119,33 @@ class OmegaApplication:
             settings=folder_settings,
             logger=get_logger("folders.manager"),
         )
+        safety_gateway = SafeExecutionGateway(
+            policy_engine=PermissionPolicyEngine(
+                configuration=PermissionConfiguration.from_file(),
+                protected_resources=ProtectedResourceEvaluator.from_file(),
+            ),
+            confirmations=ConfirmationManager(
+                timeout_seconds=float(
+                    self.settings.safety["confirmation_timeout_seconds"]
+                ),
+                maximum_attempts=int(
+                    self.settings.safety["maximum_confirmation_attempts"]
+                ),
+            ),
+            logger=get_logger("safety.gateway"),
+        )
         self.session = OmegaSession(
             self.settings.user,
             self.settings.assistant,
             logger=get_logger("session"),
-            application_dispatcher=ApplicationActionDispatcher(manager, registry),
-            file_dispatcher=FileActionDispatcher(file_manager),
-            folder_dispatcher=FolderActionDispatcher(folder_manager),
+            application_dispatcher=ApplicationActionDispatcher(
+                manager, registry, gateway=safety_gateway
+            ),
+            file_dispatcher=FileActionDispatcher(file_manager, gateway=safety_gateway),
+            folder_dispatcher=FolderActionDispatcher(
+                folder_manager, gateway=safety_gateway
+            ),
+            safety_gateway=safety_gateway,
         )
         self.logger.info(
             "%s %s initialized in %s mode.",

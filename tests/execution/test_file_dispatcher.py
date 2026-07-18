@@ -34,7 +34,7 @@ def test_dispatches_file_workflow_with_preserved_ids_and_risks(tmp_path: Path) -
     assert copied is not None and copied.result.success
     assert created.action.risk_level is RiskLevel.MEDIUM
     assert read.action.risk_level is RiskLevel.LOW
-    assert written.action.risk_level is RiskLevel.HIGH
+    assert written.action.risk_level is RiskLevel.MEDIUM
     assert created.action.command_id == created.command.command_id
     assert (roots["documents"] / "author.txt").read_text(encoding="utf-8") == "Anshuman"
 
@@ -76,7 +76,7 @@ def test_exact_overwrite_controls_are_scoped_and_clearable(tmp_path: Path) -> No
     assert wrong is not None and not wrong.result.success
     assert confirmed is not None and confirmed.result.success
     assert target.read_text(encoding="utf-8") == "new"
-    assert dispatcher.dispatch_control("yes") is None
+    assert dispatcher.dispatch_control("yes") is not None
     dispatcher.clear_pending_confirmations()
 
 

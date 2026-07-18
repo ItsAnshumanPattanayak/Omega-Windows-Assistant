@@ -9,10 +9,10 @@ The approved roadmap is intentionally incremental. Each phase should be designed
 5. **Phase 4 — Windows Application Manager — Completed:** allowlisted discovery, launching, exact process status, guarded close, and structured results.
 6. **Phase 5 — Safe File Management System — Completed:** approved logical roots, validated paths, bounded text I/O, conflict-safe file operations, opening, metadata, search, and overwrite confirmation.
 7. **Phase 6 — Folder Management System — Completed:** validated folder creation, bounded inspection and search, safe opening, conflict-free rename/copy, and same-volume move.
-8. **Phase 7 — Safety, Permissions, and Confirmations — Next:** enforce approval flows and policy decisions.
-9. **Phase 8 — Recycle Bin and Undo:** support recoverable deletion and action reversal.
+8. **Phase 7 — Safety, Permissions, and Confirmations — Completed:** centralized risk classification, protected-resource enforcement, default-deny policy evaluation, exact confirmation, replay protection, revalidation, audit records, and the safe execution gateway.
+9. **Phase 8 — Recycle Bin and Undo — Next:** support recoverable deletion and action reversal.
 10. **Phase 9 — History and SQLite:** persist safe action history and audit data.
 11. **Phase 10 — Desktop GUI:** provide a transparent local desktop interface.
 12. **Phase 11 — Voice Input and Response:** add wake-word handling, time-based greetings, and spoken interaction.
 
-Later phases may cover local AI-assisted intent suggestions, additional Windows integrations, accessibility, packaging, installer support, and release hardening. None of those capabilities are implemented in Phase 6.
+Later phases may cover local AI-assisted intent suggestions, additional Windows integrations, accessibility, packaging, installer support, and release hardening. None of those capabilities are implemented in Phase 7.

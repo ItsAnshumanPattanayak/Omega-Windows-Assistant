@@ -1,14 +1,23 @@
 # Omega
 
-Omega is a safety-first Windows desktop assistant project. **Current phase: Phase 6 — Controlled Folder Management System.**
+Omega is a safety-first Windows desktop assistant project. **Current phase: Phase 7 — Safety, Permissions, and Confirmation Engine.**
 
 ## Current status
 
 Omega is a locally controlled assistant that understands narrowly approved Windows tasks while enforcing clear safety boundaries. It starts inactive, accepts `Hello Omega` as a standalone activation phrase, greets Anshuman based on the current time, accepts commands without repeating its name, and uses `Shut down Omega` for safe termination.
 
-Phase 6 adds controlled folder operations inside the same approved logical locations used by Phase 5: Desktop, Documents, Downloads, Pictures, Music, Videos, Home, and the startup working directory. An active session can create one folder beneath an existing parent, check existence, list immediate contents, inspect bounded metadata, open a validated folder, rename folders, copy bounded trees, perform atomic same-volume moves, and run bounded exact-name searches. Folder merging, destination replacement, link traversal, and cross-volume destructive moves are blocked.
+Phase 7 adds one centralized safety pipeline for every application, file, and folder operation. Omega now classifies risk, evaluates resolved protected resources, applies ordered default-deny permission policies, creates exact action-scoped confirmations, expires and cancels pending requests, blocks confirmation replay, revalidates resources, and only then dispatches an approved action. Security audit records remain in memory and contain logical descriptions rather than private paths or content.
 
-Omega still cannot permanently delete files or folders, use the Recycle Bin, undo actions, merge directory trees, replace existing destination folders, perform destructive cross-drive folder moves, access arbitrary absolute/system paths, process voice input, provide a GUI, automate browser pages, or execute AI-generated actions.
+Omega still cannot permanently delete files or folders, use the Recycle Bin or undo, run arbitrary shell commands, modify protected Windows paths, elevate to administrator, modify the Registry, merge or replace folders, process voice input, provide a GUI, automate browser pages, or execute AI-generated actions.
+
+## Safety decisions
+
+| Action category | Typical risk | Default decision | Confirmation | Restrictions |
+|---|---|---|---|---|
+| Status, bounded reads, metadata, search | Low | Allow after validation | No | Approved roots and safe types only |
+| Registered application open, create, append, rename, copy | Medium | Allow after validation | No | No arbitrary targets, arguments, merge, or replacement |
+| Application close, content overwrite, file/folder move | High | Require confirmation | Exact scoped command | Expires, is session-bound, and revalidates the target |
+| Permanent deletion, protected paths, shell/script execution | Critical | Deny | Not available | Configuration cannot enable these boundaries |
 
 ## Technology
 
@@ -74,7 +83,7 @@ Folder commands reuse Phase 5's logical-location resolver and accept only valida
 | Open in File Explorer | Yes on Windows | No | One validated target | Uses the Windows association API; never a shell command |
 | Rename | Yes | No | Same parent only | No overwrite, merge, link, or protected target |
 | Copy tree | Yes | No | 20 levels, 10,000 items, 5 GiB by default | Preflight and post-copy verification; no links or merge |
-| Move tree | Same volume only | No | Same bounds as copy | Atomic rename-style move; cross-volume removal is blocked |
+| Move tree | Same volume only | Yes, exact | Same bounds as copy | Atomic rename-style move; cross-volume removal is blocked |
 | Search by folder name | Yes | No | Depth 6 and 50 results by default | Exact case-insensitive name; one approved root only |
 | Delete | No | Not applicable | Deferred to Phase 8 | No permanent folder-deletion path exists |
 
@@ -87,7 +96,7 @@ Availability depends on the applications installed on the current Windows comput
 | Google Chrome | Yes | Yes | Confirmation | No | May contain tabs or unsaved form data |
 | Microsoft Edge | Yes | Yes | Confirmation | No | May contain tabs or unsaved form data |
 | Notepad | Yes | Yes | Confirmation | No | May contain unsaved text |
-| Calculator | Yes | Yes | Yes | No | Uses an allowlisted Windows URI |
+| Calculator | Yes | Yes | Confirmation | No | Uses an allowlisted Windows URI |
 | File Explorer | Yes | Yes | No | No | Closing is blocked to protect the desktop shell |
 | Paint | Yes | Yes | Confirmation | No | May contain unsaved work |
 | Settings | Yes | Yes | No | No | Uses an allowlisted Windows URI; close is blocked |
@@ -107,7 +116,7 @@ python -m mypy src
 
 ## Safety principles
 
-Omega never passes user text to a shell or executable argument list. Application targets come only from the validated project registry. File and folder targets are built from registered logical roots, validated Windows path components, and resolved containment checks; arbitrary absolute paths and permanent deletion are disabled. Recursive folder scans are bounded and never follow symbolic links or junctions. Administrator operations and force close remain disabled by default. Logs must not contain file contents or other sensitive information. Read the full [safety policy](docs/safety_policy.md).
+Omega never passes user text to a shell or executable argument list. Every session-originated operation passes through `SafeExecutionGateway`; domain risk values are provisional and cannot override its classifier. Denial overrides confirmation, confirmation overrides allow, and no matching allow policy means deny. File and folder targets use registered logical roots, resolved containment, protected-resource checks, and immediate revalidation. Confirmations are exact, short-lived, session-bound, and single-use. Logs and audit records exclude file contents, pending text, secrets, process command lines, and private absolute paths. Read the full [safety policy](docs/safety_policy.md).
 
 ## Roadmap
 

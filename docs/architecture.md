@@ -90,7 +90,7 @@ Parsed application command
 
 The critical process denylist includes `System`, `Registry`, `smss.exe`, `csrss.exe`, `wininit.exe`, `services.exe`, `lsass.exe`, `svchost.exe`, `winlogon.exe`, `dwm.exe`, and `explorer.exe`. File Explorer can be opened and inspected, but Omega will not terminate `explorer.exe` because it may be the Windows desktop shell. Settings, Task Manager, Command Prompt, and PowerShell are also blocked from closing in Phase 4 because Omega cannot yet uniquely prove ownership of every matching process.
 
-Chrome, Edge, Notepad, and Paint require an exact application-specific confirmation before graceful close. The pending confirmation is held only in memory, expires after the configured timeout, is cleared on session timeout/shutdown/interruption, and cannot authorize a different application. `yes` is never sufficient. Calculator is documented as the initial low-risk close target. Force close is never an automatic fallback: it requires a failed graceful close, a separate request and confirmation, the global switch, and application-level permission. Both switches default to disabled for the initial registry.
+Every graceful application close now requires an exact application-specific confirmation through the central `ConfirmationManager`. The request is held only in memory, expires after the configured timeout, is cleared on session timeout/shutdown/interruption, and cannot authorize a different application. `yes` is never sufficient. File Explorer, Settings, Task Manager, Command Prompt, and PowerShell remain blocked from closing. Force close is denied globally in Phase 7 even if a domain definition is accidentally loosened.
 
 When a normal executable launch yields a PID, `ApplicationManager` records the canonical ID, PID creation time, and action ID in memory. It verifies PID identity before preferring an Omega-owned process for close and drops stale records. URI applications and applications that detach may not expose a reliable launch PID; status can still use exact registered process names, but ownership claims remain conservative.
 
@@ -114,7 +114,7 @@ Parsed file command
 
 `FilePathValidator` parses Windows path components and resolves the candidate and its existing parents before checking containment with path-aware common-path comparison. A string-prefix check is unsafe because sibling paths such as `Documents-old` share characters with `Documents`; resolved path components also expose symbolic-link or junction escapes. Protected Windows locations, repository `.git`, configuration, logs, and action-backup data are independently blocked.
 
-The writer supports UTF-8 text/data extensions with configured content and resulting-size limits. Non-empty replacement creates an in-memory pending record containing the exact target, content, expiry, size, nanosecond modification time, and content hash. Exact confirmation re-resolves and revalidates the target, rejects changed files, and uses a temporary file on the same filesystem plus `os.replace` for atomic replacement. Pending text is never logged or persisted and is cleared on cancellation, timeout, shutdown, interruption, or restart. Append writes exactly the quoted content and does not insert a newline.
+The writer supports UTF-8 text/data extensions with configured content and resulting-size limits. Non-empty replacement is submitted to the central gateway, which keeps pending content only in a private in-memory execution closure and binds confirmation to the exact target fingerprint. Exact confirmation re-resolves and revalidates the target, rejects changed files, and uses a temporary file on the same filesystem plus `os.replace` for atomic replacement. Pending text is never serialized, logged, or persisted and is cleared on cancellation, timeout, shutdown, interruption, or restart. Append writes exactly the quoted content and does not insert a newline.
 
 Rename, copy, and move refuse destination conflicts because Phase 5 has no recovery/undo layer for replacing a different file. Regular-file and symlink checks occur before mutation; copy and move verify sizes and SHA-256 content. Executable/script opening is blocked. `WindowsFileOpener` isolates the `os.startfile` boundary and receives only a validated absolute document path, never arguments or a command string.
 
@@ -147,7 +147,33 @@ Copy builds a private operation-created staging tree inside the validated destin
 
 Same-volume moves use a rename-style operation and verify both endpoints and the bounded tree measurements. Cross-volume destructive movement is refused: Omega offers no source removal until Phase 8 provides recovery and undo. Folder deletion likewise returns the Phase 8 deferral without resolving or mutating the target. Exact-name search stays inside one approved logical root, uses bounded recursion, skips protected/inaccessible entries, and never follows links or scans a whole drive.
 
-`FolderActionDispatcher` accepts only complete, unambiguous folder parse results, preserves command and action IDs, assigns provisional Phase 6 risk data, and delegates to `FolderManager`. The parser and session contain no direct directory operation. Inactive sessions cannot reach the dispatcher, and `Shut down Omega` remains a built-in priority command.
+`FolderActionDispatcher` accepts only complete, unambiguous folder parse results, preserves command and action IDs, assigns provisional risk data, and submits the action to `SafeExecutionGateway`. Same-volume folder movement requires central exact confirmation before `FolderManager` is called. The parser and session contain no direct directory operation. Inactive sessions cannot reach the dispatcher, and `Shut down Omega` remains a built-in priority command.
+
+## Central safety and permission pipeline
+
+```text
+Parsed command
+  -> Action proposal
+  -> SafeExecutionGateway
+  -> RiskClassifier
+  -> ProtectedResourceEvaluator
+  -> PermissionPolicyEngine
+  -> ALLOW / REQUIRE_CONFIRMATION / DENY
+  -> immediate resource revalidation
+  -> Application / File / Folder dispatcher
+  -> domain manager and service
+  -> ActionResult
+```
+
+Phase 7 makes `SafeExecutionGateway` the single production authority between an active session and all operational dispatchers. Dispatchers still validate domain parameters and build `Action` proposals, but their provisional risk values are not permission. The classifier may increase risk and never silently lowers a more conservative proposal. Every policy has a stable ID and explicit priority; `DENY` overrides `REQUIRE_CONFIRMATION`, which overrides `ALLOW`. If no explicit allow policy applies, the result is deny.
+
+`SafetyContext` combines a command and its action with only the target information needed for evaluation. Resolved absolute paths may exist in memory for canonical containment checks, but serialization retains only logical target descriptions. `SafetyEvaluation` records the authoritative risk, decision, stable reason code, matched policies, and a safe user message. Configuration may disable an action or require more confirmation, but immutable hard boundaries prevent permanent deletion, arbitrary shell/script execution, protected-path modification, critical-process termination, administrator elevation, and destination replacement.
+
+`ConfirmationManager` owns one pending high-risk action per active session. Its commands are exact and scoped, for example `confirm close Chrome`, `confirm overwrite notes.txt on Desktop`, `confirm move notes.txt from Documents to Downloads`, and `confirm move folder Projects from Desktop to Documents`. Comparison is case-insensitive and ignores surrounding whitespace, but generic `yes`, partial targets, added text, different sessions, expired requests, and replay are rejected. A new pending action in the same session cancels the older request. Pending content and executor callbacks remain in private process memory and are never serialized or logged.
+
+Before an approved or confirmed action reaches a manager, the gateway reevaluates policy and compares a bounded resource fingerprint. Files use resolved identity, size, nanosecond modification time, and a bounded hash; folders add immediate item count; applications use the registered application and process identity snapshot. A change, new destination conflict, vanished source, inserted link, or reused process identity cancels execution. The confirmation is consumed before dispatch and the action ID is recorded, preventing duplicate execution.
+
+`SafetyAuditRecord` captures only stable IDs, intent, risk, decision, policy IDs, confirmation state, time, and a redacted logical target. It excludes file contents, replacement text, confirmation secrets, private paths, environment values, process command lines, and stack traces. Phase 7 keeps this audit in memory; durable history remains Phase 9.
 
 ## Planned layers
 
@@ -155,10 +181,10 @@ The following components are planned, not implemented:
 
 - **Input layer:** text and, later, voice input. Voice activation will use `Hello Omega`.
 - **Command-processing layer:** converts approved user intent into structured commands.
-- **Safety layer:** checks permissions, protected paths, confirmations, and action policies before execution.
+- **Safety layer:** implemented in Phase 7; checks permissions, protected paths, confirmations, and action policies before execution.
 - **Executor layer:** performs allowlisted application operations and validated file/folder operations through separate domain dispatchers. Future domains require separate review.
 
-Command understanding must remain separate from execution. An interpreter may recognize a request, but only the safety layer may authorize it and only the executor may perform it. This separation makes future behavior testable and prevents an AI suggestion from becoming an action automatically.
+Command understanding remains separate from execution. An interpreter may recognize a request, but only the implemented safety layer may authorize it and only an approved dispatcher may call a manager. This separation makes behavior testable and prevents a parser or future AI suggestion from becoming an action automatically.
 
 Arbitrary shell execution will be prohibited because it would allow ambiguous natural-language input to become unrestricted operating-system access.
 

@@ -44,8 +44,11 @@ def test_inactive_command_has_no_effect_and_full_file_lifecycle_is_safe(
     )
     assert "renamed" in session.handle_input("Rename author.txt to writer.txt")
     assert "copied" in session.handle_input("Copy writer.txt from Desktop to Documents")
-    assert "moved" in session.handle_input(
+    assert "confirm move writer.txt" in session.handle_input(
         "Move writer.txt from Documents to Downloads"
+    )
+    assert "moved" in session.handle_input(
+        "confirm move writer.txt from Documents to Downloads"
     )
     assert "writer.txt" in session.handle_input("Find writer.txt in Downloads")
     deletion = session.handle_input("Delete writer.txt from Downloads")
@@ -85,8 +88,9 @@ def test_timeout_clears_pending_file_content_and_application_commands_remain_par
     clock[0] = 11
     assert "timed out" in (session.check_timeout() or "")
     session.handle_input("Hello Omega")
-    assert "No matching" in session.handle_input(
-        "confirm overwrite notes.txt on Desktop"
+    assert (
+        "no pending"
+        in session.handle_input("confirm overwrite notes.txt on Desktop").casefold()
     )
     application = session.handle_input("Open Chrome")
     assert "open Chrome" in application and "not available" in application
@@ -95,8 +99,6 @@ def test_timeout_clears_pending_file_content_and_application_commands_remain_par
 def test_file_failure_does_not_crash_and_shutdown_has_priority(tmp_path: Path) -> None:
     session, roots = _session(tmp_path)
     session.handle_input("Hello Omega")
-    assert "does not create executable" in session.handle_input(
-        "Create virus.bat on Desktop"
-    )
+    assert "command-script files" in session.handle_input("Create virus.bat on Desktop")
     assert not (roots["desktop"] / "virus.bat").exists()
     assert "Shutting down" in session.handle_input("Shut down Omega")

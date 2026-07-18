@@ -3,10 +3,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
-from dataclasses import dataclass
 from pathlib import Path, PureWindowsPath
-from time import monotonic
 from uuid import UUID
 
 from omega.core.exceptions import (
@@ -26,20 +23,12 @@ from omega.files.opener import WindowsFileOpener
 from omega.files.operations import FileOperationsService
 from omega.files.paths import SafeFilePathResolver
 from omega.files.reader import TextFileReader
-from omega.files.results import FileSnapshot, ValidatedFilePath
+from omega.files.results import ValidatedFilePath
 from omega.files.search import FileSearchService
 from omega.files.validator import WindowsFilenameValidator
 from omega.files.writer import TextFileWriter
 from omega.models import ActionResult, ErrorCategory, OmegaErrorDetails
 from omega.models._serialization import JsonValue
-
-
-@dataclass(frozen=True)
-class _PendingOverwrite:
-    target: ValidatedFilePath
-    content: str
-    snapshot: FileSnapshot
-    expires_at: float
 
 
 class FileManager:
@@ -56,7 +45,7 @@ class FileManager:
         opener: WindowsFileOpener,
         *,
         settings: FileOperationSettings,
-        monotonic_clock: Callable[[], float] = monotonic,
+        monotonic_clock: object | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
         self.location_resolver = location_resolver
@@ -67,9 +56,8 @@ class FileManager:
         self.search = search
         self.opener = opener
         self.settings = settings
-        self._clock = monotonic_clock
+        del monotonic_clock
         self._logger = logger or logging.getLogger("omega.files.manager")
-        self._pending_overwrites: dict[str, _PendingOverwrite] = {}
 
     def create_file(
         self,
@@ -217,7 +205,7 @@ class FileManager:
         action_id: UUID,
         command_id: UUID | None = None,
     ) -> ActionResult:
-        """Write empty files immediately or request exact overwrite confirmation."""
+        """Write empty files; reject direct replacement outside the gateway."""
         try:
             target = self._resolve_text(location, file_name)
             snapshot = self.writer.snapshot(target.path)
@@ -229,26 +217,14 @@ class FileManager:
                     f"{target.path.name} was updated successfully.",
                     self._target_data(target),
                 )
-            key = self._pending_key(target)
-            self._pending_overwrites[key] = _PendingOverwrite(
-                target,
-                content,
-                snapshot,
-                self._clock() + self.settings.confirmation_timeout_seconds,
-            )
-            self._logger.info(
-                "File overwrite confirmation created: location=%s relative=%s",
-                target.location.logical_name,
-                target.relative_path.as_posix(),
-            )
             return self._failure(
                 action_id,
                 command_id,
                 "FILE_OVERWRITE_CONFIRMATION_REQUIRED",
                 ErrorCategory.PERMISSION,
                 "Replacing existing text requires exact confirmation.",
-                f"This will replace the existing contents of {target.path.name}.\n"
-                f'Type "confirm overwrite {target.path.name}" to continue.',
+                "A central safety confirmation is required before replacing "
+                f"{target.path.name}.",
                 True,
             )
         except FileManagementError as error:
@@ -261,32 +237,25 @@ class FileManager:
         action_id: UUID,
         command_id: UUID | None = None,
     ) -> ActionResult:
-        """Consume one matching unexpired confirmation after target revalidation."""
+        """Reject legacy confirmation; only ConfirmationManager can approve."""
+        return self._legacy_confirmation_failure(action_id, command_id)
+
+    def replace_text_file(
+        self,
+        file_name: str,
+        location: str | None,
+        content: str,
+        action_id: UUID,
+        command_id: UUID | None = None,
+    ) -> ActionResult:
+        """Replace text only after the central gateway grants confirmation."""
         try:
             target = self._resolve_text(location, file_name)
-            pending = self._pending_overwrites.pop(self._pending_key(target), None)
-            if pending is None:
-                raise FileConflictError(
-                    "No matching overwrite confirmation is pending."
-                )
-            if self._clock() > pending.expires_at:
-                self._logger.info("File overwrite confirmation expired.")
-                return self._failure(
-                    action_id,
-                    command_id,
-                    "FILE_OVERWRITE_CONFIRMATION_EXPIRED",
-                    ErrorCategory.TIMEOUT,
-                    "The overwrite confirmation expired.",
-                    "That overwrite confirmation expired. "
-                    "Please request the write again.",
-                    True,
-                )
-            if target.path.resolve() != pending.target.path.resolve():
-                raise FileConflictError("The confirmation does not match that file.")
-            self.writer.replace(target, pending.content, pending.snapshot)
+            snapshot = self.writer.snapshot(target.path)
+            self.writer.replace(target, content, snapshot)
             return self._success(
                 action_id,
-                "Confirmed text replacement completed.",
+                "Existing text was replaced and verified.",
                 f"{target.path.name} was updated successfully.",
                 self._target_data(target),
             )
@@ -300,22 +269,8 @@ class FileManager:
         action_id: UUID,
         command_id: UUID | None = None,
     ) -> ActionResult:
-        """Cancel only the pending overwrite bound to the exact target."""
-        try:
-            target = self._resolve_text(location, file_name)
-            pending = self._pending_overwrites.pop(self._pending_key(target), None)
-            if pending is None:
-                raise FileConflictError(
-                    "No matching overwrite confirmation is pending."
-                )
-            return self._success(
-                action_id,
-                "Pending overwrite cancelled.",
-                f"The overwrite of {target.path.name} was cancelled.",
-                self._target_data(target),
-            )
-        except FileManagementError as error:
-            return self._managed_failure(action_id, command_id, error)
+        """Reject legacy cancellation because no domain confirmation is stored."""
+        return self._legacy_confirmation_failure(action_id, command_id)
 
     def append_text_file(
         self,
@@ -474,8 +429,7 @@ class FileManager:
             return self._managed_failure(action_id, command_id, error)
 
     def clear_pending_confirmations(self) -> None:
-        """Drop in-memory text without logging it on timeout or shutdown."""
-        self._pending_overwrites.clear()
+        """Compatibility no-op; pending text exists only in ConfirmationManager."""
 
     def _transfer(
         self,
@@ -534,13 +488,6 @@ class FileManager:
             default_extension=default_extension,
         )
         return str(PureWindowsPath(*parsed.parts[:-1], name))
-
-    @staticmethod
-    def _pending_key(target: ValidatedFilePath) -> str:
-        return (
-            f"{target.location.logical_name}:"
-            f"{target.relative_path.as_posix().casefold()}"
-        )
 
     @staticmethod
     def _target_data(target: ValidatedFilePath) -> dict[str, JsonValue]:
@@ -617,3 +564,17 @@ class FileManager:
             command_id=command_id,
         )
         return ActionResult.failure_result(action_id, message, user_message, error)
+
+    @classmethod
+    def _legacy_confirmation_failure(
+        cls, action_id: UUID, command_id: UUID | None
+    ) -> ActionResult:
+        return cls._failure(
+            action_id,
+            command_id,
+            "CENTRAL_GATEWAY_REQUIRED",
+            ErrorCategory.SAFETY,
+            "Direct file confirmation is disabled in Phase 7.",
+            "A central safety confirmation is required for that file operation.",
+            True,
+        )

@@ -25,7 +25,7 @@ def test_create_exists_metadata_and_existing_conflict(
     assert not conflict.success and conflict.error.code == "FILE_ALREADY_EXISTS"  # type: ignore[union-attr]
 
 
-def test_read_write_confirmation_cancel_expiry_and_changed_target(
+def test_direct_overwrite_confirmation_authority_is_removed_from_manager(
     manager_factory: Callable[..., FileManager], logical_roots: Mapping[str, Path]
 ) -> None:
     current = [0.0]
@@ -37,19 +37,20 @@ def test_read_write_confirmation_cancel_expiry_and_changed_target(
     wrong = manager.confirm_overwrite("other.txt", "desktop", *_call_ids())
     confirmed = manager.confirm_overwrite("notes.txt", "desktop", *_call_ids())
 
-    assert written.success and path.read_text(encoding="utf-8") == "second"
-    assert not pending.success and "confirm overwrite" in pending.user_message
+    assert written.success and path.read_text(encoding="utf-8") == "first"
+    assert not pending.success and "central safety confirmation" in pending.user_message
     assert not wrong.success
-    assert confirmed.success
+    assert not confirmed.success
 
     manager.write_text_file("notes.txt", "desktop", "third", *_call_ids())
     cancelled = manager.cancel_overwrite("notes.txt", "desktop", *_call_ids())
-    assert cancelled.success and path.read_text(encoding="utf-8") == "second"
+    assert not cancelled.success and path.read_text(encoding="utf-8") == "first"
 
     manager.write_text_file("notes.txt", "desktop", "third", *_call_ids())
     current[0] = 31
     expired = manager.confirm_overwrite("notes.txt", "desktop", *_call_ids())
-    assert not expired.success and expired.error.code.endswith("EXPIRED")  # type: ignore[union-attr]
+    assert not expired.success
+    assert expired.error.code == "CENTRAL_GATEWAY_REQUIRED"  # type: ignore[union-attr]
 
     current[0] = 0
     manager.write_text_file("notes.txt", "desktop", "third", *_call_ids())

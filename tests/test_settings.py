@@ -37,6 +37,8 @@ def test_load_settings_applies_sensible_defaults() -> None:
         assert settings.files["allow_absolute_paths"] is False
         assert settings.folders["maximum_listing_items"] == 100
         assert settings.folders["allow_permanent_deletion"] is False
+        assert settings.safety["default_decision"] == "deny"
+        assert settings.safety["maximum_confirmation_attempts"] == 3
 
 
 def test_missing_required_section_raises_configuration_error() -> None:
@@ -93,6 +95,35 @@ def test_unsafe_file_settings_are_rejected(files: str) -> None:
 )
 def test_unsafe_folder_settings_are_rejected(folders: str) -> None:
     config = _valid_config().replace("folders: {}", f"folders:\n  {folders}")
+    with TemporaryDirectory(dir=Path.cwd() / "data") as temporary_directory:
+        config_path = Path(temporary_directory) / "app_config.yaml"
+        config_path.write_text(config, encoding="utf-8")
+        with pytest.raises(ConfigurationError):
+            load_settings(config_path)
+
+
+@pytest.mark.parametrize(
+    "safety",
+    [
+        "default_decision: allow",
+        "allow_administrator_operations: true",
+        "allow_arbitrary_shell_commands: true",
+        "permanent_deletion_enabled: true",
+        "allow_absolute_paths: true",
+        "allow_network_paths: true",
+        "allow_device_paths: true",
+        "allow_force_close: true",
+        "allow_destination_replace: true",
+        "allow_folder_merge: true",
+        "allow_cross_volume_destructive_move: true",
+        "confirmation_timeout_seconds: -1",
+        "confirmation_timeout_seconds: 301",
+        "maximum_confirmation_attempts: 0",
+        "maximum_confirmation_attempts: 11",
+    ],
+)
+def test_unsafe_central_safety_settings_are_rejected(safety: str) -> None:
+    config = _valid_config().replace("safety: {}", f"safety:\n  {safety}")
     with TemporaryDirectory(dir=Path.cwd() / "data") as temporary_directory:
         config_path = Path(temporary_directory) / "app_config.yaml"
         config_path.write_text(config, encoding="utf-8")

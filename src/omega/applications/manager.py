@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from enum import StrEnum
 from time import monotonic, sleep
 from typing import Any
 from uuid import UUID
@@ -24,6 +23,7 @@ from omega.applications.results import (
 from omega.core.exceptions import ApplicationRegistryError
 from omega.models import ActionResult, ActionStatus, ErrorCategory, OmegaErrorDetails
 from omega.models._serialization import JsonValue, utc_now
+from omega.safety.models import ResourceFingerprint
 
 
 @dataclass(frozen=True)
@@ -33,7 +33,6 @@ class ApplicationOperationSettings:
     launch_verification_timeout_seconds: float = 5.0
     graceful_close_timeout_seconds: float = 5.0
     force_close_timeout_seconds: float = 3.0
-    confirmation_timeout_seconds: float = 30.0
     allow_force_close: bool = False
 
     def __post_init__(self) -> None:
@@ -41,7 +40,6 @@ class ApplicationOperationSettings:
             "launch_verification_timeout_seconds",
             "graceful_close_timeout_seconds",
             "force_close_timeout_seconds",
-            "confirmation_timeout_seconds",
         ):
             value = getattr(self, name)
             if (
@@ -64,22 +62,8 @@ class ApplicationOperationSettings:
                 "graceful_close_timeout_seconds", 5
             ),
             force_close_timeout_seconds=values.get("force_close_timeout_seconds", 3),
-            confirmation_timeout_seconds=values.get("confirmation_timeout_seconds", 30),
             allow_force_close=values.get("allow_force_close", False),
         )
-
-
-class ConfirmationKind(StrEnum):
-    CLOSE = "close"
-    FORCE_CLOSE = "force_close"
-
-
-@dataclass(frozen=True)
-class _PendingConfirmation:
-    application_id: str
-    kind: ConfirmationKind
-    expires_at: float
-    requested_action_id: UUID
 
 
 @dataclass(frozen=True)
@@ -113,13 +97,10 @@ class ApplicationManager:
         self._clock = monotonic_clock
         self._sleep = sleeper
         self._logger = logger or logging.getLogger("omega.applications.manager")
-        self._pending: dict[tuple[ConfirmationKind, str], _PendingConfirmation] = {}
         self._owned: dict[int, OmegaOwnedProcess] = {}
-        self._force_eligible: set[str] = set()
 
     def clear_pending_confirmations(self) -> None:
-        """Discard process-local approvals when a session ends or times out."""
-        self._pending.clear()
+        """Compatibility no-op; Phase 7 stores confirmations only centrally."""
 
     def open_application(
         self, application_id: str, action_id: UUID, command_id: UUID | None = None
@@ -256,156 +237,107 @@ class ApplicationManager:
     def request_close_application(
         self, application_id: str, action_id: UUID, command_id: UUID | None = None
     ) -> ActionResult:
-        """Close a safe app now, or establish a short-lived exact confirmation."""
+        """Reject legacy direct requests; the central gateway owns confirmation."""
+        definition, failure = self._definition(application_id, action_id, command_id)
+        if failure is not None:
+            return failure
+        assert definition is not None
+        return self._gateway_required(definition, action_id, command_id)
+
+    def close_application(
+        self, application_id: str, action_id: UUID, command_id: UUID | None = None
+    ) -> ActionResult:
+        """Execute a graceful close only after the central gateway approves it."""
         definition, failure = self._definition(application_id, action_id, command_id)
         if failure is not None:
             return failure
         assert definition is not None
         if not definition.supports_graceful_close:
             return self._blocked_close(definition, action_id, command_id)
-        inspection = self._inspect(definition)
-        if not inspection.processes:
-            if inspection.inaccessible_count:
-                return self._close_visibility_failure(definition, action_id, command_id)
-            return self._success(
-                action_id,
-                "Application was not running.",
-                f"{definition.display_name} is not currently running.",
-                {"application_id": definition.application_id, "outcome": "not_running"},
-            )
-        if definition.requires_close_confirmation:
-            self._set_pending(definition, ConfirmationKind.CLOSE, action_id)
-            alias = definition.aliases[0].title()
-            return self._success(
-                action_id,
-                "Close confirmation is required.",
-                f"Closing {definition.display_name} may discard unsaved work. "
-                f'Type "confirm close {alias}" to continue.',
-                {
-                    "application_id": definition.application_id,
-                    "outcome": "confirmation_required",
-                },
-            )
         return self._close_now(definition, action_id, command_id)
+
+    def inspect_application_fingerprint(
+        self, application_id: str
+    ) -> ResourceFingerprint:
+        """Capture process identity for central confirmation revalidation."""
+        definition = self.registry.get(application_id)
+        if definition is None:
+            return ResourceFingerprint("application", application_id, False)
+        inspection = self._inspect(definition)
+        identities = tuple(
+            sorted(
+                (process.pid, process.created_at or 0.0)
+                for process in inspection.processes
+            )
+        )
+        identity = f"{application_id}:{identities!r}"
+        return ResourceFingerprint(
+            "application",
+            identity,
+            bool(inspection.processes),
+            item_count=len(inspection.processes),
+        )
 
     def confirm_close_application(
         self, application_id: str, action_id: UUID, command_id: UUID | None = None
     ) -> ActionResult:
-        """Use an unexpired exact close confirmation for the same application."""
+        """Reject legacy confirmation; only ConfirmationManager can approve."""
         definition, failure = self._definition(application_id, action_id, command_id)
         if failure is not None:
             return failure
         assert definition is not None
-        pending_error = self._consume_pending(
-            definition, ConfirmationKind.CLOSE, action_id, command_id
-        )
-        if pending_error is not None:
-            return pending_error
-        return self._close_now(definition, action_id, command_id)
+        return self._gateway_required(definition, action_id, command_id)
 
     def cancel_close_application(
         self, application_id: str, action_id: UUID, command_id: UUID | None = None
     ) -> ActionResult:
-        return self._cancel_pending(
-            application_id, ConfirmationKind.CLOSE, action_id, command_id
-        )
-
-    def request_force_close_application(
-        self, application_id: str, action_id: UUID, command_id: UUID | None = None
-    ) -> ActionResult:
-        """Request, but never immediately execute, an eligible force close."""
         definition, failure = self._definition(application_id, action_id, command_id)
         if failure is not None:
             return failure
         assert definition is not None
-        if not self.settings.allow_force_close or not definition.allow_force_close:
-            return self._failure(
-                action_id,
-                command_id,
-                "FORCE_CLOSE_DISABLED",
-                ErrorCategory.SAFETY,
-                "Force close is disabled by policy.",
-                f"Omega does not force close {definition.display_name}.",
-                False,
-            )
-        if application_id not in self._force_eligible:
-            return self._failure(
-                action_id,
-                command_id,
-                "FORCE_CLOSE_NOT_ELIGIBLE",
-                ErrorCategory.SAFETY,
-                "Graceful close must fail before force close can be requested.",
-                "A graceful close must fail before a force close can be requested.",
-                True,
-            )
-        self._set_pending(definition, ConfirmationKind.FORCE_CLOSE, action_id)
-        alias = definition.aliases[0].title()
-        return self._success(
+        return self._gateway_required(definition, action_id, command_id)
+
+    def request_force_close_application(
+        self, application_id: str, action_id: UUID, command_id: UUID | None = None
+    ) -> ActionResult:
+        """Deny force close at the domain boundary in Phase 7."""
+        definition, failure = self._definition(application_id, action_id, command_id)
+        if failure is not None:
+            return failure
+        assert definition is not None
+        return self._failure(
             action_id,
-            "Force-close confirmation is required.",
-            f"Force closing {definition.display_name} may cause data loss. "
-            f'Type "confirm force close {alias}" to continue.',
-            {
-                "application_id": definition.application_id,
-                "outcome": "force_confirmation_required",
-            },
+            command_id,
+            "FORCE_CLOSE_DISABLED",
+            ErrorCategory.SAFETY,
+            "Force close is disabled by central Phase 7 policy.",
+            f"Omega does not force close {definition.display_name}.",
+            False,
         )
 
     def confirm_force_close_application(
         self, application_id: str, action_id: UUID, command_id: UUID | None = None
     ) -> ActionResult:
-        """Force close only after both policy switches and exact confirmation."""
+        """Deny force close even if a legacy caller tries to confirm it."""
         definition, failure = self._definition(application_id, action_id, command_id)
         if failure is not None:
             return failure
         assert definition is not None
-        if not self.settings.allow_force_close or not definition.allow_force_close:
-            return self._failure(
-                action_id,
-                command_id,
-                "FORCE_CLOSE_DISABLED",
-                ErrorCategory.SAFETY,
-                "Force close is disabled by policy.",
-                f"Omega does not force close {definition.display_name}.",
-                False,
-            )
-        pending_error = self._consume_pending(
-            definition, ConfirmationKind.FORCE_CLOSE, action_id, command_id
-        )
-        if pending_error is not None:
-            return pending_error
-        inspection = self._inspect(definition)
-        if not inspection.processes:
-            if inspection.inaccessible_count:
-                return self._close_visibility_failure(definition, action_id, command_id)
-            return self._success(
-                action_id,
-                "Application was not running.",
-                f"{definition.display_name} is not currently running.",
-                {"application_id": definition.application_id, "outcome": "not_running"},
-            )
-        targets = self._preferred_targets(definition, inspection.processes)
-        result = self.process_service.kill(
-            definition, targets, self.settings.force_close_timeout_seconds
-        )
-        if result.complete:
-            self._force_eligible.discard(application_id)
-            self._remove_owned(targets)
-            return self._success(
-                action_id,
-                "Application was force closed after explicit confirmation.",
-                f"{definition.display_name} has been force closed.",
-                self._operation_data(definition, result, "force_closed"),
-            )
-        return self._operation_failure(
-            definition, result, action_id, command_id, force=True
+        return self._failure(
+            action_id,
+            command_id,
+            "FORCE_CLOSE_DISABLED",
+            ErrorCategory.SAFETY,
+            "Force close is disabled by central Phase 7 policy.",
+            f"Omega does not force close {definition.display_name}.",
+            False,
         )
 
     def cancel_force_close_application(
         self, application_id: str, action_id: UUID, command_id: UUID | None = None
     ) -> ActionResult:
-        return self._cancel_pending(
-            application_id, ConfirmationKind.FORCE_CLOSE, action_id, command_id
+        return self.request_force_close_application(
+            application_id, action_id, command_id
         )
 
     def _close_now(
@@ -430,7 +362,6 @@ class ApplicationManager:
         )
         if result.complete:
             self._remove_owned(targets)
-            self._force_eligible.discard(definition.application_id)
             self._logger.info("Application closed: %s", definition.application_id)
             return self._success(
                 action_id,
@@ -438,7 +369,6 @@ class ApplicationManager:
                 f"{definition.display_name} has been closed.",
                 self._operation_data(definition, result, "closed"),
             )
-        self._force_eligible.add(definition.application_id)
         return self._operation_failure(
             definition, result, action_id, command_id, force=False
         )
@@ -518,89 +448,6 @@ class ApplicationManager:
         for process in processes:
             self._owned.pop(process.pid, None)
 
-    def _set_pending(
-        self,
-        definition: ApplicationDefinition,
-        kind: ConfirmationKind,
-        action_id: UUID,
-    ) -> None:
-        self._pending[(kind, definition.application_id)] = _PendingConfirmation(
-            definition.application_id,
-            kind,
-            self._clock() + self.settings.confirmation_timeout_seconds,
-            action_id,
-        )
-        self._logger.info(
-            "Application confirmation created: %s %s",
-            kind.value,
-            definition.application_id,
-        )
-
-    def _consume_pending(
-        self,
-        definition: ApplicationDefinition,
-        kind: ConfirmationKind,
-        action_id: UUID,
-        command_id: UUID | None,
-    ) -> ActionResult | None:
-        pending = self._pending.pop((kind, definition.application_id), None)
-        if pending is None:
-            return self._failure(
-                action_id,
-                command_id,
-                "CONFIRMATION_NOT_PENDING",
-                ErrorCategory.PERMISSION,
-                "No matching application confirmation is pending.",
-                f"There is no pending {kind.value.replace('_', ' ')} request for "
-                f"{definition.display_name}.",
-                True,
-            )
-        if self._clock() > pending.expires_at:
-            self._logger.info(
-                "Application confirmation expired: %s %s",
-                kind.value,
-                definition.application_id,
-            )
-            return self._failure(
-                action_id,
-                command_id,
-                "CONFIRMATION_EXPIRED",
-                ErrorCategory.TIMEOUT,
-                "The application confirmation expired.",
-                "That confirmation expired. Please request the action again.",
-                True,
-            )
-        return None
-
-    def _cancel_pending(
-        self,
-        application_id: str,
-        kind: ConfirmationKind,
-        action_id: UUID,
-        command_id: UUID | None,
-    ) -> ActionResult:
-        definition, failure = self._definition(application_id, action_id, command_id)
-        if failure is not None:
-            return failure
-        assert definition is not None
-        pending = self._pending.pop((kind, application_id), None)
-        if pending is None:
-            return self._failure(
-                action_id,
-                command_id,
-                "CONFIRMATION_NOT_PENDING",
-                ErrorCategory.CANCELLED,
-                "No matching confirmation was available to cancel.",
-                f"There is no pending request for {definition.display_name}.",
-                True,
-            )
-        return self._success(
-            action_id,
-            "Pending application request cancelled.",
-            f"The request for {definition.display_name} was cancelled.",
-            {"application_id": application_id, "outcome": "cancelled"},
-        )
-
     def _definition(
         self, application_id: str, action_id: UUID, command_id: UUID | None
     ) -> tuple[ApplicationDefinition | None, ActionResult | None]:
@@ -626,6 +473,22 @@ class ApplicationManager:
             "The application ID is not registered.",
             "That application is not registered for Omega to control.",
             False,
+        )
+
+    def _gateway_required(
+        self,
+        definition: ApplicationDefinition,
+        action_id: UUID,
+        command_id: UUID | None,
+    ) -> ActionResult:
+        return self._failure(
+            action_id,
+            command_id,
+            "CENTRAL_GATEWAY_REQUIRED",
+            ErrorCategory.SAFETY,
+            "Direct application confirmation is disabled in Phase 7.",
+            f"A central safety confirmation is required for {definition.display_name}.",
+            True,
         )
 
     def _blocked_close(

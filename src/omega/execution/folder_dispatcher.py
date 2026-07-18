@@ -1,23 +1,32 @@
-"""Narrow dispatcher for complete deterministic Phase 6 folder commands."""
+"""Folder action adapter protected by the central execution gateway."""
 
 from __future__ import annotations
 
+import hashlib
+from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
+from uuid import UUID
 
+from omega.core.exceptions import FolderManagementError
 from omega.folders.manager import FolderManager
 from omega.models import (
     Action,
     ActionResult,
-    ActionStatus,
     ConfirmationStatus,
-    ErrorCategory,
     IntentType,
-    OmegaErrorDetails,
     PermissionDecision,
     RiskLevel,
     UserCommand,
 )
 from omega.models._serialization import JsonValue
+from omega.safety import (
+    ConfirmationSpec,
+    GatewayDispatchResult,
+    ResourceFingerprint,
+    SafeExecutionGateway,
+    SafetyContext,
+)
 from omega.understanding.result import CommandParseResult
 
 _FOLDER_INTENTS = frozenset(
@@ -34,7 +43,6 @@ _FOLDER_INTENTS = frozenset(
         IntentType.SEARCH_FOLDER,
     }
 )
-
 _RISK = {
     IntentType.OPEN_FOLDER: RiskLevel.LOW,
     IntentType.LIST_FOLDER: RiskLevel.LOW,
@@ -51,8 +59,6 @@ _RISK = {
 
 @dataclass(frozen=True)
 class FolderDispatchResult:
-    """The parsed command, typed action proposal, and structured result."""
-
     command: UserCommand
     action: Action
     result: ActionResult
@@ -61,12 +67,19 @@ class FolderDispatchResult:
     def user_message(self) -> str:
         return self.result.user_message
 
+    @classmethod
+    def from_gateway(cls, value: GatewayDispatchResult) -> FolderDispatchResult:
+        return cls(value.command, value.action, value.result)
+
 
 class FolderActionDispatcher:
-    """Dispatch only complete folder intents through the folder manager."""
+    """Build folder proposals and route all operations through one gateway."""
 
-    def __init__(self, manager: FolderManager) -> None:
+    def __init__(
+        self, manager: FolderManager, *, gateway: SafeExecutionGateway | None = None
+    ) -> None:
         self.manager = manager
+        self.gateway = gateway or SafeExecutionGateway()
 
     def dispatch(self, parsed: CommandParseResult) -> FolderDispatchResult | None:
         command = parsed.command
@@ -76,52 +89,102 @@ class FolderActionDispatcher:
             or command.intent not in _FOLDER_INTENTS
         ):
             return None
-        denied = command.intent is IntentType.DELETE_FOLDER
-        action = self._action(command, _RISK[command.intent], denied=denied)
-        if denied:
-            return FolderDispatchResult(
-                command, action, self._delete_deferred(command, action)
-            )
         values = self._values(command)
+        action = self._action(command)
+        source, destination = self._preview_paths(command.intent, values)
+        conflict = (
+            destination is not None
+            and destination.exists()
+            and command.intent
+            in {
+                IntentType.CREATE_FOLDER,
+                IntentType.RENAME_FOLDER,
+                IntentType.COPY_FOLDER,
+                IntentType.MOVE_FOLDER,
+            }
+        )
+        target = destination if destination is not None else source
+        context = SafetyContext(
+            command=command,
+            action=action,
+            session_id=command.session_id or UUID(int=0),
+            source_path=source,
+            destination_path=destination,
+            logical_source=self._string(values, "source_location")
+            or self._string(values, "location"),
+            logical_destination=self._string(values, "destination")
+            or self._string(values, "location"),
+            target_exists=target.exists() if target is not None else None,
+            target_type="folder",
+            additional_context={"destination_conflict": conflict},
+        )
+        executor = self._executor(command, action, values)
+        if executor is None:
+            return None
+        confirmation = self._confirmation(command.intent, values, source, destination)
+        fingerprint = self._fingerprint(command.intent, source, destination)
+        submitted = self.gateway.submit(
+            context,
+            executor,
+            confirmation=confirmation,
+            fingerprint=fingerprint,
+            revalidator=lambda: self._fingerprint(command.intent, source, destination),
+        )
+        return FolderDispatchResult.from_gateway(submitted)
+
+    def clear_pending_confirmations(self) -> None:
+        self.gateway.clear_confirmations()
+
+    def _executor(
+        self,
+        command: UserCommand,
+        action: Action,
+        values: dict[str, JsonValue],
+    ) -> Callable[[], ActionResult] | None:
         location = self._string(values, "location")
         folder_name = self._string(values, "folder_name")
-        result: ActionResult | None = None
+        action_id, command_id = action.action_id, command.command_id
         if command.intent is IntentType.CREATE_FOLDER and folder_name:
-            result = self.manager.create_folder(
+            return lambda: self.manager.create_folder(
                 folder_name,
                 location,
-                action.action_id,
-                command.command_id,
+                action_id,
+                command_id,
                 parent_path=self._string(values, "parent_path"),
             )
-        elif command.intent is IntentType.OPEN_FOLDER:
-            result = self.manager.open_folder(
-                folder_name, location, action.action_id, command.command_id
+        if command.intent is IntentType.OPEN_FOLDER:
+            return lambda: self.manager.open_folder(
+                folder_name, location, action_id, command_id
             )
-        elif command.intent is IntentType.LIST_FOLDER:
-            result = self.manager.list_folder(
-                folder_name, location, action.action_id, command.command_id
+        if command.intent is IntentType.LIST_FOLDER:
+            return lambda: self.manager.list_folder(
+                folder_name, location, action_id, command_id
             )
-        elif command.intent is IntentType.CHECK_FOLDER_EXISTENCE:
-            result = self.manager.folder_exists(
-                folder_name, location, action.action_id, command.command_id
+        if command.intent is IntentType.CHECK_FOLDER_EXISTENCE:
+            return lambda: self.manager.folder_exists(
+                folder_name, location, action_id, command_id
             )
-        elif command.intent is IntentType.GET_FOLDER_INFORMATION:
-            result = self.manager.get_folder_information(
+        if command.intent is IntentType.GET_FOLDER_INFORMATION:
+            return lambda: self.manager.get_folder_information(
                 folder_name,
                 location,
-                action.action_id,
-                command.command_id,
+                action_id,
+                command_id,
                 recursive=values.get("recursive") is True,
             )
-        elif command.intent is IntentType.RENAME_FOLDER:
+        if command.intent is IntentType.RENAME_FOLDER:
             source = self._string(values, "source_folder")
             new_name = self._string(values, "new_name")
             if source and new_name:
-                result = self.manager.rename_folder(
-                    source, new_name, location, action.action_id, command.command_id
+                safe_source, safe_new_name = source, new_name
+                return lambda: self.manager.rename_folder(
+                    safe_source,
+                    safe_new_name,
+                    location,
+                    action_id,
+                    command_id,
                 )
-        elif command.intent in {IntentType.COPY_FOLDER, IntentType.MOVE_FOLDER}:
+        if command.intent in {IntentType.COPY_FOLDER, IntentType.MOVE_FOLDER}:
             source = self._string(values, "source_folder")
             destination = self._string(values, "destination")
             if source and destination:
@@ -130,20 +193,109 @@ class FolderActionDispatcher:
                     if command.intent is IntentType.COPY_FOLDER
                     else self.manager.move_folder
                 )
-                result = method(
+                return lambda: method(
                     source,
                     self._string(values, "source_location"),
                     destination,
-                    action.action_id,
-                    command.command_id,
+                    action_id,
+                    command_id,
                 )
-        elif command.intent is IntentType.SEARCH_FOLDER and folder_name:
-            result = self.manager.search_folders(
-                folder_name, location, action.action_id, command.command_id
+        if command.intent is IntentType.SEARCH_FOLDER and folder_name:
+            return lambda: self.manager.search_folders(
+                folder_name, location, action_id, command_id
             )
-        if result is None:
+        if command.intent is IntentType.DELETE_FOLDER:
+            return lambda: self._unreachable(action, command)
+        return None
+
+    def _preview_paths(
+        self, intent: IntentType, values: dict[str, JsonValue]
+    ) -> tuple[Path | None, Path | None]:
+        try:
+            location = self._string(values, "location")
+            if intent is IntentType.CREATE_FOLDER:
+                name = self._string(values, "folder_name")
+                if name:
+                    return None, self.manager._resolve(location, name).path
+            if intent in {
+                IntentType.OPEN_FOLDER,
+                IntentType.LIST_FOLDER,
+                IntentType.CHECK_FOLDER_EXISTENCE,
+                IntentType.GET_FOLDER_INFORMATION,
+            }:
+                name = self._string(values, "folder_name")
+                return self.manager._resolve(location, name, allow_root=True).path, None
+            if intent is IntentType.RENAME_FOLDER:
+                name = self._string(values, "source_folder")
+                new_name = self._string(values, "new_name")
+                if name and new_name:
+                    source = self.manager._resolve(location, name).path
+                    destination = self.manager._resolve(
+                        location, str(Path(name).with_name(new_name))
+                    ).path
+                    return source, destination
+            if intent in {IntentType.COPY_FOLDER, IntentType.MOVE_FOLDER}:
+                name = self._string(values, "source_folder")
+                target_location = self._string(values, "destination")
+                if name and target_location:
+                    source = self.manager._resolve(
+                        self._string(values, "source_location"), name
+                    ).path
+                    destination = self.manager._resolve(
+                        target_location, source.name
+                    ).path
+                    return source, destination
+        except (FolderManagementError, OSError, ValueError):
+            return None, None
+        return None, None
+
+    def _confirmation(
+        self,
+        intent: IntentType,
+        values: dict[str, JsonValue],
+        source: Path | None,
+        destination: Path | None,
+    ) -> ConfirmationSpec | None:
+        if (
+            intent is not IntentType.MOVE_FOLDER
+            or source is None
+            or destination is None
+        ):
             return None
-        return FolderDispatchResult(command, action, result)
+        source_location = self._display(
+            self._string(values, "source_location")
+            or self.manager.settings.default_location
+        )
+        destination_location = self._display(self._string(values, "destination"))
+        exact = (
+            f"confirm move folder {source.name} from {source_location} "
+            f"to {destination_location}"
+        )
+        return ConfirmationSpec(
+            source.name,
+            f"Moving the {source.name} folder will remove it from "
+            f'{source_location}. Type "{exact}" to continue.',
+            exact,
+            f"cancel move folder {source.name} from {source_location} "
+            f"to {destination_location}",
+        )
+
+    def _fingerprint(
+        self, intent: IntentType, source: Path | None, destination: Path | None
+    ) -> ResourceFingerprint | None:
+        if intent is not IntentType.MOVE_FOLDER:
+            return None
+        items = [
+            SafeExecutionGateway.fingerprint_path(path)
+            for path in (source, destination)
+            if path is not None
+        ]
+        if not items:
+            return None
+        digest = hashlib.sha256(repr(items).encode("utf-8")).hexdigest()
+        return ResourceFingerprint(
+            "folder_operation", digest, True, item_count=len(items)
+        )
 
     @staticmethod
     def _values(command: UserCommand) -> dict[str, JsonValue]:
@@ -165,42 +317,25 @@ class FolderActionDispatcher:
         return value if isinstance(value, str) else None
 
     @staticmethod
-    def _action(command: UserCommand, risk: RiskLevel, *, denied: bool) -> Action:
+    def _display(value: str | None) -> str:
+        return (value or "Desktop").replace("_", " ").title()
+
+    @staticmethod
+    def _action(command: UserCommand) -> Action:
         return Action(
             command_id=command.command_id,
             intent=command.intent,
             parameters={
-                entity.name: entity.value
-                for entity in command.entities
-                if entity.name is not None
+                entity.name: entity.value for entity in command.entities if entity.name
             },
-            risk_level=risk,
-            status=ActionStatus.REJECTED if denied else ActionStatus.PENDING,
-            permission_decision=(
-                PermissionDecision.DENY if denied else PermissionDecision.ALLOW
-            ),
+            risk_level=_RISK[command.intent],
+            permission_decision=PermissionDecision.ALLOW,
             confirmation_status=ConfirmationStatus.NOT_REQUIRED,
             requires_confirmation=False,
         )
 
     @staticmethod
-    def _delete_deferred(command: UserCommand, action: Action) -> ActionResult:
-        message = (
-            "Safe folder deletion will be added with Recycle Bin and undo support "
-            "in Phase 8."
-        )
-        error = OmegaErrorDetails(
-            code="FOLDER_DELETION_DEFERRED",
-            category=ErrorCategory.SAFETY,
-            message="Permanent folder deletion is disabled in Phase 6.",
-            user_message=message,
-            recoverable=False,
-            action_id=action.action_id,
-            command_id=command.command_id,
-        )
-        return ActionResult.failure_result(
-            action.action_id,
-            "Permanent folder deletion is disabled.",
-            message,
-            error,
+    def _unreachable(action: Action, command: UserCommand) -> ActionResult:
+        raise RuntimeError(
+            f"Denied deletion reached executor {action.action_id} {command.command_id}."
         )

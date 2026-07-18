@@ -40,6 +40,11 @@ class StubManager:
     ) -> ActionResult:
         return self._result("close", application_id, action_id, command_id)
 
+    def close_application(
+        self, application_id: str, action_id: UUID, command_id: UUID | None = None
+    ) -> ActionResult:
+        return self._result("close", application_id, action_id, command_id)
+
     def confirm_close_application(
         self, application_id: str, action_id: UUID, command_id: UUID | None = None
     ) -> ActionResult:
@@ -102,7 +107,7 @@ def test_dispatches_open_status_and_close_with_preserved_ids_and_risk() -> None:
 
     assert opened.action.risk_level is RiskLevel.LOW  # type: ignore[union-attr]
     assert status.command.intent is IntentType.CHECK_APPLICATION_STATUS  # type: ignore[union-attr]
-    assert closed.action.risk_level is RiskLevel.MEDIUM  # type: ignore[union-attr]
+    assert closed.action.risk_level is RiskLevel.HIGH  # type: ignore[union-attr]
     assert closed.action.requires_confirmation is True  # type: ignore[union-attr]
     assert manager.calls[0][2] == opened.action.action_id  # type: ignore[union-attr]
     assert manager.calls[0][3] == opened.command.command_id  # type: ignore[union-attr]
@@ -122,22 +127,20 @@ def test_incomplete_or_non_application_commands_do_not_dispatch() -> None:
 def test_control_commands_are_exact_scoped_and_canonical() -> None:
     dispatcher, manager = _dispatcher()
 
-    confirmed = dispatcher.dispatch_control("  CONFIRM CLOSE Google Chrome  ")
+    requested = dispatcher.dispatch(CommandParser().parse("Close Chrome"))
+    confirmed = dispatcher.dispatch_control("  CONFIRM CLOSE Chrome  ")
     cancelled = dispatcher.dispatch_control("cancel close chrome")
     forced = dispatcher.dispatch_control("force close chrome")
 
-    assert confirmed.command.entities[0].value == "chrome"  # type: ignore[union-attr]
+    assert requested is not None and not requested.result.success
+    assert confirmed is not None and confirmed.result.success
     assert confirmed.command.original_text.startswith("  CONFIRM")  # type: ignore[union-attr]
-    assert cancelled is not None
-    assert forced.action.risk_level is RiskLevel.HIGH  # type: ignore[union-attr]
-    assert [call[0] for call in manager.calls] == [
-        "confirm_close",
-        "cancel_close",
-        "force_close",
-    ]
-    assert dispatcher.dispatch_control("yes") is None
-    assert dispatcher.dispatch_control("confirm close unknown") is None
-    assert dispatcher.dispatch_control("confirm close chrome please") is None
+    assert cancelled is not None and not cancelled.result.success
+    assert forced is None
+    assert [call[0] for call in manager.calls] == ["close"]
+    assert dispatcher.dispatch_control("yes") is not None
+    assert dispatcher.dispatch_control("confirm close unknown") is not None
+    assert dispatcher.dispatch_control("confirm close chrome please") is not None
 
 
 def test_dispatcher_clears_session_confirmations() -> None:

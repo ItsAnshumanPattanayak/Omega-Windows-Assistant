@@ -3,13 +3,17 @@
   "protected_locations": [
     "C:\\Windows",
     "C:\\Windows\\System32",
+    "C:\\Windows\\SysWOW64",
     "C:\\Program Files",
     "C:\\Program Files (x86)",
     "C:\\ProgramData",
     "C:\\Boot",
+    "C:\\EFI",
     "C:\\Recovery",
     "C:\\System Volume Information",
-    "C:\\$Recycle.Bin"
+    "C:\\$Recycle.Bin",
+    "C:\\pagefile.sys",
+    "C:\\hiberfil.sys"
   ],
   "protected_project_paths": [
     ".git",
@@ -21,5 +25,18 @@
     "dist",
     ".venv",
     "venv"
+  ],
+  "protected_processes": [
+    "System",
+    "Registry",
+    "smss.exe",
+    "csrss.exe",
+    "wininit.exe",
+    "services.exe",
+    "lsass.exe",
+    "svchost.exe",
+    "winlogon.exe",
+    "dwm.exe",
+    "explorer.exe"
   ]
 }

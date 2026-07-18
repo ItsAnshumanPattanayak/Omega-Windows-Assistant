@@ -55,3 +55,36 @@ Phase 0 enforces the initial configuration flags and deliberately contains no co
 - `DELETE_FOLDER` performs no deletion in Phase 6. Recycle Bin and undo support remain deferred to Phase 8.
 - Copy failure cleanup is internal and limited to the private temporary tree created for that operation inside its validated destination parent. It is not callable as a user deletion operation and cannot target an existing destination.
 - Automated folder tests use injected pytest temporary logical roots. The opt-in Windows workflow also uses isolated temporary roots and never touches real personal folders. Folder opening is mocked in automated tests.
+
+## Phase 7 centralized enforcement
+
+### Risk and decision rules
+
+- **Low:** observational or safely reversible operations such as status, bounded reads, existence, metadata, and approved searches.
+- **Medium:** recoverable state changes such as registered application open, create, append, rename, and non-conflicting copy.
+- **High:** operations that may lose or remove user state, including application close, non-empty content replacement, file move, and same-volume folder move. These require exact scoped confirmation.
+- **Critical:** permanent deletion, protected-resource access, arbitrary shell/script execution, critical-process termination, administrator operations, Registry/security modification, disk operations, or unknown executable actions. These are denied.
+
+Final decisions use strict precedence: `DENY` over `REQUIRE_CONFIRMATION` over `ALLOW`. Policies run in explicit priority order and record stable identifiers. If no allow policy applies, Omega denies the operation. Parser confidence, polite wording, claims that an operation is safe, and user-supplied risk labels never grant permission.
+
+### Hard boundaries and protected resources
+
+Configuration can make a safe capability stricter, but cannot enable permanent deletion, arbitrary shell or PowerShell/Command Prompt execution, user-provided executable paths/PIDs/scripts, protected Windows path modification, administrator elevation, Registry/security changes, critical process termination, destination replacement, folder merge, or destructive cross-volume moves. Malformed configuration prevents execution.
+
+Protection is based on canonical resolved location rather than folder name alone. Windows, System32, SysWOW64, Program Files, ProgramData, boot/EFI/recovery data, system-volume and Recycle Bin internals, page/hibernation files, Omega `.git`, configuration, logs, backups, command history, build outputs, virtual environments, and package metadata are protected. Source and destination are both checked. Absolute, UNC, device, drive-root, alternate-stream, environment-expanded, tilde-expanded, traversal, symbolic-link, and junction paths fail closed.
+
+System, Registry, `smss.exe`, `csrss.exe`, `wininit.exe`, `services.exe`, `lsass.exe`, `svchost.exe`, `winlogon.exe`, `dwm.exe`, and `explorer.exe` are protected processes. File Explorer, Settings, Task Manager, Command Prompt, and PowerShell cannot be closed. Registered Command Prompt and PowerShell may be opened without user arguments, but Omega never passes a command to them.
+
+### Exact confirmation and replay protection
+
+Only one destructive confirmation may be pending per active session. Exact commands name the action and target; generic `yes`, partial or different targets, extra hidden text, repeating the original command, and a different session do not approve anything. Requests expire after 30 seconds by default and cancel after three invalid attempts. Cancellation, timeout, shutdown, Ctrl+C, EOF, termination, and restart clear private pending state. Confirmation IDs use `secrets`, are never persisted, and are not written to normal logs.
+
+The manager consumes approval before dispatch. Replaying a consumed command cannot execute again. Immediately before dispatch, Omega reruns central policy and compares the file, folder, destination, or process fingerprint captured during the request. Changed content or metadata, destination occupation, source disappearance, a new link/junction, folder content changes, or process identity changes cancel the action.
+
+### Fail-closed errors, audit privacy, and testing
+
+Expected denial, mismatch, cancellation, and expiry return structured safe results rather than uncaught exceptions. Unexpected policy, revalidation, or manager failures prevent execution and return a generic user-safe message. Diagnostic logging never includes private command content, file contents, pending replacement text, secrets, environment values, confirmation tokens, process command lines, or private absolute paths.
+
+Process-local `SafetyAuditRecord` values include stable event, command/action/session IDs, intent, risk, decision, reason code, policy IDs, confirmation status, UTC time, and a logical target description. They contain no stack trace or private payload. Persistent audit history is deferred to Phase 9.
+
+Security tests use injected clocks, mock process services, pytest temporary logical roots, and disposable resources. They cover command injection, traversal, protected resources, unsafe extensions, configuration tampering, confirmation bypass/expiry/replay, resource change, duplicate execution, and manager exceptions. Windows safety integration remains explicit opt-in and never tests force close, permanent deletion, administrator access, scripts, or real protected paths.

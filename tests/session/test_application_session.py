@@ -38,6 +38,12 @@ class SessionManagerStub:
             'Type "confirm close Chrome" to continue.',
         )
 
+    def close_application(
+        self, _application_id: str, action_id: UUID, _command_id: UUID | None = None
+    ) -> ActionResult:
+        self.calls.append("confirm")
+        return self._success(action_id, "Google Chrome has been closed.")
+
     def confirm_close_application(
         self, _application_id: str, action_id: UUID, _command_id: UUID | None = None
     ) -> ActionResult:
@@ -112,7 +118,7 @@ def test_inactive_session_never_dispatches_and_active_workflow_uses_results() ->
     assert (
         session.handle_input("confirm close Chrome") == "Google Chrome has been closed."
     )
-    assert manager.calls == ["open", "status", "close", "confirm"]
+    assert manager.calls == ["open", "status", "confirm"]
     assert [command.original_text for command in session.history] == [
         "Open Chrome",
         "Is Chrome running?",
@@ -131,7 +137,7 @@ def test_shutdown_has_priority_and_clears_confirmation_state() -> None:
 
     assert response.startswith("Shutting down")
     assert session.state is SessionState.TERMINATED
-    assert manager.calls == ["close"]
+    assert manager.calls == []
     assert manager.cleared == 1
 
 

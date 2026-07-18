@@ -111,3 +111,39 @@ class FolderSearchError(FolderManagementError):
 
 class FolderOpenError(FolderManagementError):
     """Raised when a validated directory cannot be opened safely."""
+
+
+class SafetyError(OmegaError):
+    """Base exception for central safety-boundary failures."""
+
+
+class RiskClassificationError(SafetyError):
+    """Raised when a risk cannot be classified deterministically."""
+
+
+class PolicyConfigurationError(SafetyError):
+    """Raised when permission configuration cannot fail closed safely."""
+
+
+class PermissionEvaluationError(SafetyError):
+    """Raised when typed policy evaluation cannot complete."""
+
+
+class ProtectedResourceError(SafetyError):
+    """Raised for invalid protected-resource configuration."""
+
+
+class ConfirmationError(SafetyError):
+    """Base exception for invalid central confirmation state."""
+
+
+class ConfirmationExpiredError(ConfirmationError):
+    """Raised when a pending confirmation has expired."""
+
+
+class ConfirmationMismatchError(ConfirmationError):
+    """Raised when a control phrase does not match its pending action."""
+
+
+class ExecutionGatewayError(SafetyError):
+    """Raised when the central execution gateway cannot fail safely."""
