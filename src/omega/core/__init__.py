@@ -3,6 +3,7 @@
 from omega.core.exceptions import (
     ConfigurationError,
     InitializationError,
+    ModelValidationError,
     OmegaError,
     UnsupportedPlatformError,
 )
@@ -10,6 +11,7 @@ from omega.core.exceptions import (
 __all__ = [
     "ConfigurationError",
     "InitializationError",
+    "ModelValidationError",
     "OmegaError",
     "UnsupportedPlatformError",
 ]

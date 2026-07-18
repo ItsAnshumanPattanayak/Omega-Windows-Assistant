@@ -1,12 +1,12 @@
 # Omega
 
-Omega is a safety-first Windows desktop assistant project. This repository currently contains **Phase 0: Project Foundation and Environment Setup** only.
+Omega is a safety-first Windows desktop assistant project. **Phase 1: Core Command Models** is complete after approval.
 
 ## Current status
 
 The long-term vision is a locally controlled assistant that can understand approved Windows tasks while enforcing clear safety boundaries. Its planned activation phrase is `Hello Omega`; a future active session will use `Shut down Omega` to terminate safely. Once activated in a future phase, Omega is planned to greet Anshuman based on the current time and accept normal commands without repeating its name.
 
-Phase 0 provides a professional Python package layout, configuration loading, structured logging, custom exceptions, safe setup guidance, documentation, and tests. It does **not** listen to a microphone, detect wake words, greet users, execute commands, open or close applications, manage files, call AI services, or display a GUI.
+Phase 0 provides a professional Python package layout, configuration loading, structured logging, custom exceptions, safe setup guidance, documentation, and tests. Phase 1 adds typed, serializable models for commands, entities, action proposals, risk, permission decisions, confirmation states, results, and error records. Omega still cannot detect wake phrases, execute commands, automate Windows, manage files, call AI services, or display a GUI.
 
 ## Technology
 

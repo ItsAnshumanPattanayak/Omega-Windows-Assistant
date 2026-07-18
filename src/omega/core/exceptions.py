@@ -15,3 +15,7 @@ class InitializationError(OmegaError):
 
 class UnsupportedPlatformError(OmegaError):
     """Raised when the current runtime does not meet Omega requirements."""
+
+
+class ModelValidationError(OmegaError):
+    """Raised when a typed Omega model contains an invalid state or value."""
