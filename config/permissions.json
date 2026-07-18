@@ -1,0 +1,9 @@
+{
+  "description": "Foundation safety permissions. Future command executors must consult these settings.",
+  "permissions": {
+    "administrator_operations": false,
+    "arbitrary_shell_commands": false,
+    "permanent_deletion": false,
+    "require_confirmation_for_destructive_actions": true
+  }
+}

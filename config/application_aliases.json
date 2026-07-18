@@ -1,0 +1,7 @@
+{
+  "description": "Starter aliases for future Windows application resolution. No application control is implemented in Phase 0.",
+  "applications": {
+    "browser": ["browser", "web browser"],
+    "text_editor": ["text editor", "editor"]
+  }
+}

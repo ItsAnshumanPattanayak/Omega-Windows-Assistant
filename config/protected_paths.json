@@ -1,0 +1,9 @@
+{
+  "description": "Protected Windows locations for future safety checks. Entries use environment-neutral path names, not user-specific paths.",
+  "protected_locations": [
+    "C:\\Windows",
+    "C:\\Program Files",
+    "C:\\Program Files (x86)",
+    "C:\\ProgramData"
+  ]
+}

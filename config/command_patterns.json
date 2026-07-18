@@ -1,0 +1,8 @@
+{
+  "description": "Starter patterns for a future rule-based command interpreter. They are not executed or parsed in Phase 0.",
+  "patterns": {
+    "open_application": [],
+    "close_application": [],
+    "create_folder": []
+  }
+}

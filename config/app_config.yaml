@@ -1,0 +1,24 @@
+application:
+  name: Omega
+  version: 0.1.0
+  environment: development
+
+user:
+  display_name: Anshuman
+
+assistant:
+  activation_phrase: Hello Omega
+  shutdown_phrase: Shut down Omega
+  active_session_timeout_seconds: 300
+
+logging:
+  level: INFO
+  console_enabled: true
+  file_enabled: true
+  max_file_size_mb: 5
+  backup_count: 3
+
+safety:
+  allow_administrator_operations: false
+  allow_arbitrary_shell_commands: false
+  permanent_deletion_enabled: false
