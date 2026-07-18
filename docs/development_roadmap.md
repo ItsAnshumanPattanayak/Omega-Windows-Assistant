@@ -5,8 +5,8 @@ The approved roadmap is intentionally incremental. Each phase should be designed
 1. **Phase 0 — Project Foundation and Environment Setup — Completed:** package structure, configuration, logging, documentation, and tests.
 2. **Phase 1 — Core Command Models — Completed:** typed, serializable command, action, safety, result, and error records.
 3. **Phase 2 — Text Command Interface — Completed:** text sessions, greetings, command capture, timeout, and safe shutdown.
-4. **Phase 3 — Rule-Based Command Understanding — Next:** recognize a limited, testable set of text commands.
-5. **Phase 4 — Windows Application Manager:** safely resolve and manage approved applications.
+4. **Phase 3 — Rule-Based Command Understanding — Completed:** deterministic normalization, intents, entities, aliases, and clarification.
+5. **Phase 4 — Windows Application Manager — Next:** safely resolve and manage approved applications.
 6. **Phase 5 — File Management System:** add constrained, permission-aware file operations.
 7. **Phase 6 — Folder Management System:** add constrained folder operations.
 8. **Phase 7 — Safety, Permissions, and Confirmations:** enforce approval flows and policy decisions.

@@ -1,12 +1,12 @@
 # Omega
 
-Omega is a safety-first Windows desktop assistant project. **Phase 2: Text Command Interface** is complete after approval.
+Omega is a safety-first Windows desktop assistant project. **Phase 3: Rule-Based Command Understanding** is complete after approval.
 
 ## Current status
 
 The long-term vision is a locally controlled assistant that can understand approved Windows tasks while enforcing clear safety boundaries. Its planned activation phrase is `Hello Omega`; a future active session will use `Shut down Omega` to terminate safely. Once activated in a future phase, Omega is planned to greet Anshuman based on the current time and accept normal commands without repeating its name.
 
-Phase 2 adds text-based activation, time-based personalized greetings, active/inactive sessions, in-memory command capture and history, timeout, and safe shutdown. Omega still cannot open applications, create files or folders, process voice commands, or execute Windows automation.
+Phase 3 adds deterministic normalization, rule-based intent recognition, configured application aliases, file/folder/location extraction, confidence scoring, missing-parameter clarification, ambiguity handling, single-action enforcement, and structured parsed history. Omega still cannot open or close applications, create or delete files or folders, execute Windows commands, process voice input, or use local AI.
 
 ## Technology
 

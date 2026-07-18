@@ -18,7 +18,7 @@ def test_terminal_lifecycle_and_eof() -> None:
     )
     assert terminal.run() == 0
     assert messages[0] == "Omega is ready."
-    assert any("received your command" in message for message in messages)
+    assert any("understood" in message for message in messages)
 
 
 def test_terminal_handles_eof() -> None:

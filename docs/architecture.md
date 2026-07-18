@@ -39,6 +39,32 @@ Process starts → Omega inactive → “Hello Omega” → time-based greeting 
 → commands captured as UserCommand models → “Shut down Omega” → safe termination
 ```
 
+## Deterministic understanding pipeline
+
+```text
+Active-session text input
+  ↓
+Command normalization
+  ↓
+Built-in command priority check
+  ↓
+Single-action validation
+  ↓
+Rule-based intent detection
+  ↓
+Entity extraction
+  ↓
+Confidence and completeness checks
+  ↓
+CommandParseResult
+  ↓
+Safe user response
+```
+
+Phase 3 uses explicitly ordered, typed regular-expression rules because deterministic behavior is auditable and fails closed. `ApplicationAliasRegistry` safely loads stable canonical names from JSON, rejects duplicate aliases, and resolves only whole-word matches. Missing parameters and ambiguous targets are represented in `CommandParseResult` and produce clarification without retaining conversational execution state. Unsupported and dangerous text remains `UNKNOWN`.
+
+The parser only mutates the in-memory `UserCommand` representation; it imports no shell, subprocess, filesystem mutation, or Windows automation APIs. Phase 4 may consume recognized application commands through a separately reviewed executor boundary, but Phase 3 cannot launch anything.
+
 ## Planned layers
 
 The following components are planned, not implemented:

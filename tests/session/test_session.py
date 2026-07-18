@@ -26,10 +26,11 @@ def test_activation_command_history_and_shutdown() -> None:
     assert session.handle_input("  HELLO OMEGA ").startswith("Good morning, Anshuman")
     assert session.state is SessionState.ACTIVE
     assert "already active" in session.handle_input("hello omega")
-    assert "received" in session.handle_input("Open Chrome")
+    assert "understood" in session.handle_input("Open Chrome")
     command = session.history[0]
     assert command.original_text == "Open Chrome"
-    assert command.source is CommandSource.TEXT and command.intent is IntentType.UNKNOWN
+    assert command.source is CommandSource.TEXT
+    assert command.intent is IntentType.OPEN_APPLICATION
     assert "Open Chrome" in session.handle_input("show history")
     assert session.handle_input("shut down omega").startswith("Shutting down")
     assert session.state is SessionState.TERMINATED

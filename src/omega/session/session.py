@@ -10,9 +10,11 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from omega.core.exceptions import InvalidSessionTransitionError, ModelValidationError
-from omega.models import CommandSource, IntentType, UserCommand
+from omega.models import UserCommand
 from omega.session.greeting import greeting_for
 from omega.session.state import SessionState
+from omega.understanding.parser import CommandParser
+from omega.understanding.responses import format_parse_response
 
 _ALLOWED_TRANSITIONS = {
     SessionState.INACTIVE: {SessionState.ACTIVE, SessionState.TERMINATED},
@@ -37,6 +39,7 @@ class OmegaSession:
         monotonic_clock: Callable[[], float] = monotonic,
         now_provider: Callable[[], datetime] = datetime.now,
         logger: logging.Logger | None = None,
+        parser: CommandParser | None = None,
     ) -> None:
         self.display_name = self._required_text(user_settings, "display_name")
         self.activation_phrase = self._required_text(
@@ -49,6 +52,7 @@ class OmegaSession:
         self._clock = monotonic_clock
         self._now_provider = now_provider
         self._logger = logger or logging.getLogger("omega.session")
+        self._parser = parser or CommandParser()
         self.state = SessionState.INACTIVE
         self.session_id: UUID | None = None
         self.activated_at: float | None = None
@@ -183,17 +187,10 @@ class OmegaSession:
                     "\n".join(command.original_text for command in self._history)
                     or "No commands received yet."
                 )
-            command = UserCommand(
-                original_text=text,
-                source=CommandSource.TEXT,
-                intent=IntentType.UNKNOWN,
-                session_id=self.session_id,
-            )
-            self._history.append(command)
+            result = self._parser.parse(text, self.session_id)
+            self._history.append(result.command)
             self.last_activity_at = self._clock()
-            return (
-                "I received your command, but command execution is not available yet."
-            )
+            return format_parse_response(result)
         raise InvalidSessionTransitionError(
             "Session cannot accept input while shutting down."
         )

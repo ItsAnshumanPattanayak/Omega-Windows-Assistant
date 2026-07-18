@@ -1,7 +1,15 @@
 {
-  "description": "Starter aliases for future Windows application resolution. No application control is implemented in Phase 0.",
+  "description": "Canonical Windows application names and deterministic text aliases. Phase 3 resolves names only and never launches applications.",
   "applications": {
-    "browser": ["browser", "web browser"],
-    "text_editor": ["text editor", "editor"]
+    "chrome": ["chrome", "google chrome"],
+    "edge": ["edge", "microsoft edge"],
+    "notepad": ["notepad", "text editor"],
+    "calculator": ["calculator", "calc"],
+    "file_explorer": ["file explorer", "windows explorer", "explorer"],
+    "paint": ["paint", "microsoft paint"],
+    "settings": ["settings", "windows settings"],
+    "task_manager": ["task manager"],
+    "command_prompt": ["command prompt", "cmd"],
+    "powershell": ["powershell", "power shell"]
   }
 }
