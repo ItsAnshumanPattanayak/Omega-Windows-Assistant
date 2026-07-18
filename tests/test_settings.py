@@ -16,6 +16,7 @@ user: {}
 assistant: {}
 logging: {}
 safety: {}
+applications: {}
 """
 
 
@@ -29,6 +30,7 @@ def test_load_settings_applies_sensible_defaults() -> None:
         assert settings.application_name == "Omega"
         assert settings.assistant["activation_phrase"] == "Hello Omega"
         assert settings.logging["file_enabled"] is True
+        assert settings.applications["allow_force_close"] is False
 
 
 def test_missing_required_section_raises_configuration_error() -> None:

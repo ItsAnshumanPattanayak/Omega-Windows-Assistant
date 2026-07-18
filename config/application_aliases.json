@@ -1,15 +1,142 @@
 {
-  "description": "Canonical Windows application names and deterministic text aliases. Phase 3 resolves names only and never launches applications.",
+  "description": "Canonical allowlisted Windows application definitions shared by command understanding and controlled execution.",
   "applications": {
-    "chrome": ["chrome", "google chrome"],
-    "edge": ["edge", "microsoft edge"],
-    "notepad": ["notepad", "text editor"],
-    "calculator": ["calculator", "calc"],
-    "file_explorer": ["file explorer", "windows explorer", "explorer"],
-    "paint": ["paint", "microsoft paint"],
-    "settings": ["settings", "windows settings"],
-    "task_manager": ["task manager"],
-    "command_prompt": ["command prompt", "cmd"],
-    "powershell": ["powershell", "power shell"]
+    "chrome": {
+      "display_name": "Google Chrome",
+      "aliases": ["chrome", "google chrome"],
+      "executable_names": ["chrome.exe"],
+      "candidate_paths": [
+        "%ProgramFiles%\\Google\\Chrome\\Application\\chrome.exe",
+        "%ProgramFiles(x86)%\\Google\\Chrome\\Application\\chrome.exe",
+        "%LOCALAPPDATA%\\Google\\Chrome\\Application\\chrome.exe"
+      ],
+      "process_names": ["chrome.exe"],
+      "validate_process_path": true,
+      "allow_multiple_instances": false,
+      "supports_graceful_close": true,
+      "requires_close_confirmation": true,
+      "allow_force_close": false,
+      "enabled": true
+    },
+    "edge": {
+      "display_name": "Microsoft Edge",
+      "aliases": ["edge", "microsoft edge"],
+      "executable_names": ["msedge.exe"],
+      "candidate_paths": [
+        "%ProgramFiles(x86)%\\Microsoft\\Edge\\Application\\msedge.exe",
+        "%ProgramFiles%\\Microsoft\\Edge\\Application\\msedge.exe"
+      ],
+      "process_names": ["msedge.exe"],
+      "validate_process_path": true,
+      "allow_multiple_instances": false,
+      "supports_graceful_close": true,
+      "requires_close_confirmation": true,
+      "allow_force_close": false,
+      "enabled": true
+    },
+    "notepad": {
+      "display_name": "Notepad",
+      "aliases": ["notepad", "text editor"],
+      "executable_names": ["notepad.exe"],
+      "candidate_paths": [
+        "%WINDIR%\\System32\\notepad.exe",
+        "%WINDIR%\\notepad.exe"
+      ],
+      "process_names": ["notepad.exe"],
+      "allow_multiple_instances": true,
+      "supports_graceful_close": true,
+      "requires_close_confirmation": true,
+      "allow_force_close": false,
+      "enabled": true
+    },
+    "calculator": {
+      "display_name": "Calculator",
+      "aliases": ["calculator", "calc"],
+      "executable_names": [],
+      "candidate_paths": [],
+      "uri": "calculator:",
+      "process_names": ["CalculatorApp.exe", "Calculator.exe"],
+      "allow_multiple_instances": false,
+      "supports_graceful_close": true,
+      "requires_close_confirmation": false,
+      "allow_force_close": false,
+      "enabled": true
+    },
+    "file_explorer": {
+      "display_name": "File Explorer",
+      "aliases": ["file explorer", "windows explorer", "explorer"],
+      "executable_names": ["explorer.exe"],
+      "candidate_paths": ["%WINDIR%\\explorer.exe"],
+      "process_names": ["explorer.exe"],
+      "allow_multiple_instances": true,
+      "supports_graceful_close": false,
+      "requires_close_confirmation": true,
+      "allow_force_close": false,
+      "enabled": true
+    },
+    "paint": {
+      "display_name": "Paint",
+      "aliases": ["paint", "microsoft paint"],
+      "executable_names": ["mspaint.exe"],
+      "candidate_paths": ["%WINDIR%\\System32\\mspaint.exe"],
+      "process_names": ["mspaint.exe"],
+      "validate_process_path": true,
+      "allow_multiple_instances": true,
+      "supports_graceful_close": true,
+      "requires_close_confirmation": true,
+      "allow_force_close": false,
+      "enabled": true
+    },
+    "settings": {
+      "display_name": "Settings",
+      "aliases": ["settings", "windows settings"],
+      "executable_names": [],
+      "candidate_paths": [],
+      "uri": "ms-settings:",
+      "process_names": ["SystemSettings.exe"],
+      "allow_multiple_instances": false,
+      "supports_graceful_close": false,
+      "requires_close_confirmation": true,
+      "allow_force_close": false,
+      "enabled": true
+    },
+    "task_manager": {
+      "display_name": "Task Manager",
+      "aliases": ["task manager"],
+      "executable_names": ["Taskmgr.exe"],
+      "candidate_paths": ["%WINDIR%\\System32\\Taskmgr.exe"],
+      "process_names": ["Taskmgr.exe"],
+      "allow_multiple_instances": false,
+      "supports_graceful_close": false,
+      "requires_close_confirmation": true,
+      "allow_force_close": false,
+      "enabled": true
+    },
+    "command_prompt": {
+      "display_name": "Command Prompt",
+      "aliases": ["command prompt", "cmd"],
+      "executable_names": ["cmd.exe"],
+      "candidate_paths": ["%WINDIR%\\System32\\cmd.exe"],
+      "process_names": ["cmd.exe"],
+      "allow_multiple_instances": true,
+      "supports_graceful_close": false,
+      "requires_close_confirmation": true,
+      "allow_force_close": false,
+      "enabled": true
+    },
+    "powershell": {
+      "display_name": "PowerShell",
+      "aliases": ["powershell", "power shell"],
+      "executable_names": ["powershell.exe"],
+      "candidate_paths": [
+        "%WINDIR%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+      ],
+      "process_names": ["powershell.exe"],
+      "allow_multiple_instances": true,
+      "supports_graceful_close": false,
+      "requires_close_confirmation": true,
+      "allow_force_close": false,
+      "enabled": true
+    }
   }
 }

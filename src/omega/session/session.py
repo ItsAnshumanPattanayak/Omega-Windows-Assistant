@@ -1,4 +1,4 @@
-"""Non-executing session manager for Omega's terminal interface."""
+"""Session manager for parsing and controlled application dispatch."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from omega.core.exceptions import InvalidSessionTransitionError, ModelValidationError
+from omega.execution.dispatcher import ApplicationActionDispatcher
 from omega.models import UserCommand
 from omega.session.greeting import greeting_for
 from omega.session.state import SessionState
@@ -29,7 +30,7 @@ _ALLOWED_TRANSITIONS = {
 
 
 class OmegaSession:
-    """Manage a text-only Omega session without parsing or executing commands."""
+    """Manage text lifecycle, history, parsing, and injected safe dispatch."""
 
     def __init__(
         self,
@@ -40,6 +41,7 @@ class OmegaSession:
         now_provider: Callable[[], datetime] = datetime.now,
         logger: logging.Logger | None = None,
         parser: CommandParser | None = None,
+        application_dispatcher: ApplicationActionDispatcher | None = None,
     ) -> None:
         self.display_name = self._required_text(user_settings, "display_name")
         self.activation_phrase = self._required_text(
@@ -53,6 +55,7 @@ class OmegaSession:
         self._now_provider = now_provider
         self._logger = logger or logging.getLogger("omega.session")
         self._parser = parser or CommandParser()
+        self._application_dispatcher = application_dispatcher
         self.state = SessionState.INACTIVE
         self.session_id: UUID | None = None
         self.activated_at: float | None = None
@@ -118,6 +121,8 @@ class OmegaSession:
 
     def shutdown(self) -> str:
         """Safely terminate this terminal session."""
+        if self._application_dispatcher is not None:
+            self._application_dispatcher.clear_pending_confirmations()
         if self.state is SessionState.INACTIVE:
             self.transition_to(SessionState.TERMINATED)
             self._logger.info("Omega terminated while inactive.")
@@ -134,6 +139,8 @@ class OmegaSession:
 
     def interrupt(self) -> str:
         """Terminate gracefully in response to Ctrl+C or EOF."""
+        if self._application_dispatcher is not None:
+            self._application_dispatcher.clear_pending_confirmations()
         if self.state is not SessionState.TERMINATED:
             if self.state is SessionState.ACTIVE:
                 self.transition_to(SessionState.TERMINATED)
@@ -151,6 +158,8 @@ class OmegaSession:
         if self._clock() - self.last_activity_at <= self.timeout_seconds:
             return None
         self.transition_to(SessionState.INACTIVE)
+        if self._application_dispatcher is not None:
+            self._application_dispatcher.clear_pending_confirmations()
         self.session_id = None
         self.activated_at = None
         self.last_activity_at = None
@@ -187,9 +196,21 @@ class OmegaSession:
                     "\n".join(command.original_text for command in self._history)
                     or "No commands received yet."
                 )
+            if self._application_dispatcher is not None:
+                controlled = self._application_dispatcher.dispatch_control(
+                    text, self.session_id
+                )
+                if controlled is not None:
+                    self._history.append(controlled.command)
+                    self.last_activity_at = self._clock()
+                    return controlled.user_message
             result = self._parser.parse(text, self.session_id)
             self._history.append(result.command)
             self.last_activity_at = self._clock()
+            if self._application_dispatcher is not None:
+                dispatched = self._application_dispatcher.dispatch(result)
+                if dispatched is not None:
+                    return dispatched.user_message
             return format_parse_response(result)
         raise InvalidSessionTransitionError(
             "Session cannot accept input while shutting down."

@@ -27,3 +27,11 @@ class SessionError(OmegaError):
 
 class InvalidSessionTransitionError(SessionError):
     """Raised when a session state transition is not permitted."""
+
+
+class ApplicationError(OmegaError):
+    """Base exception for invalid controlled-application behavior."""
+
+
+class ApplicationRegistryError(ApplicationError):
+    """Raised when the allowlisted application registry is invalid."""

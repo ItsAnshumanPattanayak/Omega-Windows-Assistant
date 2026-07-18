@@ -19,7 +19,9 @@ from omega.utils.constants import (
 )
 from omega.utils.paths import config_dir
 
-REQUIRED_SECTIONS = frozenset({"application", "user", "assistant", "logging", "safety"})
+REQUIRED_SECTIONS = frozenset(
+    {"application", "user", "assistant", "logging", "safety", "applications"}
+)
 
 
 @dataclass(frozen=True)
@@ -31,6 +33,7 @@ class Settings:
     assistant: Mapping[str, Any]
     logging: Mapping[str, Any]
     safety: Mapping[str, Any]
+    applications: Mapping[str, Any]
 
     @property
     def application_name(self) -> str:
@@ -67,6 +70,13 @@ def _defaults() -> dict[str, dict[str, Any]]:
             "allow_administrator_operations": False,
             "allow_arbitrary_shell_commands": False,
             "permanent_deletion_enabled": False,
+        },
+        "applications": {
+            "launch_verification_timeout_seconds": 5,
+            "graceful_close_timeout_seconds": 5,
+            "force_close_timeout_seconds": 3,
+            "confirmation_timeout_seconds": 30,
+            "allow_force_close": False,
         },
     }
 

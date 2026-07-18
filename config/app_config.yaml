@@ -22,3 +22,10 @@ safety:
   allow_administrator_operations: false
   allow_arbitrary_shell_commands: false
   permanent_deletion_enabled: false
+
+applications:
+  launch_verification_timeout_seconds: 5
+  graceful_close_timeout_seconds: 5
+  force_close_timeout_seconds: 3
+  confirmation_timeout_seconds: 30
+  allow_force_close: false

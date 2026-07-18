@@ -39,7 +39,7 @@ class ApplicationAliasRegistry:
 
     @classmethod
     def from_file(cls, path: Path | None = None) -> ApplicationAliasRegistry:
-        """Load and validate the project alias JSON file."""
+        """Load aliases from the canonical application-definition JSON file."""
         alias_path = path or config_dir() / "application_aliases.json"
         try:
             data: Any = json.loads(alias_path.read_text(encoding="utf-8"))
@@ -50,7 +50,18 @@ class ApplicationAliasRegistry:
             ) from error
         if not isinstance(applications, Mapping):
             raise ConfigurationError("Application aliases must be a JSON object.")
-        return cls(applications)
+        aliases: dict[str, Sequence[str]] = {}
+        for canonical, values in applications.items():
+            if isinstance(values, Mapping):
+                candidates = values.get("aliases")
+            else:
+                candidates = values
+            if not isinstance(canonical, str) or not isinstance(candidates, Sequence):
+                raise ConfigurationError(
+                    "Application definitions must contain an aliases list."
+                )
+            aliases[canonical] = candidates
+        return cls(aliases)
 
     def resolve(self, text: str) -> tuple[str, str] | None:
         """Return canonical and matched alias using strict word boundaries."""

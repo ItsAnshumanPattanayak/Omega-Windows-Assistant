@@ -1,17 +1,20 @@
 # Omega
 
-Omega is a safety-first Windows desktop assistant project. **Phase 3: Rule-Based Command Understanding** is complete after approval.
+Omega is a safety-first Windows desktop assistant project. **Current phase: Phase 4 — Controlled Windows Application Manager.**
 
 ## Current status
 
-The long-term vision is a locally controlled assistant that can understand approved Windows tasks while enforcing clear safety boundaries. Its planned activation phrase is `Hello Omega`; a future active session will use `Shut down Omega` to terminate safely. Once activated in a future phase, Omega is planned to greet Anshuman based on the current time and accept normal commands without repeating its name.
+Omega is a locally controlled assistant that understands narrowly approved Windows tasks while enforcing clear safety boundaries. It starts inactive, accepts `Hello Omega` as a standalone activation phrase, greets Anshuman based on the current time, accepts commands without repeating its name, and uses `Shut down Omega` for safe termination.
 
-Phase 3 adds deterministic normalization, rule-based intent recognition, configured application aliases, file/folder/location extraction, confidence scoring, missing-parameter clarification, ambiguity handling, single-action enforcement, and structured parsed history. Omega still cannot open or close applications, create or delete files or folders, execute Windows commands, process voice input, or use local AI.
+Phase 4 connects complete Phase 3 application intents to an allowlisted Windows application manager. An active text session can open registered applications, report their running status, close selected applications gracefully, and require an exact short-lived confirmation before data-loss-risk closes. Operations return the existing structured `ActionResult` records. Unknown, disabled, ambiguous, incomplete, or unregistered targets are never executed.
+
+Omega still cannot create or delete files or folders, execute arbitrary shell commands, install software, modify Windows settings, process voice input, provide a GUI, automate browser pages, or execute AI-generated actions.
 
 ## Technology
 
 - Python 3.11+
 - PyYAML for safe YAML configuration
+- psutil for controlled process inspection and termination
 - pytest, Ruff, Black, and mypy for quality checks
 
 ## Architecture
@@ -42,7 +45,24 @@ python -m omega
 omega
 ```
 
-The final command works after installing the package (for example, with `python -m pip install -e .`). All commands currently initialize Phase 0, report success, and exit.
+The final command works after installing the package (for example, with `python -m pip install -e .`). Omega starts inactive; say `Hello Omega` before entering an application command, and use `Shut down Omega` to exit safely.
+
+## Registered applications
+
+Availability depends on the applications installed on the current Windows computer. Status matching uses exact registered process names.
+
+| Application | Open | Status | Graceful close | Force close | Restrictions |
+|---|---:|---:|---:|---:|---|
+| Google Chrome | Yes | Yes | Confirmation | No | May contain tabs or unsaved form data |
+| Microsoft Edge | Yes | Yes | Confirmation | No | May contain tabs or unsaved form data |
+| Notepad | Yes | Yes | Confirmation | No | May contain unsaved text |
+| Calculator | Yes | Yes | Yes | No | Uses an allowlisted Windows URI |
+| File Explorer | Yes | Yes | No | No | Closing is blocked to protect the desktop shell |
+| Paint | Yes | Yes | Confirmation | No | May contain unsaved work |
+| Settings | Yes | Yes | No | No | Uses an allowlisted Windows URI; close is blocked |
+| Task Manager | Yes | Yes | No | No | Close is blocked |
+| Command Prompt | Yes | Yes | No | No | No user arguments; close is blocked |
+| PowerShell | Yes | Yes | No | No | No user arguments; close is blocked |
 
 ## Quality checks
 
@@ -56,7 +76,7 @@ python -m mypy src
 
 ## Safety principles
 
-Omega will never permit unrestricted user-provided shell execution, administrator operations by default, or permanent deletion by default. Future destructive actions will require confirmation and prefer the Recycle Bin. Logs must not contain sensitive information. Read the full [safety policy](docs/safety_policy.md).
+Omega never passes user text to a shell or executable argument list. Application IDs, paths, URIs, and exact process names come only from the validated project registry; launches use argument sequences with `shell=False`. Administrator operations and force close remain disabled by default. Logs must not contain sensitive information. Read the full [safety policy](docs/safety_policy.md).
 
 ## Roadmap
 

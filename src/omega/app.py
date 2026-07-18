@@ -1,4 +1,4 @@
-"""Minimal application bootstrap for the Omega Phase 0 foundation."""
+"""Application bootstrap for Omega's controlled text-session services."""
 
 from __future__ import annotations
 
@@ -6,8 +6,17 @@ import sys
 from collections.abc import Callable
 from pathlib import Path
 
+from omega.applications import (
+    ApplicationManager,
+    ApplicationOperationSettings,
+    ApplicationProcessService,
+    ApplicationRegistry,
+    WindowsApplicationDiscovery,
+    WindowsApplicationLauncher,
+)
 from omega.config.settings import Settings, load_settings
 from omega.core.exceptions import InitializationError, UnsupportedPlatformError
+from omega.execution import ApplicationActionDispatcher
 from omega.interfaces.terminal import TerminalInterface
 from omega.session.session import OmegaSession
 from omega.utils.constants import MINIMUM_PYTHON_VERSION
@@ -16,7 +25,7 @@ from omega.utils.paths import log_dir
 
 
 class OmegaApplication:
-    """Initialize Phase 0 without accepting or executing commands."""
+    """Initialize configuration, logging, and controlled application services."""
 
     def __init__(self, config_path: Path | None = None) -> None:
         self.settings: Settings = load_settings(config_path)
@@ -31,10 +40,22 @@ class OmegaApplication:
         )
         self._validate_python_version()
         self.logger = get_logger("app")
+        registry = ApplicationRegistry.from_file()
+        manager = ApplicationManager(
+            registry,
+            WindowsApplicationDiscovery(logger=get_logger("applications.discovery")),
+            WindowsApplicationLauncher(logger=get_logger("applications.launcher")),
+            ApplicationProcessService(logger=get_logger("applications.processes")),
+            settings=ApplicationOperationSettings.from_mapping(
+                self.settings.applications
+            ),
+            logger=get_logger("applications.manager"),
+        )
         self.session = OmegaSession(
             self.settings.user,
             self.settings.assistant,
             logger=get_logger("session"),
+            application_dispatcher=ApplicationActionDispatcher(manager, registry),
         )
         self.logger.info(
             "%s %s initialized in %s mode.",
@@ -57,7 +78,7 @@ class OmegaApplication:
         input_func: Callable[[str], str] = input,
         output_func: Callable[[str], None] = print,
     ) -> int:
-        """Run the Phase 2 terminal session without executing user commands."""
+        """Run the terminal session and return its process exit code."""
         try:
             self.logger.info("Omega project foundation initialized successfully.")
             return TerminalInterface(

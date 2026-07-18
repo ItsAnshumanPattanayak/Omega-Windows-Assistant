@@ -4,4 +4,5 @@ pytest-cov>=5.0,<7.0
 ruff>=0.6,<1.0
 black>=24.0,<26.0
 mypy>=1.10,<2.0
+types-psutil>=6.0,<8.0
 types-PyYAML>=6.0,<7.0
