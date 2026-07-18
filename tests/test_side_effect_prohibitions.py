@@ -2,7 +2,7 @@ import ast
 from pathlib import Path
 
 
-def test_application_execution_contains_no_unrestricted_execution_paths() -> None:
+def test_production_execution_contains_no_unrestricted_or_delete_paths() -> None:
     source_root = Path("src/omega")
     prohibited_text = (
         "taskkill",
@@ -24,6 +24,12 @@ def test_application_execution_contains_no_unrestricted_execution_paths() -> Non
                         and node.func.value.id == "os"
                         and node.func.attr == "system"
                     ), path
+                    assert not (
+                        isinstance(node.func.value, ast.Name)
+                        and node.func.value.id == "os"
+                        and node.func.attr in {"remove", "unlink"}
+                    ), path
+                    assert node.func.attr != "unlink", path
                 for keyword in node.keywords:
                     assert not (
                         keyword.arg == "shell"

@@ -5,9 +5,17 @@ from omega.execution.dispatcher import (
     ApplicationControlCommand,
     ApplicationDispatchResult,
 )
+from omega.execution.file_dispatcher import (
+    FileActionDispatcher,
+    FileControlCommand,
+    FileDispatchResult,
+)
 
 __all__ = [
     "ApplicationActionDispatcher",
     "ApplicationControlCommand",
     "ApplicationDispatchResult",
+    "FileActionDispatcher",
+    "FileControlCommand",
+    "FileDispatchResult",
 ]

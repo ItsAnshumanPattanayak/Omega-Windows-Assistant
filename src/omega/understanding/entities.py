@@ -1,4 +1,4 @@
-"""Deterministic extraction of Phase 1 command entities."""
+"""Deterministic extraction of canonical Phase 1 command entities."""
 
 from __future__ import annotations
 
@@ -14,89 +14,144 @@ EXTENSIONS = {
     "csv": ".csv",
     "python": ".py",
     "html": ".html",
+    "css": ".css",
+    "javascript": ".js",
+    "yaml": ".yaml",
 }
 LOCATIONS = {
     "desktop": "desktop",
+    "my desktop": "desktop",
     "documents": "documents",
+    "my documents": "documents",
     "downloads": "downloads",
+    "my downloads": "downloads",
     "pictures": "pictures",
+    "my pictures": "pictures",
     "music": "music",
+    "my music": "music",
     "videos": "videos",
+    "my videos": "videos",
     "home": "home",
+    "home folder": "home",
+    "user folder": "home",
     "current directory": "current_directory",
+    "current folder": "current_directory",
+    "project directory": "current_directory",
 }
+_LOCATION_EXPRESSION = (
+    r"my desktop|desktop|my documents|documents|my downloads|downloads|"
+    r"my pictures|pictures|my music|music|my videos|videos|home folder|"
+    r"user folder|home|current directory|current folder|project directory"
+)
 
 
 def _entity(entity_type: EntityType, name: str, value: str, raw: str) -> CommandEntity:
     return CommandEntity(entity_type, value, raw_value=raw, name=name, confidence=1.0)
 
 
+def _location_value(raw: str) -> str:
+    return LOCATIONS[" ".join(raw.casefold().split())]
+
+
 class RuleBasedEntityExtractor:
-    """Extract known applications, names, content, and logical locations."""
+    """Extract known applications and tightly scoped Phase 5 file values."""
 
     def __init__(self, aliases: ApplicationAliasRegistry) -> None:
         self.aliases = aliases
 
     def extract(self, original: str, intent: IntentType) -> list[CommandEntity]:
         entities: list[CommandEntity] = []
+        self._application(original, intent, entities)
+        self._file_type(original, entities)
+        if intent in {
+            IntentType.CREATE_FILE,
+            IntentType.READ_FILE,
+            IntentType.WRITE_FILE,
+            IntentType.APPEND_FILE,
+            IntentType.OPEN_FILE,
+            IntentType.DELETE_FILE,
+            IntentType.SEARCH_FILE,
+            IntentType.CHECK_FILE_EXISTENCE,
+            IntentType.GET_FILE_INFORMATION,
+        }:
+            self._single_file(original, intent, entities)
+        elif intent is IntentType.RENAME_FILE:
+            self._rename(original, entities)
+        elif intent in {IntentType.COPY_FILE, IntentType.MOVE_FILE}:
+            self._transfer(original, entities)
+        elif intent is IntentType.CREATE_FOLDER:
+            self._folder(original, entities)
+        return entities
+
+    def _application(
+        self, original: str, intent: IntentType, entities: list[CommandEntity]
+    ) -> None:
         alias = self.aliases.resolve(original)
-        if alias and intent in {
+        if alias is None or intent not in {
             IntentType.OPEN_APPLICATION,
             IntentType.CLOSE_APPLICATION,
             IntentType.CHECK_APPLICATION_STATUS,
         }:
-            canonical, matched = alias
-            raw = re.search(re.escape(matched), original, re.IGNORECASE)
-            entities.append(
-                _entity(
-                    EntityType.APPLICATION,
-                    "application_name",
-                    canonical,
-                    raw.group(0) if raw else matched,
-                )
+            return
+        canonical, matched = alias
+        raw = re.search(re.escape(matched), original, re.IGNORECASE)
+        entities.append(
+            _entity(
+                EntityType.APPLICATION,
+                "application_name",
+                canonical,
+                raw.group(0) if raw else matched,
             )
-
-        type_match = re.search(
-            r"\b(text|markdown|json|csv|python|html) file\b", original, re.IGNORECASE
         )
-        if type_match:
+
+    @staticmethod
+    def _file_type(original: str, entities: list[CommandEntity]) -> None:
+        match = re.search(
+            r"\b(text|markdown|json|csv|python|html|css|javascript|yaml) file\b",
+            original,
+            re.IGNORECASE,
+        )
+        if match:
             entities.append(
                 _entity(
                     EntityType.FILE_EXTENSION,
                     "file_extension",
-                    EXTENSIONS[type_match.group(1).casefold()],
-                    type_match.group(0),
+                    EXTENSIONS[match.group(1).casefold()],
+                    match.group(0),
                 )
             )
 
+    def _single_file(
+        self, original: str, intent: IntentType, entities: list[CommandEntity]
+    ) -> None:
+        working = original.strip()
         location_match = re.search(
-            r"\b(Desktop|Documents|Downloads|Pictures|Music|Videos|Home|"
-            r"Current directory)\b",
-            original,
+            rf"\s+(?:on|in|from)\s+({_LOCATION_EXPRESSION})" r"(?:[\\/](.+))?$",
+            working,
             re.IGNORECASE,
         )
         if location_match:
             entities.append(
                 _entity(
                     EntityType.LOCATION,
-                    (
-                        "destination"
-                        if intent
-                        in {
-                            IntentType.MOVE_FILE,
-                            IntentType.MOVE_FOLDER,
-                            IntentType.COPY_FILE,
-                            IntentType.COPY_FOLDER,
-                        }
-                        else "location"
-                    ),
-                    LOCATIONS[location_match.group(1).casefold()],
-                    location_match.group(0),
+                    "location",
+                    _location_value(location_match.group(1)),
+                    location_match.group(1),
                 )
             )
+            if location_match.group(2):
+                entities.append(
+                    _entity(
+                        EntityType.PATH,
+                        "relative_subpath",
+                        location_match.group(2).strip(),
+                        location_match.group(2).strip(),
+                    )
+                )
+            working = working[: location_match.start()].rstrip()
 
-        quoted = re.search(r'(["\'])(.*?)\1', original)
-        if quoted and intent is IntentType.WRITE_FILE:
+        quoted = re.search(r'(["\'])(.*?)\1', working)
+        if quoted and intent in {IntentType.WRITE_FILE, IntentType.APPEND_FILE}:
             entities.append(
                 _entity(
                     EntityType.TEXT_CONTENT,
@@ -106,133 +161,160 @@ class RuleBasedEntityExtractor:
                 )
             )
 
-        self._extract_names(original, intent, entities)
-        return entities
+        if intent is IntentType.CREATE_FILE:
+            name = re.sub(r"^create\s+", "", working, flags=re.IGNORECASE)
+            name = re.sub(
+                r"^(?:a )?(?:(?:text|markdown|json|csv|python|html|"
+                r"css|javascript|yaml) )?"
+                r"file(?: named| called)?\s*",
+                "",
+                name,
+                flags=re.IGNORECASE,
+            ).strip()
+            if name:
+                self._file_name("file_name", name, entities)
+            return
 
-    def _extract_names(
-        self, original: str, intent: IntentType, entities: list[CommandEntity]
-    ) -> None:
-        if intent is IntentType.CREATE_FOLDER:
-            match = re.search(
-                r"(?:folder|directory)(?: named| called)?\s+(.+?)"
-                r"(?:\s+on\s+(?:Desktop|Documents|Downloads|Pictures|Music|"
-                r"Videos|Home))?$",
-                original,
+        if intent in {IntentType.WRITE_FILE, IntentType.APPEND_FILE}:
+            name_match = re.search(r"\b(?:into|to)\s+(.+)$", working, re.IGNORECASE)
+            if name_match:
+                self._file_name("file_name", name_match.group(1).strip(), entities)
+            return
+
+        prefixes = {
+            IntentType.READ_FILE: (
+                r"^(?:read(?: the file)?|show (?:the )?contents of)\s+"
+            ),
+            IntentType.OPEN_FILE: r"^open\s+",
+            IntentType.DELETE_FILE: r"^delete(?: the)?\s+",
+            IntentType.GET_FILE_INFORMATION: (
+                r"^(?:show (?:information|info) about|"
+                r"get (?:information|info) (?:about|for))\s+"
+            ),
+        }
+        if intent is IntentType.CHECK_FILE_EXISTENCE:
+            match = re.match(
+                r"^(?:does\s+(.+?)\s+exist|check whether\s+(.+?)\s+exists?)$",
+                working,
                 re.IGNORECASE,
             )
             if match:
+                self._file_name(
+                    "file_name", (match.group(1) or match.group(2)).strip(), entities
+                )
+            return
+        if intent is IntentType.SEARCH_FILE:
+            query = re.sub(
+                r"^(?:find|search for)\s+", "", working, flags=re.IGNORECASE
+            ).strip()
+            extension_match = re.fullmatch(
+                r"(text|markdown|json|csv|python|html|css|javascript|yaml) files?",
+                query,
+                re.IGNORECASE,
+            )
+            if extension_match:
+                extension = EXTENSIONS[extension_match.group(1).casefold()]
                 entities.append(
                     _entity(
-                        EntityType.FOLDER_NAME,
-                        "folder_name",
-                        match.group(1).strip(),
-                        match.group(1).strip(),
+                        EntityType.FILE_EXTENSION, "search_extension", extension, query
                     )
                 )
+            elif query:
+                self._file_name("file_name", query, entities)
             return
-        if intent is IntentType.CREATE_FILE:
-            match = re.search(
-                r"(?:file(?: named| called)?|^create)\s+(.+?)"
-                r"(?:\s+on\s+(?:Desktop|Documents|Downloads|Pictures|Music|"
-                r"Videos|Home))?$",
-                original,
-                re.IGNORECASE,
-            )
-            if match:
-                value = re.sub(
-                    r"^(?:a )?(?:text|markdown|json|csv|python|html) file"
-                    r"(?: named| called)?\s+",
-                    "",
-                    match.group(1),
-                    flags=re.IGNORECASE,
-                )
-                value = value.strip()
-                unnamed_file = re.fullmatch(
-                    r"(?:a )?(?:(?:text|markdown|json|csv|python|html) )?file",
-                    value,
-                    re.IGNORECASE,
-                )
-                if not unnamed_file:
-                    entities.append(
-                        _entity(EntityType.FILE_NAME, "file_name", value, value)
-                    )
+        prefix = prefixes.get(intent)
+        if prefix:
+            name, count = re.subn(prefix, "", working, flags=re.IGNORECASE)
+            name = name.strip()
+            if count and name:
+                self._file_name("file_name", name, entities)
+
+    @staticmethod
+    def _rename(original: str, entities: list[CommandEntity]) -> None:
+        match = re.match(r"^rename\s+(.+?)\s+to\s+(.+)$", original, re.IGNORECASE)
+        if not match:
             return
-        pair = re.search(
-            r"^(?:rename|copy|move)\s+(.+?)(?:\s+to\s+(.+))?$", original, re.IGNORECASE
+        source = match.group(1).strip()
+        location = re.search(
+            rf"\s+(?:in|on)\s+({_LOCATION_EXPRESSION})$", source, re.IGNORECASE
         )
-        if pair and intent in {
-            IntentType.RENAME_FILE,
-            IntentType.RENAME_FOLDER,
-            IntentType.COPY_FILE,
-            IntentType.COPY_FOLDER,
-            IntentType.MOVE_FILE,
-            IntentType.MOVE_FOLDER,
-        }:
-            is_file = intent in {
-                IntentType.RENAME_FILE,
-                IntentType.COPY_FILE,
-                IntentType.MOVE_FILE,
-            }
+        if location:
             entities.append(
                 _entity(
-                    EntityType.FILE_NAME if is_file else EntityType.FOLDER_NAME,
-                    "source_file" if is_file else "source_folder",
-                    pair.group(1).strip(),
-                    pair.group(1).strip(),
+                    EntityType.LOCATION,
+                    "location",
+                    _location_value(location.group(1)),
+                    location.group(1),
                 )
             )
-            if pair.group(2) and not any(
-                item.name == "destination" for item in entities
-            ):
-                name = (
-                    "new_name"
-                    if intent in {IntentType.RENAME_FILE, IntentType.RENAME_FOLDER}
-                    else "destination"
-                )
-                entities.append(
-                    _entity(
-                        EntityType.FILE_NAME if is_file else EntityType.FOLDER_NAME,
-                        name,
-                        pair.group(2).strip(),
-                        pair.group(2).strip(),
-                    )
-                )
+            source = source[: location.start()].strip()
+        RuleBasedEntityExtractor._file_name("source_file", source, entities)
+        RuleBasedEntityExtractor._file_name(
+            "new_name", match.group(2).strip(), entities
+        )
+
+    @staticmethod
+    def _transfer(original: str, entities: list[CommandEntity]) -> None:
+        match = re.match(
+            rf"^(?:copy|move)\s+(.+?)(?:\s+from\s+({_LOCATION_EXPRESSION}))?"
+            rf"\s+to\s+({_LOCATION_EXPRESSION})$",
+            original,
+            re.IGNORECASE,
+        )
+        if not match:
             return
-        if intent in {
-            IntentType.OPEN_FILE,
-            IntentType.READ_FILE,
-            IntentType.DELETE_FILE,
-            IntentType.SEARCH_FILE,
-            IntentType.WRITE_FILE,
-        }:
-            cleaned = re.sub(r'(["\']).*?\1', "", original)
-            match = re.search(r"([\w .-]+\.[A-Za-z0-9]{1,10})", cleaned)
-            if match:
-                entities.append(
-                    _entity(
-                        EntityType.FILE_NAME,
-                        "file_name",
-                        match.group(1).strip(),
-                        match.group(1).strip(),
-                    )
+        RuleBasedEntityExtractor._file_name(
+            "source_file", match.group(1).strip(), entities
+        )
+        if match.group(2):
+            entities.append(
+                _entity(
+                    EntityType.LOCATION,
+                    "source_location",
+                    _location_value(match.group(2)),
+                    match.group(2),
                 )
-        elif intent in {
-            IntentType.OPEN_FOLDER,
-            IntentType.LIST_FOLDER,
-            IntentType.DELETE_FOLDER,
-        }:
-            match = re.search(
-                r"(?:open (?:the )?|inside |contents of |delete (?:the )?)"
-                r"(.+?)(?: folder)?$",
-                original,
-                re.IGNORECASE,
             )
-            if match:
-                entities.append(
-                    _entity(
-                        EntityType.FOLDER_NAME,
-                        "folder_name",
-                        match.group(1).strip(),
-                        match.group(1).strip(),
-                    )
+        entities.append(
+            _entity(
+                EntityType.LOCATION,
+                "destination",
+                _location_value(match.group(3)),
+                match.group(3),
+            )
+        )
+
+    @staticmethod
+    def _folder(original: str, entities: list[CommandEntity]) -> None:
+        working = original
+        location = re.search(
+            rf"\s+(?:in|on)\s+({_LOCATION_EXPRESSION})$", working, re.IGNORECASE
+        )
+        if location:
+            entities.append(
+                _entity(
+                    EntityType.LOCATION,
+                    "location",
+                    _location_value(location.group(1)),
+                    location.group(1),
                 )
+            )
+            working = working[: location.start()].strip()
+        match = re.search(
+            r"(?:folder|directory)(?: named| called)?\s+(.+)$",
+            working,
+            re.IGNORECASE,
+        )
+        if match:
+            entities.append(
+                _entity(
+                    EntityType.FOLDER_NAME,
+                    "folder_name",
+                    match.group(1).strip(),
+                    match.group(1).strip(),
+                )
+            )
+
+    @staticmethod
+    def _file_name(name: str, value: str, entities: list[CommandEntity]) -> None:
+        entities.append(_entity(EntityType.FILE_NAME, name, value, value))

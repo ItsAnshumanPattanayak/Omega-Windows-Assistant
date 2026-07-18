@@ -30,6 +30,18 @@ INTENT_PATTERNS = (
         r"^(?:is .+ running|check (?:whether )?.+(?: is running| status))$",
     ),
     _rule(
+        "file_exists",
+        IntentType.CHECK_FILE_EXISTENCE,
+        r"^(?:does .+ exist(?: (?:on|in) .+)?|"
+        r"check whether .+ exists?(?: (?:on|in) .+)?)$",
+    ),
+    _rule(
+        "file_information",
+        IntentType.GET_FILE_INFORMATION,
+        r"^(?:show (?:information|info) about|"
+        r"get (?:information|info) (?:about|for)) .+$",
+    ),
+    _rule(
         "create_folder",
         IntentType.CREATE_FOLDER,
         r"^(?:create|make) (?:a )?(?:folder|directory)(?: named| called)?(?: .+)?$",
@@ -43,16 +55,23 @@ INTENT_PATTERNS = (
     _rule("rename_incomplete", IntentType.RENAME_FILE, r"^rename .+$"),
     _rule("copy", IntentType.COPY_FILE, r"^copy .+ to .+$"),
     _rule("move", IntentType.MOVE_FILE, r"^move .+(?: to .+)?$"),
+    _rule("append", IntentType.APPEND_FILE, r"^append(?: .+)? (?:to|into)(?: .+)?$"),
     _rule("write", IntentType.WRITE_FILE, r"^write(?: .+)? into(?: .+)?$"),
     _rule("search", IntentType.SEARCH_FILE, r"^(?:find|search for) .+$"),
-    _rule("read", IntentType.READ_FILE, r"^read(?: the file)?(?: .+)?$"),
+    _rule(
+        "read",
+        IntentType.READ_FILE,
+        r"^(?:read(?: the file)?(?: .+)?|show (?:the )?contents of .+)$",
+    ),
     _rule("delete", IntentType.DELETE_FILE, r"^delete(?: the)?(?: .+)?$"),
     _rule(
         "create_file",
         IntentType.CREATE_FILE,
         r"^create (?!.*\bfolder\b|.*\bdirectory\b)"
-        r"(?:(?:a )?(?:(?:text|markdown|json|csv|python|html) )?file"
-        r"(?: named| called)?(?: .+)?|.+\.[a-z0-9]+)$",
+        r"(?:(?:a )?(?:(?:text|markdown|json|csv|python|html|"
+        r"css|javascript|yaml) )?file"
+        r"(?: named| called)?(?: .+)?|"
+        r".+\.[a-z0-9]+(?:\s+(?:in|on)\s+.+)?)$",
     ),
     _rule("open", IntentType.OPEN_APPLICATION, r"^(?:open|launch|start|run)(?: .+)?$"),
     _rule("close", IntentType.CLOSE_APPLICATION, r"^(?:close|exit|quit)(?: .+)?$"),

@@ -29,3 +29,15 @@ applications:
   force_close_timeout_seconds: 3
   confirmation_timeout_seconds: 30
   allow_force_close: false
+
+files:
+  default_location: desktop
+  maximum_read_size_bytes: 1048576
+  maximum_display_characters: 10000
+  maximum_write_size_bytes: 1048576
+  maximum_resulting_file_size_bytes: 5242880
+  confirmation_timeout_seconds: 30
+  search_max_depth: 5
+  search_max_results: 50
+  allow_absolute_paths: false
+  allow_permanent_deletion: false

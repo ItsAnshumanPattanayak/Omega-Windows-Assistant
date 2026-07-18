@@ -35,6 +35,7 @@ data/logs/*.log.*
 data/*.db
 data/*.sqlite
 data/*.sqlite3
+data/pytest-temp/
 
 # Temporary and platform files
 *.tmp

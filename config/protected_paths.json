@@ -2,8 +2,19 @@
   "description": "Protected Windows locations for future safety checks. Entries use environment-neutral path names, not user-specific paths.",
   "protected_locations": [
     "C:\\Windows",
+    "C:\\Windows\\System32",
     "C:\\Program Files",
     "C:\\Program Files (x86)",
-    "C:\\ProgramData"
+    "C:\\ProgramData",
+    "C:\\Boot",
+    "C:\\Recovery",
+    "C:\\System Volume Information",
+    "C:\\$Recycle.Bin"
+  ],
+  "protected_project_paths": [
+    ".git",
+    "config",
+    "data/logs",
+    "data/action_backups"
   ]
 }

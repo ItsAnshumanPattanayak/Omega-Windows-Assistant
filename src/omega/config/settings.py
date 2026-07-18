@@ -20,7 +20,28 @@ from omega.utils.constants import (
 from omega.utils.paths import config_dir
 
 REQUIRED_SECTIONS = frozenset(
-    {"application", "user", "assistant", "logging", "safety", "applications"}
+    {
+        "application",
+        "user",
+        "assistant",
+        "logging",
+        "safety",
+        "applications",
+        "files",
+    }
+)
+
+_FILE_LOCATIONS = frozenset(
+    {
+        "desktop",
+        "documents",
+        "downloads",
+        "pictures",
+        "music",
+        "videos",
+        "home",
+        "current_directory",
+    }
 )
 
 
@@ -34,6 +55,7 @@ class Settings:
     logging: Mapping[str, Any]
     safety: Mapping[str, Any]
     applications: Mapping[str, Any]
+    files: Mapping[str, Any]
 
     @property
     def application_name(self) -> str:
@@ -78,7 +100,47 @@ def _defaults() -> dict[str, dict[str, Any]]:
             "confirmation_timeout_seconds": 30,
             "allow_force_close": False,
         },
+        "files": {
+            "default_location": "desktop",
+            "maximum_read_size_bytes": 1_048_576,
+            "maximum_display_characters": 10_000,
+            "maximum_write_size_bytes": 1_048_576,
+            "maximum_resulting_file_size_bytes": 5_242_880,
+            "confirmation_timeout_seconds": 30,
+            "search_max_depth": 5,
+            "search_max_results": 50,
+            "allow_absolute_paths": False,
+            "allow_permanent_deletion": False,
+        },
     }
+
+
+def _validate_files(values: Mapping[str, Any]) -> None:
+    default_location = values.get("default_location")
+    if default_location not in _FILE_LOCATIONS:
+        raise ConfigurationError("files.default_location must be registered.")
+    positive = (
+        "maximum_read_size_bytes",
+        "maximum_display_characters",
+        "maximum_write_size_bytes",
+        "maximum_resulting_file_size_bytes",
+        "confirmation_timeout_seconds",
+        "search_max_results",
+    )
+    for key in positive:
+        value = values.get(key)
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
+            raise ConfigurationError(f"files.{key} must be positive.")
+    depth = values.get("search_max_depth")
+    if isinstance(depth, bool) or not isinstance(depth, int) or not 0 <= depth <= 20:
+        raise ConfigurationError("files.search_max_depth must be between 0 and 20.")
+    result_limit = values.get("search_max_results")
+    if not isinstance(result_limit, int) or result_limit > 500:
+        raise ConfigurationError("files.search_max_results must not exceed 500.")
+    if values.get("allow_absolute_paths") is not False:
+        raise ConfigurationError("Phase 5 requires absolute file paths to be disabled.")
+    if values.get("allow_permanent_deletion") is not False:
+        raise ConfigurationError("Phase 5 requires permanent deletion to be disabled.")
 
 
 def _merge_defaults(raw: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
@@ -115,4 +177,5 @@ def load_settings(config_path: Path | None = None) -> Settings:
         raise ConfigurationError(message)
 
     values = _merge_defaults(raw)
+    _validate_files(values["files"])
     return Settings(**values)

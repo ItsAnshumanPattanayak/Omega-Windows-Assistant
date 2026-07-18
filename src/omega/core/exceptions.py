@@ -35,3 +35,39 @@ class ApplicationError(OmegaError):
 
 class ApplicationRegistryError(ApplicationError):
     """Raised when the allowlisted application registry is invalid."""
+
+
+class FileManagementError(OmegaError):
+    """Base exception for controlled file-management failures."""
+
+
+class FileLocationError(FileManagementError):
+    """Raised when an approved logical file location cannot be resolved."""
+
+
+class FilePathValidationError(FileManagementError):
+    """Raised when a requested file path fails safety validation."""
+
+
+class FileConflictError(FileManagementError):
+    """Raised when a safe file operation would replace an existing file."""
+
+
+class FileReadError(FileManagementError):
+    """Raised when a controlled text read cannot be completed safely."""
+
+
+class FileWriteError(FileManagementError):
+    """Raised when a controlled text write cannot be completed safely."""
+
+
+class FileOperationError(FileManagementError):
+    """Raised when a controlled rename, copy, or move fails."""
+
+
+class FileSearchError(FileManagementError):
+    """Raised when a bounded file search cannot be completed safely."""
+
+
+class FileOpenError(FileManagementError):
+    """Raised when a validated document cannot be opened safely."""

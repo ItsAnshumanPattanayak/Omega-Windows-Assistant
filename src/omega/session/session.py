@@ -1,4 +1,4 @@
-"""Session manager for parsing and controlled application dispatch."""
+"""Session manager for parsing and controlled application/file dispatch."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from uuid import UUID, uuid4
 
 from omega.core.exceptions import InvalidSessionTransitionError, ModelValidationError
 from omega.execution.dispatcher import ApplicationActionDispatcher
+from omega.execution.file_dispatcher import FileActionDispatcher
 from omega.models import UserCommand
 from omega.session.greeting import greeting_for
 from omega.session.state import SessionState
@@ -42,6 +43,7 @@ class OmegaSession:
         logger: logging.Logger | None = None,
         parser: CommandParser | None = None,
         application_dispatcher: ApplicationActionDispatcher | None = None,
+        file_dispatcher: FileActionDispatcher | None = None,
     ) -> None:
         self.display_name = self._required_text(user_settings, "display_name")
         self.activation_phrase = self._required_text(
@@ -56,6 +58,7 @@ class OmegaSession:
         self._logger = logger or logging.getLogger("omega.session")
         self._parser = parser or CommandParser()
         self._application_dispatcher = application_dispatcher
+        self._file_dispatcher = file_dispatcher
         self.state = SessionState.INACTIVE
         self.session_id: UUID | None = None
         self.activated_at: float | None = None
@@ -123,6 +126,8 @@ class OmegaSession:
         """Safely terminate this terminal session."""
         if self._application_dispatcher is not None:
             self._application_dispatcher.clear_pending_confirmations()
+        if self._file_dispatcher is not None:
+            self._file_dispatcher.clear_pending_confirmations()
         if self.state is SessionState.INACTIVE:
             self.transition_to(SessionState.TERMINATED)
             self._logger.info("Omega terminated while inactive.")
@@ -141,6 +146,8 @@ class OmegaSession:
         """Terminate gracefully in response to Ctrl+C or EOF."""
         if self._application_dispatcher is not None:
             self._application_dispatcher.clear_pending_confirmations()
+        if self._file_dispatcher is not None:
+            self._file_dispatcher.clear_pending_confirmations()
         if self.state is not SessionState.TERMINATED:
             if self.state is SessionState.ACTIVE:
                 self.transition_to(SessionState.TERMINATED)
@@ -160,6 +167,8 @@ class OmegaSession:
         self.transition_to(SessionState.INACTIVE)
         if self._application_dispatcher is not None:
             self._application_dispatcher.clear_pending_confirmations()
+        if self._file_dispatcher is not None:
+            self._file_dispatcher.clear_pending_confirmations()
         self.session_id = None
         self.activated_at = None
         self.last_activity_at = None
@@ -204,6 +213,14 @@ class OmegaSession:
                     self._history.append(controlled.command)
                     self.last_activity_at = self._clock()
                     return controlled.user_message
+            if self._file_dispatcher is not None:
+                controlled_file = self._file_dispatcher.dispatch_control(
+                    text, self.session_id
+                )
+                if controlled_file is not None:
+                    self._history.append(controlled_file.command)
+                    self.last_activity_at = self._clock()
+                    return controlled_file.user_message
             result = self._parser.parse(text, self.session_id)
             self._history.append(result.command)
             self.last_activity_at = self._clock()
@@ -211,6 +228,10 @@ class OmegaSession:
                 dispatched = self._application_dispatcher.dispatch(result)
                 if dispatched is not None:
                     return dispatched.user_message
+            if self._file_dispatcher is not None:
+                dispatched_file = self._file_dispatcher.dispatch(result)
+                if dispatched_file is not None:
+                    return dispatched_file.user_message
             return format_parse_response(result)
         raise InvalidSessionTransitionError(
             "Session cannot accept input while shutting down."

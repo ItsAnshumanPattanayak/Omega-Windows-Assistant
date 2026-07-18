@@ -32,7 +32,7 @@ Creating any Phase 1 model cannot execute an operation. Execution is deliberatel
 
 ## Text session lifecycle
 
-Phase 2 keeps terminal I/O in `TerminalInterface` and state management in `OmegaSession`. The terminal adapter collects text and displays responses; the session validates transitions, captures active commands as `UserCommand` records, and uses a monotonic timeout clock. No terminal input can execute an action.
+Phase 2 keeps terminal I/O in `TerminalInterface` and state management in `OmegaSession`. The terminal adapter collects text and displays responses; the session validates transitions, captures active commands as `UserCommand` records, and uses a monotonic timeout clock. Later dispatchers may act only on complete commands while Omega is active; shutdown, interruption, and timeout clear pending confirmations.
 
 ```text
 Process starts → Omega inactive → “Hello Omega” → time-based greeting → Omega active
@@ -94,6 +94,32 @@ Chrome, Edge, Notepad, and Paint require an exact application-specific confirmat
 
 When a normal executable launch yields a PID, `ApplicationManager` records the canonical ID, PID creation time, and action ID in memory. It verifies PID identity before preferring an Omega-owned process for close and drops stale records. URI applications and applications that detach may not expose a reliable launch PID; status can still use exact registered process names, but ownership claims remain conservative.
 
+## Controlled file execution
+
+```text
+Parsed file command
+  -> FileActionDispatcher
+  -> FileLocationResolver
+  -> FilePathValidator
+  -> FileManager
+  -> Reader / Writer / Operations / Search / Opener
+  -> post-operation verification
+  -> ActionResult
+  -> OmegaSession response
+```
+
+`FileActionDispatcher` accepts only complete, unambiguous Phase 5 file intents. It extracts canonical entities, creates an `Action` with the original command ID and a provisional risk level, then calls `FileManager`. The parser never imports or calls a file mutation service. Folder intents are ignored, and `DELETE_FILE` returns the Phase 8 Recycle Bin/undo deferral without touching the target.
+
+`FileLocationResolver` maps aliases to approved logical roots: Desktop, Documents, Downloads, Pictures, Music, Videos, Home, and the working directory captured at Omega startup. User-supplied absolute, drive-qualified, UNC, device, alternate-stream, tilde-expansion, and environment-expansion paths are rejected. Desktop is the configured default, and missing parent directories are never created automatically.
+
+`FilePathValidator` parses Windows path components and resolves the candidate and its existing parents before checking containment with path-aware common-path comparison. A string-prefix check is unsafe because sibling paths such as `Documents-old` share characters with `Documents`; resolved path components also expose symbolic-link or junction escapes. Protected Windows locations, repository `.git`, configuration, logs, and action-backup data are independently blocked.
+
+The writer supports UTF-8 text/data extensions with configured content and resulting-size limits. Non-empty replacement creates an in-memory pending record containing the exact target, content, expiry, size, nanosecond modification time, and content hash. Exact confirmation re-resolves and revalidates the target, rejects changed files, and uses a temporary file on the same filesystem plus `os.replace` for atomic replacement. Pending text is never logged or persisted and is cleared on cancellation, timeout, shutdown, interruption, or restart. Append writes exactly the quoted content and does not insert a newline.
+
+Rename, copy, and move refuse destination conflicts because Phase 5 has no recovery/undo layer for replacing a different file. Regular-file and symlink checks occur before mutation; copy and move verify sizes and SHA-256 content. Executable/script opening is blocked. `WindowsFileOpener` isolates the `os.startfile` boundary and receives only a validated absolute document path, never arguments or a command string.
+
+Filename search is limited to one logical root, exact case-insensitive names or internally selected extensions, configured recursion depth, and configured result count. It skips inaccessible and linked directories, never searches file contents or whole drives, and returns relative paths. Bounded reads, display truncation, write limits, and search limits prevent uncontrolled memory or terminal use. File contents and pending write text stay out of logs.
+
 ## Planned layers
 
 The following components are planned, not implemented:
@@ -101,7 +127,7 @@ The following components are planned, not implemented:
 - **Input layer:** text and, later, voice input. Voice activation will use `Hello Omega`.
 - **Command-processing layer:** converts approved user intent into structured commands.
 - **Safety layer:** checks permissions, protected paths, confirmations, and action policies before execution.
-- **Executor layer:** currently performs only allowlisted application operations through the Phase 4 platform-aware services. Future domains require separate review.
+- **Executor layer:** performs allowlisted Phase 4 application operations and validated Phase 5 file operations through separate domain dispatchers. Future domains require separate review.
 
 Command understanding must remain separate from execution. An interpreter may recognize a request, but only the safety layer may authorize it and only the executor may perform it. This separation makes future behavior testable and prevents an AI suggestion from becoming an action automatically.
 

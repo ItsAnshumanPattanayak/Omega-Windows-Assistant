@@ -108,7 +108,7 @@ class CommandParser:
     def _action_verb_count(text: str) -> int:
         return len(
             re.findall(
-                r"\b(?:open|launch|start|run|close|create|make|delete|move|copy|rename|write|read|find|search)\b",
+                r"\b(?:open|launch|start|run|close|create|make|delete|move|copy|rename|write|append|read|find|search)\b",
                 text,
             )
         )
@@ -153,11 +153,18 @@ class CommandParser:
         if intent is IntentType.CREATE_FILE and "file_name" not in names:
             return ["file_name"], "What should I name the file?"
         if (
-            intent in {IntentType.DELETE_FILE, IntentType.READ_FILE}
+            intent
+            in {
+                IntentType.DELETE_FILE,
+                IntentType.READ_FILE,
+                IntentType.OPEN_FILE,
+                IntentType.CHECK_FILE_EXISTENCE,
+                IntentType.GET_FILE_INFORMATION,
+            }
             and "file_name" not in names
         ):
             return ["file_name"], "Which file do you mean?"
-        if intent is IntentType.WRITE_FILE:
+        if intent in {IntentType.WRITE_FILE, IntentType.APPEND_FILE}:
             missing = [
                 name for name in ("text_content", "file_name") if name not in names
             ]
@@ -179,6 +186,10 @@ class CommandParser:
             and "new_name" not in names
         ):
             return ["new_name"], "What should the new name be?"
+        if intent is IntentType.SEARCH_FILE and not names.intersection(
+            {"file_name", "search_extension"}
+        ):
+            return ["search_query"], "Which file name or extension should I search for?"
         if intent is IntentType.UNKNOWN and normalized in {"open", "close", "delete"}:
             return ["target"], "What would you like me to act on?"
         return [], None

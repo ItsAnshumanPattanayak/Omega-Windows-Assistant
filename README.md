@@ -1,14 +1,14 @@
 # Omega
 
-Omega is a safety-first Windows desktop assistant project. **Current phase: Phase 4 — Controlled Windows Application Manager.**
+Omega is a safety-first Windows desktop assistant project. **Current phase: Phase 5 — Safe File Management System.**
 
 ## Current status
 
 Omega is a locally controlled assistant that understands narrowly approved Windows tasks while enforcing clear safety boundaries. It starts inactive, accepts `Hello Omega` as a standalone activation phrase, greets Anshuman based on the current time, accepts commands without repeating its name, and uses `Shut down Omega` for safe termination.
 
-Phase 4 connects complete Phase 3 application intents to an allowlisted Windows application manager. An active text session can open registered applications, report their running status, close selected applications gracefully, and require an exact short-lived confirmation before data-loss-risk closes. Operations return the existing structured `ActionResult` records. Unknown, disabled, ambiguous, incomplete, or unregistered targets are never executed.
+Phase 5 adds controlled file operations inside approved logical locations: Desktop, Documents, Downloads, Pictures, Music, Videos, Home, and the startup working directory. An active text session can create supported text/data files, check existence, inspect basic metadata, read bounded UTF-8 text, write or append text, rename/copy/move files without replacing destinations, open safe documents, and perform bounded filename searches. Replacing non-empty text requires exact, short-lived confirmation tied to the file version.
 
-Omega still cannot create or delete files or folders, execute arbitrary shell commands, install software, modify Windows settings, process voice input, provide a GUI, automate browser pages, or execute AI-generated actions.
+Omega still cannot permanently delete files, use the Recycle Bin, undo actions, create or delete folders through commands, access arbitrary absolute/system paths, modify executable or script files, process voice input, provide a GUI, automate browser pages, or execute AI-generated actions.
 
 ## Technology
 
@@ -45,7 +45,21 @@ python -m omega
 omega
 ```
 
-The final command works after installing the package (for example, with `python -m pip install -e .`). Omega starts inactive; say `Hello Omega` before entering an application command, and use `Shut down Omega` to exit safely.
+The final command works after installing the package (for example, with `python -m pip install -e .`). Omega starts inactive; say `Hello Omega` before entering a command, and use `Shut down Omega` to exit safely.
+
+## Safe file support
+
+All file commands resolve through a configured logical location. Desktop is the safe default when a command omits a location. Parent folders must already exist; Phase 5 does not create folder trees.
+
+| Extension | Create | Read | Write | Open | Restrictions |
+|---|---:|---:|---:|---:|---|
+| `.txt`, `.md`, `.csv` | Yes | Yes | Yes | Yes | UTF-8 text and configured size limits |
+| `.json`, `.yaml`, `.yml` | Yes | Yes | Yes | Yes | Written as text; Omega does not claim schema validity |
+| `.html`, `.css` | Yes | Yes | Yes | Yes | Stored as text and never executed by Omega |
+| `.py`, `.js` | Yes | Yes | Yes | No | Opening is blocked because the file association may execute a script |
+| `.pdf`, `.doc`, `.docx` | No | No | No | Yes | Open-only through the registered default application |
+| `.xls`, `.xlsx`, `.ppt`, `.pptx` | No | No | No | Yes | Open-only; contents are not inspected or modified |
+| Executables and command scripts | No | No | No | No | Includes `.exe`, `.bat`, `.cmd`, `.ps1`, `.vbs`, `.msi`, and related types |
 
 ## Registered applications
 
@@ -76,7 +90,7 @@ python -m mypy src
 
 ## Safety principles
 
-Omega never passes user text to a shell or executable argument list. Application IDs, paths, URIs, and exact process names come only from the validated project registry; launches use argument sequences with `shell=False`. Administrator operations and force close remain disabled by default. Logs must not contain sensitive information. Read the full [safety policy](docs/safety_policy.md).
+Omega never passes user text to a shell or executable argument list. Application targets come only from the validated project registry. File targets are built from registered logical roots, validated Windows path components, and resolved containment checks; arbitrary absolute paths and permanent deletion are disabled. Administrator operations and force close remain disabled by default. Logs must not contain file contents or other sensitive information. Read the full [safety policy](docs/safety_policy.md).
 
 ## Roadmap
 

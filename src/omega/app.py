@@ -16,7 +16,19 @@ from omega.applications import (
 )
 from omega.config.settings import Settings, load_settings
 from omega.core.exceptions import InitializationError, UnsupportedPlatformError
-from omega.execution import ApplicationActionDispatcher
+from omega.execution import ApplicationActionDispatcher, FileActionDispatcher
+from omega.files import (
+    FileLocationResolver,
+    FileManager,
+    FileOperationSettings,
+    FileOperationsService,
+    FilePathValidator,
+    FileSearchService,
+    SafeFilePathResolver,
+    TextFileReader,
+    TextFileWriter,
+    WindowsFileOpener,
+)
 from omega.interfaces.terminal import TerminalInterface
 from omega.session.session import OmegaSession
 from omega.utils.constants import MINIMUM_PYTHON_VERSION
@@ -51,11 +63,33 @@ class OmegaApplication:
             ),
             logger=get_logger("applications.manager"),
         )
+        file_settings = FileOperationSettings.from_mapping(self.settings.files)
+        locations = FileLocationResolver(startup_directory=Path.cwd())
+        file_manager = FileManager(
+            locations,
+            SafeFilePathResolver(locations, FilePathValidator()),
+            TextFileReader(
+                file_settings.maximum_read_size_bytes,
+                file_settings.maximum_display_characters,
+            ),
+            TextFileWriter(
+                file_settings.maximum_write_size_bytes,
+                file_settings.maximum_resulting_file_size_bytes,
+            ),
+            FileOperationsService(),
+            FileSearchService(
+                file_settings.search_max_depth, file_settings.search_max_results
+            ),
+            WindowsFileOpener(),
+            settings=file_settings,
+            logger=get_logger("files.manager"),
+        )
         self.session = OmegaSession(
             self.settings.user,
             self.settings.assistant,
             logger=get_logger("session"),
             application_dispatcher=ApplicationActionDispatcher(manager, registry),
+            file_dispatcher=FileActionDispatcher(file_manager),
         )
         self.logger.info(
             "%s %s initialized in %s mode.",
