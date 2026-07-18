@@ -150,6 +150,14 @@ class CommandParser:
             )
         if intent is IntentType.CREATE_FOLDER and "folder_name" not in names:
             return ["folder_name"], "What should I name the folder?"
+        if intent in {
+            IntentType.OPEN_FOLDER,
+            IntentType.LIST_FOLDER,
+            IntentType.DELETE_FOLDER,
+            IntentType.CHECK_FOLDER_EXISTENCE,
+            IntentType.GET_FOLDER_INFORMATION,
+        } and not names.intersection({"folder_name", "location"}):
+            return ["folder_name"], "Which folder do you mean?"
         if intent is IntentType.CREATE_FILE and "file_name" not in names:
             return ["file_name"], "What should I name the file?"
         if (
@@ -190,6 +198,18 @@ class CommandParser:
             {"file_name", "search_extension"}
         ):
             return ["search_query"], "Which file name or extension should I search for?"
+        if intent is IntentType.SEARCH_FOLDER and "folder_name" not in names:
+            return ["folder_name"], "Which folder name should I search for?"
+        if (
+            intent
+            in {
+                IntentType.RENAME_FOLDER,
+                IntentType.COPY_FOLDER,
+                IntentType.MOVE_FOLDER,
+            }
+            and "source_folder" not in names
+        ):
+            return ["source_folder"], "Which folder do you mean?"
         if intent is IntentType.UNKNOWN and normalized in {"open", "close", "delete"}:
             return ["target"], "What would you like me to act on?"
         return [], None

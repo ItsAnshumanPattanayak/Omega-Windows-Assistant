@@ -40,3 +40,18 @@ Phase 0 enforces the initial configuration flags and deliberately contains no co
 - Pending text exists only in memory and is cleared on cancellation, timeout, shutdown, interruption, or process restart. File contents and pending text are never logged.
 - `DELETE_FILE` performs no deletion in Phase 5. Recycle Bin deletion and undo are deferred to Phase 8.
 - Automated file tests use pytest-managed temporary logical roots. Real Windows workflow tests are opt-in and may affect only their isolated temporary directory.
+
+## Phase 6 folder controls
+
+- Folder commands reuse Phase 5's approved logical locations and accept only validated relative paths. Absolute, drive-qualified, UNC, device, alternate-stream, environment-expanded, tilde-expanded, and traversal paths are rejected.
+- Every Windows folder component rejects empty or whitespace-only names, control and invalid characters, trailing spaces/periods, overlong names, `.`/`..`, and reserved device names including reserved names with suffixes.
+- Resolved containment and protected-path checks cover Windows, Program Files, ProgramData, recovery/system-volume/Recycle Bin areas, repository `.git`, configuration, logs, backups, command history, build output, and virtual environments. Protection is based on the actual resolved path rather than a coincidental folder name elsewhere.
+- User commands create only one final directory with a real existing parent. They never create a missing parent hierarchy and never change permissions or attributes.
+- Listings are non-recursive and bounded. Recursive metadata, copy/move preflight, and search enforce configured item, byte, result, and depth limits and never claim completeness after truncation.
+- Directory symbolic links, junctions, and other reparse points are never followed. A link found during copy or move preflight rejects the operation before the final destination is created.
+- Folder copy and move require read-only preflight, immediate source revalidation, a non-existing destination, and post-operation tree-count/byte verification. Source/destination equality and nesting are rejected.
+- Folder merging and destination replacement are disabled. Omega never removes or modifies a pre-existing destination and never invents an alternate name.
+- Same-volume moves use rename-style filesystem behavior. Destructive cross-volume moves are disabled; Omega can perform a separate safe copy while preserving the source.
+- `DELETE_FOLDER` performs no deletion in Phase 6. Recycle Bin and undo support remain deferred to Phase 8.
+- Copy failure cleanup is internal and limited to the private temporary tree created for that operation inside its validated destination parent. It is not callable as a user deletion operation and cannot target an existing destination.
+- Automated folder tests use injected pytest temporary logical roots. The opt-in Windows workflow also uses isolated temporary roots and never touches real personal folders. Folder opening is mocked in automated tests.

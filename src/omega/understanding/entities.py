@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from pathlib import PureWindowsPath
 
 from omega.models import CommandEntity, EntityType, IntentType
 from omega.understanding.aliases import ApplicationAliasRegistry
@@ -54,7 +55,7 @@ def _location_value(raw: str) -> str:
 
 
 class RuleBasedEntityExtractor:
-    """Extract known applications and tightly scoped Phase 5 file values."""
+    """Extract known applications and tightly scoped file/folder values."""
 
     def __init__(self, aliases: ApplicationAliasRegistry) -> None:
         self.aliases = aliases
@@ -79,8 +80,19 @@ class RuleBasedEntityExtractor:
             self._rename(original, entities)
         elif intent in {IntentType.COPY_FILE, IntentType.MOVE_FILE}:
             self._transfer(original, entities)
-        elif intent is IntentType.CREATE_FOLDER:
-            self._folder(original, entities)
+        elif intent in {
+            IntentType.CREATE_FOLDER,
+            IntentType.OPEN_FOLDER,
+            IntentType.LIST_FOLDER,
+            IntentType.RENAME_FOLDER,
+            IntentType.COPY_FOLDER,
+            IntentType.MOVE_FOLDER,
+            IntentType.DELETE_FOLDER,
+            IntentType.CHECK_FOLDER_EXISTENCE,
+            IntentType.GET_FOLDER_INFORMATION,
+            IntentType.SEARCH_FOLDER,
+        }:
+            self._folder_command(original, intent, entities)
         return entities
 
     def _application(
@@ -284,36 +296,228 @@ class RuleBasedEntityExtractor:
             )
         )
 
-    @staticmethod
-    def _folder(original: str, entities: list[CommandEntity]) -> None:
-        working = original
-        location = re.search(
-            rf"\s+(?:in|on)\s+({_LOCATION_EXPRESSION})$", working, re.IGNORECASE
-        )
+    def _folder_command(
+        self,
+        original: str,
+        intent: IntentType,
+        entities: list[CommandEntity],
+    ) -> None:
+        if intent is IntentType.CREATE_FOLDER:
+            self._create_folder(original, entities)
+        elif intent in {
+            IntentType.OPEN_FOLDER,
+            IntentType.LIST_FOLDER,
+            IntentType.CHECK_FOLDER_EXISTENCE,
+            IntentType.GET_FOLDER_INFORMATION,
+            IntentType.DELETE_FOLDER,
+        }:
+            self._folder_target(original, intent, entities)
+        elif intent is IntentType.RENAME_FOLDER:
+            self._rename_folder(original, entities)
+        elif intent in {IntentType.COPY_FOLDER, IntentType.MOVE_FOLDER}:
+            self._transfer_folder(original, entities)
+        elif intent is IntentType.SEARCH_FOLDER:
+            self._search_folder(original, entities)
+
+    def _create_folder(self, original: str, entities: list[CommandEntity]) -> None:
+        working, location, nested = self._split_location(original)
         if location:
-            entities.append(
-                _entity(
-                    EntityType.LOCATION,
-                    "location",
-                    _location_value(location.group(1)),
-                    location.group(1),
-                )
-            )
-            working = working[: location.start()].strip()
+            self._append_location("location", location, entities)
+        if nested:
+            entities.append(_entity(EntityType.PATH, "parent_path", nested, nested))
         match = re.search(
             r"(?:folder|directory)(?: named| called)?\s+(.+)$",
             working,
             re.IGNORECASE,
         )
         if match:
+            name = self._strip_folder_words(match.group(1))
+            if name:
+                entities.append(
+                    _entity(EntityType.FOLDER_NAME, "folder_name", name, name)
+                )
+
+    def _folder_target(
+        self,
+        original: str,
+        intent: IntentType,
+        entities: list[CommandEntity],
+    ) -> None:
+        prefixes = {
+            IntentType.OPEN_FOLDER: r"^open\s+",
+            IntentType.LIST_FOLDER: (
+                r"^(?:show (?:files|the contents) inside|show (?:the )?contents of|"
+                r"list (?:files inside|(?:the )?contents of)|what is inside)\s+"
+            ),
+            IntentType.DELETE_FOLDER: r"^delete(?: the)?\s+",
+            IntentType.GET_FOLDER_INFORMATION: (
+                r"^(?:show (?:information|info) about|get (?:information|info) "
+                r"(?:about|for)|how large is|count (?:the )?items inside)\s+"
+            ),
+        }
+        working = original.strip()
+        if intent is IntentType.CHECK_FOLDER_EXISTENCE:
+            match = re.match(r"^does\s+(.+?)\s+exist(.*)$", working, re.IGNORECASE)
+            if match:
+                working = f"{match.group(1)}{match.group(2)}"
+            else:
+                match = re.match(
+                    r"^check whether\s+(.+?)\s+exists?(.*)$",
+                    working,
+                    re.IGNORECASE,
+                )
+                if match:
+                    working = f"{match.group(1)}{match.group(2)}"
+                else:
+                    working = re.sub(
+                        r"^is there (?:a )?(?:folder|directory) named\s+",
+                        "",
+                        working,
+                        flags=re.IGNORECASE,
+                    ).strip()
+        else:
+            working = re.sub(prefixes[intent], "", working, flags=re.IGNORECASE).strip()
+        working, location, nested = self._split_location(working)
+        direct_location = self._logical_path(working)
+        if direct_location is not None:
+            location, nested = direct_location
+            working = ""
+        if location:
+            self._append_location("location", location, entities)
+        target = self._strip_folder_words(working)
+        if nested:
+            target = PureWindowsPath(nested, target).as_posix() if target else nested
+        if target:
             entities.append(
-                _entity(
-                    EntityType.FOLDER_NAME,
-                    "folder_name",
-                    match.group(1).strip(),
-                    match.group(1).strip(),
+                _entity(EntityType.FOLDER_NAME, "folder_name", target, target)
+            )
+        if intent is IntentType.GET_FOLDER_INFORMATION and re.match(
+            r"^how large is", original, re.IGNORECASE
+        ):
+            entities.append(
+                CommandEntity(
+                    EntityType.BOOLEAN,
+                    True,
+                    raw_value="recursive",
+                    name="recursive",
+                    confidence=1.0,
                 )
             )
+
+    def _rename_folder(self, original: str, entities: list[CommandEntity]) -> None:
+        working, location, nested = self._split_location(original)
+        match = re.match(r"^rename\s+(.+?)\s+to\s+(.+)$", working, re.IGNORECASE)
+        if not match:
+            return
+        source = self._strip_folder_words(match.group(1))
+        new_name = self._strip_folder_words(match.group(2))
+        direct_location = self._logical_path(source)
+        if direct_location is not None:
+            location, direct_path = direct_location
+            source = direct_path or ""
+        if nested:
+            source = nested
+        if location:
+            self._append_location("location", location, entities)
+        if source:
+            entities.append(
+                _entity(EntityType.FOLDER_NAME, "source_folder", source, source)
+            )
+        if new_name:
+            entities.append(
+                _entity(EntityType.FOLDER_NAME, "new_name", new_name, new_name)
+            )
+
+    def _transfer_folder(self, original: str, entities: list[CommandEntity]) -> None:
+        match = re.match(
+            rf"^(?:copy|move)\s+(.+?)(?:\s+from\s+({_LOCATION_EXPRESSION})(?:[\\/](.+?))?)?"
+            rf"\s+to\s+({_LOCATION_EXPRESSION})$",
+            original,
+            re.IGNORECASE,
+        )
+        if not match:
+            return
+        source = self._strip_folder_words(match.group(1))
+        source_location = match.group(2)
+        nested = match.group(3)
+        direct_location = self._logical_path(source)
+        if direct_location is not None:
+            source_location, direct_path = direct_location
+            source = direct_path or ""
+        if nested:
+            source = PureWindowsPath(nested, source).as_posix() if source else nested
+        if source:
+            entities.append(
+                _entity(EntityType.FOLDER_NAME, "source_folder", source, source)
+            )
+        if source_location:
+            self._append_location("source_location", source_location, entities)
+        self._append_location("destination", match.group(4), entities)
+
+    def _search_folder(self, original: str, entities: list[CommandEntity]) -> None:
+        working = re.sub(
+            r"^(?:find|search for)\s+",
+            "",
+            original,
+            flags=re.IGNORECASE,
+        ).strip()
+        working = re.sub(
+            r"^(?:a )?folders?(?: named)?\s+",
+            "",
+            working,
+            flags=re.IGNORECASE,
+        ).strip()
+        working, location, nested = self._split_location(working)
+        if location:
+            self._append_location("location", location, entities)
+        name = self._strip_folder_words(working)
+        if nested:
+            name = nested
+        if name:
+            entities.append(_entity(EntityType.FOLDER_NAME, "folder_name", name, name))
+
+    @staticmethod
+    def _split_location(text: str) -> tuple[str, str | None, str | None]:
+        match = re.search(
+            rf"\s+(?:on|in|inside|from)\s+({_LOCATION_EXPRESSION})(?:[\\/](.+))?$",
+            text,
+            re.IGNORECASE,
+        )
+        if match is None:
+            return text.strip(), None, None
+        return (
+            text[: match.start()].strip(),
+            match.group(1),
+            match.group(2).strip() if match.group(2) else None,
+        )
+
+    @staticmethod
+    def _logical_path(text: str) -> tuple[str, str | None] | None:
+        match = re.fullmatch(
+            rf"({_LOCATION_EXPRESSION})(?:[\\/](.+))?",
+            text.strip(),
+            re.IGNORECASE,
+        )
+        if match is None:
+            return None
+        return match.group(1), match.group(2).strip() if match.group(2) else None
+
+    @staticmethod
+    def _strip_folder_words(value: str) -> str:
+        result = value.strip()
+        result = re.sub(r"^(?:the |a )", "", result, flags=re.IGNORECASE)
+        result = re.sub(
+            r"^(?:folder|directory)(?: named| called)?\s+",
+            "",
+            result,
+            flags=re.IGNORECASE,
+        )
+        result = re.sub(r"\s+(?:folder|directory)$", "", result, flags=re.IGNORECASE)
+        return result.strip()
+
+    @staticmethod
+    def _append_location(name: str, raw: str, entities: list[CommandEntity]) -> None:
+        entities.append(_entity(EntityType.LOCATION, name, _location_value(raw), raw))
 
     @staticmethod
     def _file_name(name: str, value: str, entities: list[CommandEntity]) -> None:

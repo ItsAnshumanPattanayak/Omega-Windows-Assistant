@@ -12,6 +12,7 @@ from uuid import UUID, uuid4
 from omega.core.exceptions import InvalidSessionTransitionError, ModelValidationError
 from omega.execution.dispatcher import ApplicationActionDispatcher
 from omega.execution.file_dispatcher import FileActionDispatcher
+from omega.execution.folder_dispatcher import FolderActionDispatcher
 from omega.models import UserCommand
 from omega.session.greeting import greeting_for
 from omega.session.state import SessionState
@@ -44,6 +45,7 @@ class OmegaSession:
         parser: CommandParser | None = None,
         application_dispatcher: ApplicationActionDispatcher | None = None,
         file_dispatcher: FileActionDispatcher | None = None,
+        folder_dispatcher: FolderActionDispatcher | None = None,
     ) -> None:
         self.display_name = self._required_text(user_settings, "display_name")
         self.activation_phrase = self._required_text(
@@ -59,6 +61,7 @@ class OmegaSession:
         self._parser = parser or CommandParser()
         self._application_dispatcher = application_dispatcher
         self._file_dispatcher = file_dispatcher
+        self._folder_dispatcher = folder_dispatcher
         self.state = SessionState.INACTIVE
         self.session_id: UUID | None = None
         self.activated_at: float | None = None
@@ -232,6 +235,10 @@ class OmegaSession:
                 dispatched_file = self._file_dispatcher.dispatch(result)
                 if dispatched_file is not None:
                     return dispatched_file.user_message
+            if self._folder_dispatcher is not None:
+                dispatched_folder = self._folder_dispatcher.dispatch(result)
+                if dispatched_folder is not None:
+                    return dispatched_folder.user_message
             return format_parse_response(result)
         raise InvalidSessionTransitionError(
             "Session cannot accept input while shutting down."

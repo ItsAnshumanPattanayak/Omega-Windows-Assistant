@@ -10,6 +10,10 @@ from omega.execution.file_dispatcher import (
     FileControlCommand,
     FileDispatchResult,
 )
+from omega.execution.folder_dispatcher import (
+    FolderActionDispatcher,
+    FolderDispatchResult,
+)
 
 __all__ = [
     "ApplicationActionDispatcher",
@@ -18,4 +22,6 @@ __all__ = [
     "FileActionDispatcher",
     "FileControlCommand",
     "FileDispatchResult",
+    "FolderActionDispatcher",
+    "FolderDispatchResult",
 ]

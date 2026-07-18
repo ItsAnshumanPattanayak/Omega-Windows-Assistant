@@ -33,13 +33,15 @@ INTENT_PATTERNS = (
         "file_exists",
         IntentType.CHECK_FILE_EXISTENCE,
         r"^(?:does .+ exist(?: (?:on|in) .+)?|"
-        r"check whether .+ exists?(?: (?:on|in) .+)?)$",
+        r"check whether .+ exists?(?: (?:on|in) .+)?|"
+        r"is there (?:a )?(?:folder|directory) named .+)$",
     ),
     _rule(
         "file_information",
         IntentType.GET_FILE_INFORMATION,
         r"^(?:show (?:information|info) about|"
-        r"get (?:information|info) (?:about|for)) .+$",
+        r"get (?:information|info) (?:about|for)|how large is|"
+        r"count (?:the )?items inside) .+$",
     ),
     _rule(
         "create_folder",
@@ -49,7 +51,8 @@ INTENT_PATTERNS = (
     _rule(
         "list_folder",
         IntentType.LIST_FOLDER,
-        r"^(?:show files inside|list (?:the )?contents of) .+$",
+        r"^(?:show (?:files|the contents) inside|show (?:the )?contents of|"
+        r"list (?:files inside|(?:the )?contents of)|what is inside) .+$",
     ),
     _rule("rename", IntentType.RENAME_FILE, r"^rename .+ to .+$"),
     _rule("rename_incomplete", IntentType.RENAME_FILE, r"^rename .+$"),
@@ -57,6 +60,12 @@ INTENT_PATTERNS = (
     _rule("move", IntentType.MOVE_FILE, r"^move .+(?: to .+)?$"),
     _rule("append", IntentType.APPEND_FILE, r"^append(?: .+)? (?:to|into)(?: .+)?$"),
     _rule("write", IntentType.WRITE_FILE, r"^write(?: .+)? into(?: .+)?$"),
+    _rule(
+        "folder_search",
+        IntentType.SEARCH_FOLDER,
+        r"^(?:find|search for) (?:(?:a )?folders?(?: named)? .+|"
+        r"(?:the )?.+ folder(?: (?:on|in) .+)?)$",
+    ),
     _rule("search", IntentType.SEARCH_FILE, r"^(?:find|search for) .+$"),
     _rule(
         "read",

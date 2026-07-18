@@ -120,6 +120,35 @@ Rename, copy, and move refuse destination conflicts because Phase 5 has no recov
 
 Filename search is limited to one logical root, exact case-insensitive names or internally selected extensions, configured recursion depth, and configured result count. It skips inaccessible and linked directories, never searches file contents or whole drives, and returns relative paths. Bounded reads, display truncation, write limits, and search limits prevent uncontrolled memory or terminal use. File contents and pending write text stay out of logs.
 
+## Controlled folder execution
+
+```text
+Parsed folder command
+  -> FolderActionDispatcher
+  -> FileLocationResolver
+  -> FolderPathValidator
+  -> bounded preflight inspection
+  -> FolderManager
+  -> Creator / Inspector / Operations / Search / Opener
+  -> post-operation verification
+  -> ActionResult
+  -> OmegaSession response
+```
+
+Phase 6 deliberately reuses Phase 5's `FileLocationResolver` and `ResolvedLocation` record. A single canonical mapping for Desktop, Documents, Downloads, Pictures, Music, Videos, Home, and the captured startup directory prevents file and folder operations from disagreeing about an approved root. Folder-specific validation remains separate because directory trees require component-by-component validation, reparse-point checks, bounded traversal, and different conflict semantics.
+
+`FolderPathValidator` accepts only Windows-safe relative components beneath a resolved logical root. It rejects empty or reserved names, traversal, drive-qualified, UNC, device, alternate-stream, environment-expanded, and tilde-expanded paths. Containment uses resolved path components rather than string prefixes. Actual protected Windows and Omega runtime paths are blocked by resolved location, so an unrelated user directory merely named `config` is not rejected.
+
+Creation uses a non-recursive `mkdir`: the immediate parent must already exist and be a real directory. This prevents a short command from silently creating an entire hierarchy. Listing is immediate and deterministically sorted. Metadata and recursive size calculations use configured depth, item, and byte limits and label partial results rather than claiming complete totals.
+
+Recursive copy and move start with a read-only tree preflight. It measures regular files, directories, bytes, maximum depth, root modification time, and immediate item count; rejects inaccessible entries, protected paths, symbolic links, junctions, destination conflicts, self-nesting, and resource-limit violations; then rechecks the source immediately before mutation. Links and junctions are rejected for the entire operation because copying or traversing their targets would undermine logical-root containment.
+
+Copy builds a private operation-created staging tree inside the validated destination parent, verifies regular-file counts, folder counts, and total bytes, and only then renames it to the final non-existing destination. Failure cleanup is confined to that private temporary directory and is not exposed through `DELETE_FOLDER`. Existing destinations are never cleaned, merged, replaced, or automatically renamed.
+
+Same-volume moves use a rename-style operation and verify both endpoints and the bounded tree measurements. Cross-volume destructive movement is refused: Omega offers no source removal until Phase 8 provides recovery and undo. Folder deletion likewise returns the Phase 8 deferral without resolving or mutating the target. Exact-name search stays inside one approved logical root, uses bounded recursion, skips protected/inaccessible entries, and never follows links or scans a whole drive.
+
+`FolderActionDispatcher` accepts only complete, unambiguous folder parse results, preserves command and action IDs, assigns provisional Phase 6 risk data, and delegates to `FolderManager`. The parser and session contain no direct directory operation. Inactive sessions cannot reach the dispatcher, and `Shut down Omega` remains a built-in priority command.
+
 ## Planned layers
 
 The following components are planned, not implemented:
@@ -127,7 +156,7 @@ The following components are planned, not implemented:
 - **Input layer:** text and, later, voice input. Voice activation will use `Hello Omega`.
 - **Command-processing layer:** converts approved user intent into structured commands.
 - **Safety layer:** checks permissions, protected paths, confirmations, and action policies before execution.
-- **Executor layer:** performs allowlisted Phase 4 application operations and validated Phase 5 file operations through separate domain dispatchers. Future domains require separate review.
+- **Executor layer:** performs allowlisted application operations and validated file/folder operations through separate domain dispatchers. Future domains require separate review.
 
 Command understanding must remain separate from execution. An interpreter may recognize a request, but only the safety layer may authorize it and only the executor may perform it. This separation makes future behavior testable and prevents an AI suggestion from becoming an action automatically.
 

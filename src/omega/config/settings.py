@@ -28,6 +28,7 @@ REQUIRED_SECTIONS = frozenset(
         "safety",
         "applications",
         "files",
+        "folders",
     }
 )
 
@@ -56,6 +57,7 @@ class Settings:
     safety: Mapping[str, Any]
     applications: Mapping[str, Any]
     files: Mapping[str, Any]
+    folders: Mapping[str, Any]
 
     @property
     def application_name(self) -> str:
@@ -112,6 +114,22 @@ def _defaults() -> dict[str, dict[str, Any]]:
             "allow_absolute_paths": False,
             "allow_permanent_deletion": False,
         },
+        "folders": {
+            "default_location": "desktop",
+            "maximum_listing_items": 100,
+            "maximum_scan_depth": 10,
+            "maximum_scan_items": 10_000,
+            "maximum_scan_bytes": 10_737_418_240,
+            "maximum_copy_depth": 20,
+            "maximum_copy_items": 10_000,
+            "maximum_copy_bytes": 5_368_709_120,
+            "search_max_depth": 6,
+            "search_max_results": 50,
+            "allow_folder_merge": False,
+            "allow_destination_replace": False,
+            "allow_permanent_deletion": False,
+            "allow_cross_volume_move": False,
+        },
     }
 
 
@@ -141,6 +159,45 @@ def _validate_files(values: Mapping[str, Any]) -> None:
         raise ConfigurationError("Phase 5 requires absolute file paths to be disabled.")
     if values.get("allow_permanent_deletion") is not False:
         raise ConfigurationError("Phase 5 requires permanent deletion to be disabled.")
+
+
+def _validate_folders(values: Mapping[str, Any]) -> None:
+    if values.get("default_location") not in _FILE_LOCATIONS:
+        raise ConfigurationError("folders.default_location must be registered.")
+    positive = (
+        "maximum_listing_items",
+        "maximum_scan_items",
+        "maximum_scan_bytes",
+        "maximum_copy_items",
+        "maximum_copy_bytes",
+        "search_max_results",
+    )
+    for key in positive:
+        value = values.get(key)
+        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+            raise ConfigurationError(f"folders.{key} must be a positive integer.")
+    for key in ("maximum_scan_depth", "maximum_copy_depth", "search_max_depth"):
+        value = values.get(key)
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, int)
+            or not 0 <= value <= 50
+        ):
+            raise ConfigurationError(f"folders.{key} must be between 0 and 50.")
+    if values.get("maximum_listing_items", 0) > 1_000:
+        raise ConfigurationError("folders.maximum_listing_items must not exceed 1000.")
+    if values.get("search_max_results", 0) > 500:
+        raise ConfigurationError("folders.search_max_results must not exceed 500.")
+    switches = (
+        "allow_folder_merge",
+        "allow_destination_replace",
+        "allow_permanent_deletion",
+        "allow_cross_volume_move",
+    )
+    if any(values.get(key) is not False for key in switches):
+        raise ConfigurationError(
+            "Unsafe Phase 6 folder-policy switches must be disabled."
+        )
 
 
 def _merge_defaults(raw: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
@@ -178,4 +235,5 @@ def load_settings(config_path: Path | None = None) -> Settings:
 
     values = _merge_defaults(raw)
     _validate_files(values["files"])
+    _validate_folders(values["folders"])
     return Settings(**values)

@@ -71,3 +71,43 @@ class FileSearchError(FileManagementError):
 
 class FileOpenError(FileManagementError):
     """Raised when a validated document cannot be opened safely."""
+
+
+class FolderManagementError(OmegaError):
+    """Base exception for controlled folder-management failures."""
+
+
+class FolderValidationError(FolderManagementError):
+    """Raised when a folder name or path fails safety validation."""
+
+
+class FolderCreationError(FolderManagementError):
+    """Raised when one validated folder cannot be created safely."""
+
+
+class FolderInspectionError(FolderManagementError):
+    """Raised when bounded folder inspection cannot be completed safely."""
+
+
+class FolderOperationError(FolderManagementError):
+    """Raised when a folder rename, copy, or move cannot complete safely."""
+
+
+class FolderConflictError(FolderOperationError):
+    """Raised when an operation would merge with or replace a destination."""
+
+
+class FolderResourceLimitError(FolderOperationError):
+    """Raised when a folder tree exceeds a configured safety limit."""
+
+
+class FolderCrossVolumeMoveError(FolderOperationError):
+    """Raised when an unsafe destructive cross-volume move is requested."""
+
+
+class FolderSearchError(FolderManagementError):
+    """Raised when a bounded folder search cannot be completed safely."""
+
+
+class FolderOpenError(FolderManagementError):
+    """Raised when a validated directory cannot be opened safely."""

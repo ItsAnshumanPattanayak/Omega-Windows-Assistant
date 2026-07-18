@@ -41,3 +41,19 @@ files:
   search_max_results: 50
   allow_absolute_paths: false
   allow_permanent_deletion: false
+
+folders:
+  default_location: desktop
+  maximum_listing_items: 100
+  maximum_scan_depth: 10
+  maximum_scan_items: 10000
+  maximum_scan_bytes: 10737418240
+  maximum_copy_depth: 20
+  maximum_copy_items: 10000
+  maximum_copy_bytes: 5368709120
+  search_max_depth: 6
+  search_max_results: 50
+  allow_folder_merge: false
+  allow_destination_replace: false
+  allow_permanent_deletion: false
+  allow_cross_volume_move: false

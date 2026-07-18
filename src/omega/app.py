@@ -16,7 +16,11 @@ from omega.applications import (
 )
 from omega.config.settings import Settings, load_settings
 from omega.core.exceptions import InitializationError, UnsupportedPlatformError
-from omega.execution import ApplicationActionDispatcher, FileActionDispatcher
+from omega.execution import (
+    ApplicationActionDispatcher,
+    FileActionDispatcher,
+    FolderActionDispatcher,
+)
 from omega.files import (
     FileLocationResolver,
     FileManager,
@@ -28,6 +32,16 @@ from omega.files import (
     TextFileReader,
     TextFileWriter,
     WindowsFileOpener,
+)
+from omega.folders import (
+    FolderCreator,
+    FolderInspector,
+    FolderManager,
+    FolderOperations,
+    FolderOperationSettings,
+    FolderPathValidator,
+    FolderSearch,
+    WindowsFolderOpener,
 )
 from omega.interfaces.terminal import TerminalInterface
 from omega.session.session import OmegaSession
@@ -84,12 +98,27 @@ class OmegaApplication:
             settings=file_settings,
             logger=get_logger("files.manager"),
         )
+        folder_settings = FolderOperationSettings.from_mapping(self.settings.folders)
+        folder_validator = FolderPathValidator()
+        folder_inspector = FolderInspector(folder_validator)
+        folder_manager = FolderManager(
+            locations,
+            folder_validator,
+            FolderCreator(),
+            folder_inspector,
+            FolderOperations(folder_inspector, folder_validator),
+            FolderSearch(folder_validator),
+            WindowsFolderOpener(),
+            settings=folder_settings,
+            logger=get_logger("folders.manager"),
+        )
         self.session = OmegaSession(
             self.settings.user,
             self.settings.assistant,
             logger=get_logger("session"),
             application_dispatcher=ApplicationActionDispatcher(manager, registry),
             file_dispatcher=FileActionDispatcher(file_manager),
+            folder_dispatcher=FolderActionDispatcher(folder_manager),
         )
         self.logger.info(
             "%s %s initialized in %s mode.",

@@ -18,6 +18,7 @@ logging: {}
 safety: {}
 applications: {}
 files: {}
+folders: {}
 """
 
 
@@ -34,6 +35,8 @@ def test_load_settings_applies_sensible_defaults() -> None:
         assert settings.applications["allow_force_close"] is False
         assert settings.files["default_location"] == "desktop"
         assert settings.files["allow_absolute_paths"] is False
+        assert settings.folders["maximum_listing_items"] == 100
+        assert settings.folders["allow_permanent_deletion"] is False
 
 
 def test_missing_required_section_raises_configuration_error() -> None:
@@ -67,6 +70,29 @@ def test_invalid_yaml_raises_configuration_error() -> None:
 )
 def test_unsafe_file_settings_are_rejected(files: str) -> None:
     config = _valid_config().replace("files: {}", f"files:\n  {files}")
+    with TemporaryDirectory(dir=Path.cwd() / "data") as temporary_directory:
+        config_path = Path(temporary_directory) / "app_config.yaml"
+        config_path.write_text(config, encoding="utf-8")
+        with pytest.raises(ConfigurationError):
+            load_settings(config_path)
+
+
+@pytest.mark.parametrize(
+    "folders",
+    [
+        "default_location: system32",
+        "maximum_listing_items: 0",
+        "maximum_scan_depth: 51",
+        "maximum_copy_items: -1",
+        "search_max_results: 501",
+        "allow_folder_merge: true",
+        "allow_destination_replace: true",
+        "allow_permanent_deletion: true",
+        "allow_cross_volume_move: true",
+    ],
+)
+def test_unsafe_folder_settings_are_rejected(folders: str) -> None:
+    config = _valid_config().replace("folders: {}", f"folders:\n  {folders}")
     with TemporaryDirectory(dir=Path.cwd() / "data") as temporary_directory:
         config_path = Path(temporary_directory) / "app_config.yaml"
         config_path.write_text(config, encoding="utf-8")

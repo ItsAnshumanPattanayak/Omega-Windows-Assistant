@@ -1,14 +1,14 @@
 # Omega
 
-Omega is a safety-first Windows desktop assistant project. **Current phase: Phase 5 — Safe File Management System.**
+Omega is a safety-first Windows desktop assistant project. **Current phase: Phase 6 — Controlled Folder Management System.**
 
 ## Current status
 
 Omega is a locally controlled assistant that understands narrowly approved Windows tasks while enforcing clear safety boundaries. It starts inactive, accepts `Hello Omega` as a standalone activation phrase, greets Anshuman based on the current time, accepts commands without repeating its name, and uses `Shut down Omega` for safe termination.
 
-Phase 5 adds controlled file operations inside approved logical locations: Desktop, Documents, Downloads, Pictures, Music, Videos, Home, and the startup working directory. An active text session can create supported text/data files, check existence, inspect basic metadata, read bounded UTF-8 text, write or append text, rename/copy/move files without replacing destinations, open safe documents, and perform bounded filename searches. Replacing non-empty text requires exact, short-lived confirmation tied to the file version.
+Phase 6 adds controlled folder operations inside the same approved logical locations used by Phase 5: Desktop, Documents, Downloads, Pictures, Music, Videos, Home, and the startup working directory. An active session can create one folder beneath an existing parent, check existence, list immediate contents, inspect bounded metadata, open a validated folder, rename folders, copy bounded trees, perform atomic same-volume moves, and run bounded exact-name searches. Folder merging, destination replacement, link traversal, and cross-volume destructive moves are blocked.
 
-Omega still cannot permanently delete files, use the Recycle Bin, undo actions, create or delete folders through commands, access arbitrary absolute/system paths, modify executable or script files, process voice input, provide a GUI, automate browser pages, or execute AI-generated actions.
+Omega still cannot permanently delete files or folders, use the Recycle Bin, undo actions, merge directory trees, replace existing destination folders, perform destructive cross-drive folder moves, access arbitrary absolute/system paths, process voice input, provide a GUI, automate browser pages, or execute AI-generated actions.
 
 ## Technology
 
@@ -61,6 +61,23 @@ All file commands resolve through a configured logical location. Desktop is the 
 | `.xls`, `.xlsx`, `.ppt`, `.pptx` | No | No | No | Yes | Open-only; contents are not inspected or modified |
 | Executables and command scripts | No | No | No | No | Includes `.exe`, `.bat`, `.cmd`, `.ps1`, `.vbs`, `.msi`, and related types |
 
+## Safe folder support
+
+Folder commands reuse Phase 5's logical-location resolver and accept only validated relative paths. Creation makes only the requested final directory and requires its immediate parent to exist. Recursive work is preceded by a bounded, read-only scan that rejects symbolic links, junctions, protected paths, inaccessible trees, and configured item, byte, or depth overages.
+
+| Operation | Supported | Confirmation | Limits | Important restrictions |
+|---|---:|---:|---|---|
+| Create | Yes | No | One final directory | Existing real parent required; no recursive parent creation |
+| Existence check | Yes | No | One validated target | Files and links do not count as folders |
+| List contents | Yes | No | First 100 items by default | Immediate children only; protected/linked entries omitted |
+| Inspect metadata | Yes | No | Configured depth, item, and byte bounds | Incomplete scans are identified as truncated |
+| Open in File Explorer | Yes on Windows | No | One validated target | Uses the Windows association API; never a shell command |
+| Rename | Yes | No | Same parent only | No overwrite, merge, link, or protected target |
+| Copy tree | Yes | No | 20 levels, 10,000 items, 5 GiB by default | Preflight and post-copy verification; no links or merge |
+| Move tree | Same volume only | No | Same bounds as copy | Atomic rename-style move; cross-volume removal is blocked |
+| Search by folder name | Yes | No | Depth 6 and 50 results by default | Exact case-insensitive name; one approved root only |
+| Delete | No | Not applicable | Deferred to Phase 8 | No permanent folder-deletion path exists |
+
 ## Registered applications
 
 Availability depends on the applications installed on the current Windows computer. Status matching uses exact registered process names.
@@ -90,7 +107,7 @@ python -m mypy src
 
 ## Safety principles
 
-Omega never passes user text to a shell or executable argument list. Application targets come only from the validated project registry. File targets are built from registered logical roots, validated Windows path components, and resolved containment checks; arbitrary absolute paths and permanent deletion are disabled. Administrator operations and force close remain disabled by default. Logs must not contain file contents or other sensitive information. Read the full [safety policy](docs/safety_policy.md).
+Omega never passes user text to a shell or executable argument list. Application targets come only from the validated project registry. File and folder targets are built from registered logical roots, validated Windows path components, and resolved containment checks; arbitrary absolute paths and permanent deletion are disabled. Recursive folder scans are bounded and never follow symbolic links or junctions. Administrator operations and force close remain disabled by default. Logs must not contain file contents or other sensitive information. Read the full [safety policy](docs/safety_policy.md).
 
 ## Roadmap
 

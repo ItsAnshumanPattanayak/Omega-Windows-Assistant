@@ -34,6 +34,9 @@ class IntentType(StrEnum):
     COPY_FOLDER = "copy_folder"
     MOVE_FOLDER = "move_folder"
     DELETE_FOLDER = "delete_folder"
+    CHECK_FOLDER_EXISTENCE = "check_folder_existence"
+    GET_FOLDER_INFORMATION = "get_folder_information"
+    SEARCH_FOLDER = "search_folder"
     UNDO_LAST_ACTION = "undo_last_action"
     SHOW_HISTORY = "show_history"
 

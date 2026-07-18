@@ -29,7 +29,18 @@ def test_production_execution_contains_no_unrestricted_or_delete_paths() -> None
                         and node.func.value.id == "os"
                         and node.func.attr in {"remove", "unlink"}
                     ), path
+                    assert not (
+                        isinstance(node.func.value, ast.Name)
+                        and node.func.value.id == "os"
+                        and node.func.attr in {"rmdir", "removedirs"}
+                    ), path
+                    assert not (
+                        isinstance(node.func.value, ast.Name)
+                        and node.func.value.id == "shutil"
+                        and node.func.attr == "rmtree"
+                    ), path
                     assert node.func.attr != "unlink", path
+                    assert node.func.attr != "rmdir", path
                 for keyword in node.keywords:
                     assert not (
                         keyword.arg == "shell"

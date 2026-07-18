@@ -23,6 +23,7 @@ class RuleBasedIntentDetector:
                     " folder" in normalized_text
                     or normalized_text.startswith("open the ")
                     and normalized_text.endswith(" folder")
+                    or _opens_logical_location(normalized_text)
                 ):
                     intent = IntentType.OPEN_FOLDER
                 elif re_has_extension(normalized_text):
@@ -51,6 +52,18 @@ class RuleBasedIntentDetector:
                     if " folder" in normalized_text
                     else IntentType.DELETE_FILE
                 )
+            elif pattern.name == "file_exists" and (
+                " folder" in normalized_text
+                or " directory" in normalized_text
+                or not re_has_extension(normalized_text)
+            ):
+                intent = IntentType.CHECK_FOLDER_EXISTENCE
+            elif pattern.name == "file_information" and (
+                " folder" in normalized_text
+                or " directory" in normalized_text
+                or not re_has_extension(normalized_text)
+            ):
+                intent = IntentType.GET_FOLDER_INFORMATION
             return intent, pattern.name
         return IntentType.UNKNOWN, None
 
@@ -59,3 +72,13 @@ def re_has_extension(text: str) -> bool:
     import re
 
     return re.search(r"\.[a-z0-9]{1,10}(?:\b|$)", text) is not None
+
+
+def _opens_logical_location(text: str) -> bool:
+    import re
+
+    locations = (
+        "desktop|documents|downloads|pictures|music|videos|home|"
+        "current directory|current folder|project directory"
+    )
+    return re.fullmatch(rf"open (?:the )?(?:{locations})(?:[\\/].+)?", text) is not None

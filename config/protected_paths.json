@@ -15,6 +15,11 @@
     ".git",
     "config",
     "data/logs",
-    "data/action_backups"
+    "data/action_backups",
+    "data/command_history",
+    "build",
+    "dist",
+    ".venv",
+    "venv"
   ]
 }
