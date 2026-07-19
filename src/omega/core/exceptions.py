@@ -147,3 +147,19 @@ class ConfirmationMismatchError(ConfirmationError):
 
 class ExecutionGatewayError(SafetyError):
     """Raised when the central execution gateway cannot fail safely."""
+
+
+class RecoveryError(OmegaError):
+    """Base exception for recoverable deletion and undo failures."""
+
+
+class RecycleBinError(RecoveryError):
+    """Raised when an item cannot be moved to the Recycle Bin safely."""
+
+
+class RecoveryRecordError(RecoveryError):
+    """Raised when an undo record is invalid or unavailable."""
+
+
+class RestoreError(RecoveryError):
+    """Raised when a recycled item cannot be restored safely."""

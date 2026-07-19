@@ -29,6 +29,7 @@ REQUIRED_SECTIONS = frozenset(
         "applications",
         "files",
         "folders",
+        "recovery",
     }
 )
 
@@ -48,7 +49,7 @@ _FILE_LOCATIONS = frozenset(
 
 @dataclass(frozen=True)
 class Settings:
-    """Validated configuration values used by the Phase 0 application."""
+    """Validated configuration values used by Omega."""
 
     application: Mapping[str, Any]
     user: Mapping[str, Any]
@@ -58,15 +59,18 @@ class Settings:
     applications: Mapping[str, Any]
     files: Mapping[str, Any]
     folders: Mapping[str, Any]
+    recovery: Mapping[str, Any]
 
     @property
     def application_name(self) -> str:
         """Return the configured application name."""
+
         return str(self.application.get("name", APP_NAME))
 
     @property
     def application_version(self) -> str:
         """Return the configured application version."""
+
         return str(self.application.get("version", APP_VERSION))
 
 
@@ -138,13 +142,25 @@ def _defaults() -> dict[str, dict[str, Any]]:
             "allow_permanent_deletion": False,
             "allow_cross_volume_move": False,
         },
+        "recovery": {
+            "enabled": True,
+            "allow_permanent_deletion": False,
+            "require_confirmation_for_recycle": True,
+            "require_confirmation_for_restore": True,
+            "undo_timeout_seconds": 300,
+            "maximum_undo_records": 20,
+            "maximum_recycle_size_bytes": 5_368_709_120,
+            "persist_undo_records": False,
+        },
     }
 
 
 def _validate_files(values: Mapping[str, Any]) -> None:
     default_location = values.get("default_location")
+
     if default_location not in _FILE_LOCATIONS:
         raise ConfigurationError("files.default_location must be registered.")
+
     positive = (
         "maximum_read_size_bytes",
         "maximum_display_characters",
@@ -152,18 +168,30 @@ def _validate_files(values: Mapping[str, Any]) -> None:
         "maximum_resulting_file_size_bytes",
         "search_max_results",
     )
+
     for key in positive:
         value = values.get(key)
+
         if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
             raise ConfigurationError(f"files.{key} must be positive.")
+
     depth = values.get("search_max_depth")
+
     if isinstance(depth, bool) or not isinstance(depth, int) or not 0 <= depth <= 20:
         raise ConfigurationError("files.search_max_depth must be between 0 and 20.")
+
     result_limit = values.get("search_max_results")
-    if not isinstance(result_limit, int) or result_limit > 500:
+
+    if (
+        isinstance(result_limit, bool)
+        or not isinstance(result_limit, int)
+        or result_limit > 500
+    ):
         raise ConfigurationError("files.search_max_results must not exceed 500.")
+
     if values.get("allow_absolute_paths") is not False:
         raise ConfigurationError("Phase 5 requires absolute file paths to be disabled.")
+
     if values.get("allow_permanent_deletion") is not False:
         raise ConfigurationError("Phase 5 requires permanent deletion to be disabled.")
 
@@ -171,6 +199,7 @@ def _validate_files(values: Mapping[str, Any]) -> None:
 def _validate_folders(values: Mapping[str, Any]) -> None:
     if values.get("default_location") not in _FILE_LOCATIONS:
         raise ConfigurationError("folders.default_location must be registered.")
+
     positive = (
         "maximum_listing_items",
         "maximum_scan_items",
@@ -179,36 +208,57 @@ def _validate_folders(values: Mapping[str, Any]) -> None:
         "maximum_copy_bytes",
         "search_max_results",
     )
+
     for key in positive:
         value = values.get(key)
+
         if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
             raise ConfigurationError(f"folders.{key} must be a positive integer.")
-    for key in ("maximum_scan_depth", "maximum_copy_depth", "search_max_depth"):
+
+    for key in (
+        "maximum_scan_depth",
+        "maximum_copy_depth",
+        "search_max_depth",
+    ):
         value = values.get(key)
+
         if (
             isinstance(value, bool)
             or not isinstance(value, int)
             or not 0 <= value <= 50
         ):
             raise ConfigurationError(f"folders.{key} must be between 0 and 50.")
+
     if values.get("maximum_listing_items", 0) > 1_000:
         raise ConfigurationError("folders.maximum_listing_items must not exceed 1000.")
+
     if values.get("search_max_results", 0) > 500:
         raise ConfigurationError("folders.search_max_results must not exceed 500.")
+
     switches = (
         "allow_folder_merge",
         "allow_destination_replace",
         "allow_permanent_deletion",
         "allow_cross_volume_move",
     )
+
     if any(values.get(key) is not False for key in switches):
         raise ConfigurationError(
             "Unsafe Phase 6 folder-policy switches must be disabled."
         )
 
 
+def _validate_recovery(values: Mapping[str, Any]) -> None:
+    """Validate immutable Phase 8 recovery boundaries."""
+
+    from omega.recovery.configuration import RecoveryConfiguration
+
+    RecoveryConfiguration.from_mapping(values)
+
+
 def _validate_safety(values: Mapping[str, Any]) -> None:
-    """Enforce immutable Phase 7 boundaries before any service is created."""
+    """Enforce immutable Phase 7 boundaries before services are created."""
+
     disabled = (
         "allow_administrator_operations",
         "allow_arbitrary_shell_commands",
@@ -221,13 +271,17 @@ def _validate_safety(values: Mapping[str, Any]) -> None:
         "allow_folder_merge",
         "allow_cross_volume_destructive_move",
     )
+
     if any(values.get(name) is not False for name in disabled):
         raise ConfigurationError(
             "Phase 7 hard safety-boundary settings must remain disabled."
         )
+
     if values.get("default_decision") != "deny":
         raise ConfigurationError("safety.default_decision must be deny.")
+
     timeout = values.get("confirmation_timeout_seconds")
+
     if (
         isinstance(timeout, bool)
         or not isinstance(timeout, (int, float))
@@ -236,7 +290,9 @@ def _validate_safety(values: Mapping[str, Any]) -> None:
         raise ConfigurationError(
             "safety.confirmation_timeout_seconds must be between 0 and 300."
         )
+
     attempts = values.get("maximum_confirmation_attempts")
+
     if (
         isinstance(attempts, bool)
         or not isinstance(attempts, int)
@@ -247,20 +303,28 @@ def _validate_safety(values: Mapping[str, Any]) -> None:
         )
 
 
-def _merge_defaults(raw: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
+def _merge_defaults(
+    raw: Mapping[str, Any],
+) -> dict[str, Mapping[str, Any]]:
     merged: dict[str, Mapping[str, Any]] = {}
+
     for section, values in _defaults().items():
         supplied = raw[section]
+
         if not isinstance(supplied, Mapping):
             message = f"Configuration section '{section}' must be a mapping."
             raise ConfigurationError(message)
+
         merged[section] = {**values, **supplied}
+
     return merged
 
 
 def load_settings(config_path: Path | None = None) -> Settings:
     """Load and validate Omega's project-level YAML configuration."""
+
     path = config_path or config_dir() / APP_CONFIG_FILENAME
+
     try:
         with path.open("r", encoding="utf-8") as config_file:
             raw = yaml.safe_load(config_file)
@@ -275,13 +339,17 @@ def load_settings(config_path: Path | None = None) -> Settings:
         raise ConfigurationError("Configuration root must be a YAML mapping.")
 
     missing_sections = REQUIRED_SECTIONS.difference(raw)
+
     if missing_sections:
         missing = ", ".join(sorted(missing_sections))
         message = f"Configuration is missing required section(s): {missing}"
         raise ConfigurationError(message)
 
     values = _merge_defaults(raw)
+
     _validate_safety(values["safety"])
     _validate_files(values["files"])
     _validate_folders(values["folders"])
+    _validate_recovery(values["recovery"])
+
     return Settings(**values)

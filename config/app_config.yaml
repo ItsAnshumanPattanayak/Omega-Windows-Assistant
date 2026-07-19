@@ -65,3 +65,13 @@ folders:
   allow_destination_replace: false
   allow_permanent_deletion: false
   allow_cross_volume_move: false
+
+recovery:
+  enabled: true
+  allow_permanent_deletion: false
+  require_confirmation_for_recycle: true
+  require_confirmation_for_restore: true
+  undo_timeout_seconds: 300
+  maximum_undo_records: 20
+  maximum_recycle_size_bytes: 5368709120
+  persist_undo_records: false

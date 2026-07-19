@@ -24,7 +24,7 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-addopts = "-ra --basetemp=data/pytest-temp"
+addopts = "-ra"
 
 [tool.ruff]
 line-length = 88

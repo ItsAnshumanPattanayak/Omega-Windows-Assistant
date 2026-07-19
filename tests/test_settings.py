@@ -19,13 +19,17 @@ safety: {}
 applications: {}
 files: {}
 folders: {}
+recovery: {}
 """
 
 
 def test_load_settings_applies_sensible_defaults() -> None:
     with TemporaryDirectory(dir=Path.cwd() / "data") as temporary_directory:
         config_path = Path(temporary_directory) / "app_config.yaml"
-        config_path.write_text(_valid_config(), encoding="utf-8")
+        config_path.write_text(
+            _valid_config(),
+            encoding="utf-8",
+        )
 
         settings = load_settings(config_path)
 
@@ -40,22 +44,42 @@ def test_load_settings_applies_sensible_defaults() -> None:
         assert settings.safety["default_decision"] == "deny"
         assert settings.safety["maximum_confirmation_attempts"] == 3
 
+        assert settings.recovery["enabled"] is True
+        assert settings.recovery["allow_permanent_deletion"] is False
+        assert settings.recovery["require_confirmation_for_recycle"] is True
+        assert settings.recovery["require_confirmation_for_restore"] is True
+        assert settings.recovery["undo_timeout_seconds"] == 300
+        assert settings.recovery["maximum_undo_records"] == 20
+        assert settings.recovery["persist_undo_records"] is False
+
 
 def test_missing_required_section_raises_configuration_error() -> None:
     with TemporaryDirectory(dir=Path.cwd() / "data") as temporary_directory:
         config_path = Path(temporary_directory) / "app_config.yaml"
-        config_path.write_text("application: {}\nuser: {}\n", encoding="utf-8")
+        config_path.write_text(
+            "application: {}\nuser: {}\n",
+            encoding="utf-8",
+        )
 
-        with pytest.raises(ConfigurationError, match="missing required section"):
+        with pytest.raises(
+            ConfigurationError,
+            match="missing required section",
+        ):
             load_settings(config_path)
 
 
 def test_invalid_yaml_raises_configuration_error() -> None:
     with TemporaryDirectory(dir=Path.cwd() / "data") as temporary_directory:
         config_path = Path(temporary_directory) / "app_config.yaml"
-        config_path.write_text("application: [unterminated\n", encoding="utf-8")
+        config_path.write_text(
+            "application: [unterminated\n",
+            encoding="utf-8",
+        )
 
-        with pytest.raises(ConfigurationError, match="Could not read configuration"):
+        with pytest.raises(
+            ConfigurationError,
+            match="Could not read configuration",
+        ):
             load_settings(config_path)
 
 
@@ -71,10 +95,18 @@ def test_invalid_yaml_raises_configuration_error() -> None:
     ],
 )
 def test_unsafe_file_settings_are_rejected(files: str) -> None:
-    config = _valid_config().replace("files: {}", f"files:\n  {files}")
+    config = _valid_config().replace(
+        "files: {}",
+        f"files:\n  {files}",
+    )
+
     with TemporaryDirectory(dir=Path.cwd() / "data") as temporary_directory:
         config_path = Path(temporary_directory) / "app_config.yaml"
-        config_path.write_text(config, encoding="utf-8")
+        config_path.write_text(
+            config,
+            encoding="utf-8",
+        )
+
         with pytest.raises(ConfigurationError):
             load_settings(config_path)
 
@@ -93,11 +125,21 @@ def test_unsafe_file_settings_are_rejected(files: str) -> None:
         "allow_cross_volume_move: true",
     ],
 )
-def test_unsafe_folder_settings_are_rejected(folders: str) -> None:
-    config = _valid_config().replace("folders: {}", f"folders:\n  {folders}")
+def test_unsafe_folder_settings_are_rejected(
+    folders: str,
+) -> None:
+    config = _valid_config().replace(
+        "folders: {}",
+        f"folders:\n  {folders}",
+    )
+
     with TemporaryDirectory(dir=Path.cwd() / "data") as temporary_directory:
         config_path = Path(temporary_directory) / "app_config.yaml"
-        config_path.write_text(config, encoding="utf-8")
+        config_path.write_text(
+            config,
+            encoding="utf-8",
+        )
+
         with pytest.raises(ConfigurationError):
             load_settings(config_path)
 
@@ -122,10 +164,108 @@ def test_unsafe_folder_settings_are_rejected(folders: str) -> None:
         "maximum_confirmation_attempts: 11",
     ],
 )
-def test_unsafe_central_safety_settings_are_rejected(safety: str) -> None:
-    config = _valid_config().replace("safety: {}", f"safety:\n  {safety}")
+def test_unsafe_central_safety_settings_are_rejected(
+    safety: str,
+) -> None:
+    config = _valid_config().replace(
+        "safety: {}",
+        f"safety:\n  {safety}",
+    )
+
     with TemporaryDirectory(dir=Path.cwd() / "data") as temporary_directory:
         config_path = Path(temporary_directory) / "app_config.yaml"
-        config_path.write_text(config, encoding="utf-8")
+        config_path.write_text(
+            config,
+            encoding="utf-8",
+        )
+
         with pytest.raises(ConfigurationError):
+            load_settings(config_path)
+
+
+@pytest.mark.parametrize(
+    "recovery",
+    [
+        "allow_permanent_deletion: true",
+        "persist_undo_records: true",
+        "undo_timeout_seconds: 0",
+        "undo_timeout_seconds: 3601",
+        "maximum_undo_records: 0",
+        "maximum_undo_records: 101",
+        "maximum_recycle_size_bytes: 0",
+        "maximum_recycle_size_bytes: 53687091201",
+    ],
+)
+def test_unsafe_recovery_settings_are_rejected(
+    recovery: str,
+) -> None:
+    config = _valid_config().replace(
+        "recovery: {}",
+        f"recovery:\n  {recovery}",
+    )
+
+    with TemporaryDirectory(dir=Path.cwd() / "data") as temporary_directory:
+        config_path = Path(temporary_directory) / "app_config.yaml"
+        config_path.write_text(
+            config,
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ConfigurationError):
+            load_settings(config_path)
+
+
+def test_unknown_recovery_setting_is_rejected() -> None:
+    config = _valid_config().replace(
+        "recovery: {}",
+        "recovery:\n  unknown_switch: true",
+    )
+
+    with TemporaryDirectory(dir=Path.cwd() / "data") as temporary_directory:
+        config_path = Path(temporary_directory) / "app_config.yaml"
+        config_path.write_text(
+            config,
+            encoding="utf-8",
+        )
+
+        with pytest.raises(
+            ConfigurationError,
+            match="Unknown recovery",
+        ):
+            load_settings(config_path)
+
+
+@pytest.mark.parametrize(
+    "section",
+    [
+        "application",
+        "user",
+        "assistant",
+        "logging",
+        "safety",
+        "applications",
+        "files",
+        "folders",
+        "recovery",
+    ],
+)
+def test_configuration_sections_must_be_mappings(
+    section: str,
+) -> None:
+    config = _valid_config().replace(
+        f"{section}: {{}}",
+        f"{section}: invalid",
+    )
+
+    with TemporaryDirectory(dir=Path.cwd() / "data") as temporary_directory:
+        config_path = Path(temporary_directory) / "app_config.yaml"
+        config_path.write_text(
+            config,
+            encoding="utf-8",
+        )
+
+        with pytest.raises(
+            ConfigurationError,
+            match="must be a mapping",
+        ):
             load_settings(config_path)
