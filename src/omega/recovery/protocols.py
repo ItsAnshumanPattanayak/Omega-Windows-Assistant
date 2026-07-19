@@ -1,4 +1,4 @@
-"""Protocols and low-level outcomes for Recycle Bin integrations."""
+"""Protocols and low-level outcomes for recovery integrations."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Protocol, runtime_checkable
 
 from omega.core.exceptions import ModelValidationError
+from omega.recovery.models import RecoveryRecord
 
 
 @dataclass(frozen=True)
@@ -53,6 +54,50 @@ class RecycleBinBackendResult:
             raise ModelValidationError("operation_aborted must be a boolean.")
 
 
+@dataclass(frozen=True)
+class RestoreBackendResult:
+    """Result returned by a platform-specific restore backend."""
+
+    success: bool
+    code: str
+    message: str
+    restored_path: Path | None = None
+    native_error_code: int | None = None
+    operation_aborted: bool = False
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.success, bool):
+            raise ModelValidationError("success must be a boolean.")
+
+        for field_name in ("code", "message"):
+            value = getattr(self, field_name)
+
+            if not isinstance(value, str) or not value.strip():
+                raise ModelValidationError(f"{field_name} must be a non-empty string.")
+
+        if self.restored_path is not None:
+            if not isinstance(self.restored_path, Path):
+                raise ModelValidationError("restored_path must be a Path or None.")
+
+            if not self.restored_path.is_absolute():
+                raise ModelValidationError(
+                    "restored_path must be absolute when supplied."
+                )
+
+        if self.native_error_code is not None:
+            if (
+                isinstance(self.native_error_code, bool)
+                or not isinstance(self.native_error_code, int)
+                or self.native_error_code < 0
+            ):
+                raise ModelValidationError(
+                    "native_error_code must be a non-negative integer or None."
+                )
+
+        if not isinstance(self.operation_aborted, bool):
+            raise ModelValidationError("operation_aborted must be a boolean.")
+
+
 @runtime_checkable
 class RecycleBinBackend(Protocol):
     """Platform backend capable of recycling one validated path."""
@@ -62,8 +107,20 @@ class RecycleBinBackend(Protocol):
 
 
 @runtime_checkable
+class RestoreBackend(Protocol):
+    """Platform backend capable of restoring one recovery record."""
+
+    def restore(
+        self,
+        record: RecoveryRecord,
+        destination: Path,
+    ) -> RestoreBackendResult:
+        """Restore one recycled item to a validated destination."""
+
+
+@runtime_checkable
 class ProtectedPathChecker(Protocol):
     """Callable boundary for checking protected filesystem paths."""
 
     def __call__(self, path: Path) -> bool:
-        """Return whether a path must be protected from recycling."""
+        """Return whether a path must be protected from recovery actions."""
