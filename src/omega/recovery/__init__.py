@@ -13,18 +13,22 @@ from omega.recovery.protocols import (
     RecycleBinBackend,
     RecycleBinBackendResult,
 )
+from omega.recovery.registry import RecoveryRegistry
 from omega.recovery.results import RecoveryResult
+from omega.recovery.store import InMemoryRecoveryRecordStore
 from omega.recovery.windows_recycle_bin import (
     WindowsRecycleBinService,
     WindowsShellRecycleBinBackend,
 )
 
 __all__ = [
+    "InMemoryRecoveryRecordStore",
     "ProtectedPathChecker",
     "RecoverableActionType",
     "RecoveryConfiguration",
     "RecoveryRecord",
     "RecoveryRecordStatus",
+    "RecoveryRegistry",
     "RecoveryResourceType",
     "RecoveryResult",
     "RecycleBinBackend",
