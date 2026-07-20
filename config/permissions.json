@@ -1,30 +1,110 @@
 {
   "default_decision": "deny",
   "actions": {
-    "open_application": {"enabled": true, "maximum_risk": "medium"},
-    "close_application": {"enabled": true, "maximum_risk": "high", "requires_confirmation": true},
-    "check_application_status": {"enabled": true, "maximum_risk": "low"},
-    "create_file": {"enabled": true, "maximum_risk": "medium"},
-    "read_file": {"enabled": true, "maximum_risk": "low"},
-    "write_file": {"enabled": true, "maximum_risk": "high"},
-    "append_file": {"enabled": true, "maximum_risk": "medium"},
-    "rename_file": {"enabled": true, "maximum_risk": "medium"},
-    "copy_file": {"enabled": true, "maximum_risk": "medium"},
-    "move_file": {"enabled": true, "maximum_risk": "high", "requires_confirmation": true},
-    "delete_file": {"enabled": false, "maximum_risk": "critical"},
-    "open_file": {"enabled": true, "maximum_risk": "low"},
-    "search_file": {"enabled": true, "maximum_risk": "low"},
-    "check_file_existence": {"enabled": true, "maximum_risk": "low"},
-    "get_file_information": {"enabled": true, "maximum_risk": "low"},
-    "create_folder": {"enabled": true, "maximum_risk": "medium"},
-    "open_folder": {"enabled": true, "maximum_risk": "low"},
-    "list_folder": {"enabled": true, "maximum_risk": "low"},
-    "rename_folder": {"enabled": true, "maximum_risk": "medium"},
-    "copy_folder": {"enabled": true, "maximum_risk": "medium"},
-    "move_folder": {"enabled": true, "maximum_risk": "high", "requires_confirmation": true},
-    "delete_folder": {"enabled": false, "maximum_risk": "critical"},
-    "check_folder_existence": {"enabled": true, "maximum_risk": "low"},
-    "get_folder_information": {"enabled": true, "maximum_risk": "low"},
-    "search_folder": {"enabled": true, "maximum_risk": "low"}
+    "open_application": {
+      "enabled": true,
+      "maximum_risk": "medium"
+    },
+    "close_application": {
+      "enabled": true,
+      "maximum_risk": "high",
+      "requires_confirmation": true
+    },
+    "check_application_status": {
+      "enabled": true,
+      "maximum_risk": "low"
+    },
+    "create_file": {
+      "enabled": true,
+      "maximum_risk": "medium"
+    },
+    "read_file": {
+      "enabled": true,
+      "maximum_risk": "low"
+    },
+    "write_file": {
+      "enabled": true,
+      "maximum_risk": "high"
+    },
+    "append_file": {
+      "enabled": true,
+      "maximum_risk": "medium"
+    },
+    "rename_file": {
+      "enabled": true,
+      "maximum_risk": "medium"
+    },
+    "copy_file": {
+      "enabled": true,
+      "maximum_risk": "medium"
+    },
+    "move_file": {
+      "enabled": true,
+      "maximum_risk": "high",
+      "requires_confirmation": true
+    },
+    "delete_file": {
+      "enabled": true,
+      "maximum_risk": "critical",
+      "requires_confirmation": true
+    },
+    "open_file": {
+      "enabled": true,
+      "maximum_risk": "low"
+    },
+    "search_file": {
+      "enabled": true,
+      "maximum_risk": "low"
+    },
+    "check_file_existence": {
+      "enabled": true,
+      "maximum_risk": "low"
+    },
+    "get_file_information": {
+      "enabled": true,
+      "maximum_risk": "low"
+    },
+    "create_folder": {
+      "enabled": true,
+      "maximum_risk": "medium"
+    },
+    "open_folder": {
+      "enabled": true,
+      "maximum_risk": "low"
+    },
+    "list_folder": {
+      "enabled": true,
+      "maximum_risk": "low"
+    },
+    "rename_folder": {
+      "enabled": true,
+      "maximum_risk": "medium"
+    },
+    "copy_folder": {
+      "enabled": true,
+      "maximum_risk": "medium"
+    },
+    "move_folder": {
+      "enabled": true,
+      "maximum_risk": "high",
+      "requires_confirmation": true
+    },
+    "delete_folder": {
+      "enabled": true,
+      "maximum_risk": "critical",
+      "requires_confirmation": true
+    },
+    "check_folder_existence": {
+      "enabled": true,
+      "maximum_risk": "low"
+    },
+    "get_folder_information": {
+      "enabled": true,
+      "maximum_risk": "low"
+    },
+    "search_folder": {
+      "enabled": true,
+      "maximum_risk": "low"
+    }
   }
 }

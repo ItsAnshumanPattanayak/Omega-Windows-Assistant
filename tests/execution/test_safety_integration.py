@@ -25,18 +25,28 @@ def test_file_dispatcher_cannot_execute_move_or_delete_before_gateway_approval(
     parser = CommandParser()
 
     move = dispatcher.dispatch(parser.parse("Move notes.txt from Desktop to Documents"))
-    deletion = dispatcher.dispatch(parser.parse("Delete notes.txt from Desktop"))
-
     assert move is not None and not move.result.success
     assert move.action.permission_decision is PermissionDecision.REQUIRE_CONFIRMATION
-    assert source.exists() and not (roots["documents"] / "notes.txt").exists()
-    assert deletion is not None and not deletion.result.success and source.exists()
+    assert source.exists()
 
-    confirmed = dispatcher.dispatch_control(
+    confirmed_move = dispatcher.dispatch_control(
         "confirm move notes.txt from Desktop to Documents"
     )
-    assert confirmed is not None and confirmed.result.success
-    assert not source.exists() and (roots["documents"] / "notes.txt").exists()
+    assert confirmed_move is not None and confirmed_move.result.success
+
+    moved = roots["documents"] / "notes.txt"
+    deletion = dispatcher.dispatch(parser.parse("Delete notes.txt from Documents"))
+    assert deletion is not None and not deletion.result.success
+    assert (
+        deletion.action.permission_decision is PermissionDecision.REQUIRE_CONFIRMATION
+    )
+    assert moved.exists()
+
+    confirmed_delete = dispatcher.dispatch_control(
+        "confirm recycle notes.txt from Documents"
+    )
+    assert confirmed_delete is not None and confirmed_delete.result.success
+    assert not moved.exists()
 
 
 def test_folder_dispatcher_uses_gateway_and_rejects_destination_conflict(
@@ -107,3 +117,5 @@ def test_application_composition_shares_one_gateway():
     assert session._application_dispatcher.gateway is gateway
     assert session._file_dispatcher.gateway is gateway
     assert session._folder_dispatcher.gateway is gateway
+    assert app.recovery_registry is session._file_dispatcher.manager.recovery_registry
+    assert app.recovery_registry is session._folder_dispatcher.manager.recovery_registry

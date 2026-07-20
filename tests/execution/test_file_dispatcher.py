@@ -39,21 +39,37 @@ def test_dispatches_file_workflow_with_preserved_ids_and_risks(tmp_path: Path) -
     assert (roots["documents"] / "author.txt").read_text(encoding="utf-8") == "Anshuman"
 
 
-def test_delete_is_denied_and_folder_unknown_ambiguous_or_absolute_do_not_execute(
+def test_delete_requires_confirmation_and_registers_recovery(tmp_path: Path) -> None:
+    roots = _roots(tmp_path)
+    dispatcher = build_file_dispatcher(roots)
+    target = roots["desktop"] / "notes.txt"
+    target.write_text("safe", encoding="utf-8")
+
+    pending = dispatcher.dispatch(
+        CommandParser().parse("Delete notes.txt from Desktop")
+    )
+
+    assert pending is not None and not pending.result.success
+    assert pending.action.permission_decision is PermissionDecision.REQUIRE_CONFIRMATION
+    assert pending.action.risk_level is RiskLevel.CRITICAL
+    assert "confirm recycle notes.txt from Desktop" in pending.user_message
+    assert target.exists()
+
+    confirmed = dispatcher.dispatch_control("confirm recycle notes.txt from Desktop")
+    assert confirmed is not None and confirmed.result.success
+    assert not target.exists()
+    assert dispatcher.manager.recovery_registry is not None
+    assert len(dispatcher.manager.recovery_registry.list_restorable()) == 1
+
+
+def test_other_domains_unknown_ambiguous_and_absolute_do_not_execute(
     tmp_path: Path,
 ) -> None:
     roots = _roots(tmp_path)
     dispatcher = build_file_dispatcher(roots)
     parser = CommandParser()
-    target = roots["desktop"] / "notes.txt"
-    target.write_text("safe", encoding="utf-8")
-
-    deleted = dispatcher.dispatch(parser.parse("Delete notes.txt from Desktop"))
     absolute = dispatcher.dispatch(parser.parse(r"Create notes.txt in C:\Windows"))
 
-    assert deleted is not None and not deleted.result.success
-    assert deleted.action.permission_decision is PermissionDecision.DENY
-    assert "Phase 8" in deleted.user_message and target.exists()
     assert dispatcher.dispatch(parser.parse("Create a folder named Work")) is None
     assert dispatcher.dispatch(parser.parse("Tell me a joke")) is None
     assert absolute is not None and not absolute.result.success

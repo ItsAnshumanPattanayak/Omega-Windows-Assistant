@@ -15,6 +15,7 @@ from omega.core.exceptions import (
     FolderResourceLimitError,
     FolderSearchError,
     FolderValidationError,
+    RecoveryRecordError,
 )
 from omega.files.locations import FileLocationResolver
 from omega.files.results import ResolvedLocation
@@ -25,13 +26,21 @@ from omega.folders.opener import WindowsFolderOpener
 from omega.folders.operations import FolderOperations
 from omega.folders.results import ValidatedFolderPath
 from omega.folders.search import FolderSearch
-from omega.folders.validator import FolderPathValidator, WindowsFolderNameValidator
+from omega.folders.validator import (
+    FolderPathValidator,
+    WindowsFolderNameValidator,
+)
 from omega.models import ActionResult, ErrorCategory, OmegaErrorDetails
 from omega.models._serialization import JsonValue
+from omega.recovery import (
+    RecoveryRegistry,
+    RecoveryResourceType,
+    WindowsRecycleBinService,
+)
 
 
 class FolderManager:
-    """Expose folder capabilities over injected, independently testable services."""
+    """Expose folder capabilities over injected, testable services."""
 
     def __init__(
         self,
@@ -44,6 +53,8 @@ class FolderManager:
         opener: WindowsFolderOpener,
         *,
         settings: FolderOperationSettings,
+        recycle_bin_service: WindowsRecycleBinService | None = None,
+        recovery_registry: RecoveryRegistry | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
         self.location_resolver = location_resolver
@@ -54,6 +65,8 @@ class FolderManager:
         self.search = search
         self.opener = opener
         self.settings = settings
+        self.recycle_bin_service = recycle_bin_service
+        self.recovery_registry = recovery_registry
         self._logger = logger or logging.getLogger("omega.folders.manager")
 
     def create_folder(
@@ -68,7 +81,12 @@ class FolderManager:
         try:
             safe_name = WindowsFolderNameValidator.validate_component(folder_name)
             relative = (
-                str(PureWindowsPath(parent_path, safe_name))
+                str(
+                    PureWindowsPath(
+                        parent_path,
+                        safe_name,
+                    )
+                )
                 if parent_path
                 else safe_name
             )
@@ -92,8 +110,8 @@ class FolderManager:
                 f"{self._display(location)}."
                 if "folder already" in str(error).casefold()
                 else (
-                    f"I could not create the {Path(folder_name).name} folder because "
-                    "a file with that name already exists."
+                    f"I could not create the {Path(folder_name).name} folder "
+                    "because a file with that name already exists."
                 )
             )
             return self._failure(
@@ -105,7 +123,11 @@ class FolderManager:
                 message,
             )
         except FolderManagementError as error:
-            return self._managed_failure(action_id, command_id, error)
+            return self._managed_failure(
+                action_id,
+                command_id,
+                error,
+            )
 
     def folder_exists(
         self,
@@ -115,18 +137,30 @@ class FolderManager:
         command_id: UUID | None = None,
     ) -> ActionResult:
         try:
-            target = self._resolve(location, folder_path, allow_root=True)
+            target = self._resolve(
+                location,
+                folder_path,
+                allow_root=True,
+            )
             exists = self.inspector.exists(target)
             name = self._name(target)
             phrase = "exists" if exists else "does not exist"
             return self._success(
                 action_id,
                 "Folder existence checked.",
-                f"The {name} folder {phrase} on your {target.location.display_name}.",
-                {**self._target_data(target), "exists": exists},
+                f"The {name} folder {phrase} on your "
+                f"{target.location.display_name}.",
+                {
+                    **self._target_data(target),
+                    "exists": exists,
+                },
             )
         except FolderManagementError as error:
-            return self._managed_failure(action_id, command_id, error)
+            return self._managed_failure(
+                action_id,
+                command_id,
+                error,
+            )
 
     def list_folder(
         self,
@@ -137,28 +171,43 @@ class FolderManager:
     ) -> ActionResult:
         try:
             target = self._resolve(
-                location, folder_path, allow_root=True, require_existing=True
+                location,
+                folder_path,
+                allow_root=True,
+                require_existing=True,
             )
             listing = self.inspector.list_folder(
-                target, self.settings.maximum_listing_items
+                target,
+                self.settings.maximum_listing_items,
             )
-            lines = [f"{self._name(target)} contains:", "Folders:"]
+            lines = [
+                f"{self._name(target)} contains:",
+                "Folders:",
+            ]
             lines.extend(f"- {name}" for name in listing.folders)
+
             if not listing.folders:
                 lines.append("- None")
+
             lines.append("Files:")
             lines.extend(f"- {name}" for name in listing.files)
+
             if not listing.files:
                 lines.append("- None")
+
             if listing.truncated:
                 lines.append(
-                    "The folder contains more items than Omega can display safely. "
-                    f"Showing the first {self.settings.maximum_listing_items}."
+                    "The folder contains more items than Omega can display "
+                    "safely. "
+                    f"Showing the first "
+                    f"{self.settings.maximum_listing_items}."
                 )
+
             if listing.skipped_entries:
                 lines.append(
-                    "Some protected, linked, or inaccessible entries were omitted."
+                    "Some protected, linked, or inaccessible entries were " "omitted."
                 )
+
             self._logger.info(
                 "Folder listed: location=%s items=%d truncated=%s",
                 target.location.logical_name,
@@ -178,7 +227,11 @@ class FolderManager:
                 },
             )
         except FolderManagementError as error:
-            return self._managed_failure(action_id, command_id, error)
+            return self._managed_failure(
+                action_id,
+                command_id,
+                error,
+            )
 
     def get_folder_information(
         self,
@@ -191,7 +244,10 @@ class FolderManager:
     ) -> ActionResult:
         try:
             target = self._resolve(
-                location, folder_path, allow_root=True, require_existing=True
+                location,
+                folder_path,
+                allow_root=True,
+                require_existing=True,
             )
             metadata = self.inspector.metadata(
                 target,
@@ -201,20 +257,23 @@ class FolderManager:
                 maximum_bytes=self.settings.maximum_scan_bytes,
             )
             message = (
-                f"{metadata.name} contains {metadata.immediate_folder_count} "
-                "folders and "
+                f"{metadata.name} contains "
+                f"{metadata.immediate_folder_count} folders and "
                 f"{metadata.immediate_file_count} files."
             )
+
             if recursive:
                 qualifier = "at least " if metadata.truncated else ""
                 message += (
                     " Recursively it contains "
                     f"{qualifier}{metadata.recursive_folder_count} folders, "
-                    f"{qualifier}{metadata.recursive_file_count} files, and uses "
-                    f"{qualifier}{metadata.total_bytes} bytes."
+                    f"{qualifier}{metadata.recursive_file_count} files, and "
+                    f"uses {qualifier}{metadata.total_bytes} bytes."
                 )
+
                 if metadata.truncated:
                     message += " The scan stopped at a configured safety limit."
+
             data: dict[str, JsonValue] = {
                 "name": metadata.name,
                 "logical_location": metadata.logical_location,
@@ -230,9 +289,19 @@ class FolderManager:
                 "maximum_depth": metadata.maximum_depth,
                 "truncated": metadata.truncated,
             }
-            return self._success(action_id, "Folder metadata inspected.", message, data)
+
+            return self._success(
+                action_id,
+                "Folder metadata inspected.",
+                message,
+                data,
+            )
         except FolderManagementError as error:
-            return self._managed_failure(action_id, command_id, error)
+            return self._managed_failure(
+                action_id,
+                command_id,
+                error,
+            )
 
     def open_folder(
         self,
@@ -243,7 +312,10 @@ class FolderManager:
     ) -> ActionResult:
         try:
             target = self._resolve(
-                location, folder_path, allow_root=True, require_existing=True
+                location,
+                folder_path,
+                allow_root=True,
+                require_existing=True,
             )
             self.opener.open(target)
             return self._success(
@@ -253,7 +325,11 @@ class FolderManager:
                 self._target_data(target),
             )
         except FolderManagementError as error:
-            return self._managed_failure(action_id, command_id, error)
+            return self._managed_failure(
+                action_id,
+                command_id,
+                error,
+            )
 
     def rename_folder(
         self,
@@ -264,13 +340,20 @@ class FolderManager:
         command_id: UUID | None = None,
     ) -> ActionResult:
         try:
-            source = self._resolve(location, source_path, require_existing=True)
+            source = self._resolve(
+                location,
+                source_path,
+                require_existing=True,
+            )
             safe_name = WindowsFolderNameValidator.validate_component(new_name)
             destination = self._resolve(
                 source.location.logical_name,
                 str(source.relative_path.with_name(safe_name)),
             )
-            self.operations.rename(source, destination)
+            self.operations.rename(
+                source,
+                destination,
+            )
             return self._success(
                 action_id,
                 "Folder renamed and verified.",
@@ -278,7 +361,11 @@ class FolderManager:
                 self._target_data(destination),
             )
         except FolderManagementError as error:
-            return self._managed_failure(action_id, command_id, error)
+            return self._managed_failure(
+                action_id,
+                command_id,
+                error,
+            )
 
     def copy_folder(
         self,
@@ -314,6 +401,120 @@ class FolderManager:
             command_id,
         )
 
+    def recycle_folder(
+        self,
+        folder_path: str,
+        location: str | None,
+        action_id: UUID,
+        command_id: UUID,
+        session_id: UUID,
+    ) -> ActionResult:
+        """Move one validated folder to the Recycle Bin and register undo."""
+
+        if self.recycle_bin_service is None or self.recovery_registry is None:
+            return self._failure(
+                action_id,
+                command_id,
+                "FOLDER_RECOVERY_NOT_CONFIGURED",
+                ErrorCategory.INTERNAL,
+                "Folder recovery services are not configured.",
+                "Omega could not prepare a safe Recycle Bin operation.",
+            )
+
+        try:
+            target = self._resolve(
+                location,
+                folder_path,
+                require_existing=True,
+            )
+            recycle_result = self.recycle_bin_service.recycle(
+                target.path,
+                logical_location=target.location.logical_name,
+                relative_path=target.relative_path.as_posix(),
+                command_id=command_id,
+                action_id=action_id,
+                session_id=session_id,
+            )
+
+            if not recycle_result.success:
+                return self._failure(
+                    action_id,
+                    command_id,
+                    recycle_result.code.upper(),
+                    ErrorCategory.EXECUTION,
+                    recycle_result.message,
+                    recycle_result.message,
+                )
+
+            if recycle_result.record is None:
+                return self._failure(
+                    action_id,
+                    command_id,
+                    "FOLDER_RECOVERY_RECORD_MISSING",
+                    ErrorCategory.INTERNAL,
+                    "The Recycle Bin operation returned no recovery record.",
+                    "The folder was processed, but Omega could not register undo.",
+                )
+
+            if recycle_result.record.resource_type is not RecoveryResourceType.FOLDER:
+                return self._failure(
+                    action_id,
+                    command_id,
+                    "FOLDER_RECOVERY_TYPE_MISMATCH",
+                    ErrorCategory.INTERNAL,
+                    "The recovery record did not describe a folder.",
+                    "Omega rejected an invalid folder recovery result.",
+                )
+
+            registered = self.recovery_registry.register(
+                recycle_result.record,
+                registered_at=recycle_result.completed_at,
+            )
+
+            self._logger.info(
+                "Folder recycled: location=%s relative=%s record=%s",
+                target.location.logical_name,
+                target.relative_path.as_posix(),
+                registered.record_id,
+            )
+
+            return self._success(
+                action_id,
+                "Folder moved to the Recycle Bin and registered for undo.",
+                f"The {target.path.name} folder was moved to the Recycle Bin. "
+                "You can undo this action for a limited time.",
+                {
+                    **self._target_data(target),
+                    "recovery_record_id": str(registered.record_id),
+                    "recovery_status": registered.status.value,
+                    "can_undo": registered.can_restore,
+                    "expires_at": (
+                        registered.expires_at.isoformat()
+                        if registered.expires_at is not None
+                        else None
+                    ),
+                },
+            )
+        except FolderManagementError as error:
+            return self._managed_failure(
+                action_id,
+                command_id,
+                error,
+            )
+        except RecoveryRecordError as error:
+            self._logger.warning(
+                "Folder recovery registration failed: %s",
+                error,
+            )
+            return self._failure(
+                action_id,
+                command_id,
+                "FOLDER_RECOVERY_REGISTRATION_FAILED",
+                ErrorCategory.INTERNAL,
+                str(error),
+                "The folder was processed, but Omega could not register undo.",
+            )
+
     def search_folders(
         self,
         folder_name: str,
@@ -329,18 +530,22 @@ class FolderManager:
                 maximum_depth=self.settings.search_max_depth,
                 maximum_results=self.settings.search_max_results,
             )
+
             if matches:
                 message = "\n".join(match.relative_path for match in matches)
+
                 if truncated:
                     message += (
                         "\nI found more folders than I can safely display. "
-                        f"Showing the first {self.settings.search_max_results}."
+                        f"Showing the first "
+                        f"{self.settings.search_max_results}."
                     )
             else:
                 message = (
                     f"I did not find a folder named {folder_name} in "
                     f"{resolved.display_name}."
                 )
+
             self._logger.info(
                 "Folder search completed: location=%s results=%d truncated=%s",
                 resolved.logical_name,
@@ -365,7 +570,11 @@ class FolderManager:
                 },
             )
         except FolderManagementError as error:
-            return self._managed_failure(action_id, command_id, error)
+            return self._managed_failure(
+                action_id,
+                command_id,
+                error,
+            )
 
     def _transfer(
         self,
@@ -377,8 +586,15 @@ class FolderManager:
         command_id: UUID | None,
     ) -> ActionResult:
         try:
-            source = self._resolve(source_location, source_path, require_existing=True)
-            destination = self._resolve(destination_location, source.path.name)
+            source = self._resolve(
+                source_location,
+                source_path,
+                require_existing=True,
+            )
+            destination = self._resolve(
+                destination_location,
+                source.path.name,
+            )
             method = (
                 self.operations.copy if operation == "copy" else self.operations.move
             )
@@ -403,9 +619,16 @@ class FolderManager:
                 },
             )
         except FolderManagementError as error:
-            return self._managed_failure(action_id, command_id, error)
+            return self._managed_failure(
+                action_id,
+                command_id,
+                error,
+            )
 
-    def _location(self, location: str | None) -> str:
+    def _location(
+        self,
+        location: str | None,
+    ) -> str:
         return location or self.settings.default_location
 
     def _resolve(
@@ -424,17 +647,25 @@ class FolderManager:
             require_existing=require_existing,
         )
 
-    def _display(self, location: str | None) -> str:
+    def _display(
+        self,
+        location: str | None,
+    ) -> str:
         return self._resolve_location(location).display_name
 
-    def _resolve_location(self, location: str | None) -> ResolvedLocation:
+    def _resolve_location(
+        self,
+        location: str | None,
+    ) -> ResolvedLocation:
         try:
             return self.location_resolver.resolve(self._location(location))
         except FileLocationError as error:
             raise FolderValidationError(str(error)) from error
 
     @staticmethod
-    def _name(target: ValidatedFolderPath) -> str:
+    def _name(
+        target: ValidatedFolderPath,
+    ) -> str:
         return (
             target.location.display_name
             if target.relative_path == Path(".")
@@ -442,7 +673,9 @@ class FolderManager:
         )
 
     @staticmethod
-    def _target_data(target: ValidatedFolderPath) -> dict[str, JsonValue]:
+    def _target_data(
+        target: ValidatedFolderPath,
+    ) -> dict[str, JsonValue]:
         relative = (
             "" if target.relative_path == Path(".") else target.relative_path.as_posix()
         )
@@ -454,9 +687,17 @@ class FolderManager:
 
     @staticmethod
     def _success(
-        action_id: UUID, message: str, user_message: str, data: JsonValue
+        action_id: UUID,
+        message: str,
+        user_message: str,
+        data: JsonValue,
     ) -> ActionResult:
-        return ActionResult.success_result(action_id, message, user_message, data=data)
+        return ActionResult.success_result(
+            action_id,
+            message,
+            user_message,
+            data=data,
+        )
 
     def _managed_failure(
         self,
@@ -465,22 +706,39 @@ class FolderManager:
         error: FolderManagementError,
     ) -> ActionResult:
         if isinstance(error, FolderConflictError):
-            code, category = "FOLDER_CONFLICT", ErrorCategory.ALREADY_EXISTS
+            code = "FOLDER_CONFLICT"
+            category = ErrorCategory.ALREADY_EXISTS
         elif isinstance(error, FolderResourceLimitError):
-            code, category = "FOLDER_RESOURCE_LIMIT", ErrorCategory.SAFETY
+            code = "FOLDER_RESOURCE_LIMIT"
+            category = ErrorCategory.SAFETY
         elif isinstance(error, FolderCrossVolumeMoveError):
-            code, category = "CROSS_VOLUME_MOVE_BLOCKED", ErrorCategory.SAFETY
+            code = "CROSS_VOLUME_MOVE_BLOCKED"
+            category = ErrorCategory.SAFETY
         elif isinstance(error, FolderValidationError):
-            code, category = "FOLDER_PATH_REJECTED", ErrorCategory.SAFETY
+            code = "FOLDER_PATH_REJECTED"
+            category = ErrorCategory.SAFETY
         elif isinstance(error, FolderSearchError):
-            code, category = "FOLDER_SEARCH_FAILED", ErrorCategory.EXECUTION
+            code = "FOLDER_SEARCH_FAILED"
+            category = ErrorCategory.EXECUTION
         elif isinstance(error, FolderOpenError):
-            code, category = "FOLDER_OPEN_FAILED", ErrorCategory.EXECUTION
+            code = "FOLDER_OPEN_FAILED"
+            category = ErrorCategory.EXECUTION
         else:
-            code, category = "FOLDER_OPERATION_FAILED", ErrorCategory.EXECUTION
-        self._logger.warning("Folder operation failed: code=%s", code)
+            code = "FOLDER_OPERATION_FAILED"
+            category = ErrorCategory.EXECUTION
+
+        self._logger.warning(
+            "Folder operation failed: code=%s",
+            code,
+        )
+
         return self._failure(
-            action_id, command_id, code, category, str(error), str(error)
+            action_id,
+            command_id,
+            code,
+            category,
+            str(error),
+            str(error),
         )
 
     @staticmethod
@@ -501,4 +759,10 @@ class FolderManager:
             action_id=action_id,
             command_id=command_id,
         )
-        return ActionResult.failure_result(action_id, message, user_message, error)
+
+        return ActionResult.failure_result(
+            action_id,
+            message,
+            user_message,
+            error,
+        )

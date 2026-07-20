@@ -6,6 +6,7 @@ import hashlib
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
+from functools import partial
 from pathlib import Path, PureWindowsPath
 from uuid import UUID
 
@@ -45,6 +46,7 @@ _FILE_INTENTS = frozenset(
         IntentType.GET_FILE_INFORMATION,
     }
 )
+
 _RISK = {
     IntentType.READ_FILE: RiskLevel.LOW,
     IntentType.OPEN_FILE: RiskLevel.LOW,
@@ -77,30 +79,49 @@ class FileDispatchResult:
         return self.result.user_message
 
     @classmethod
-    def from_gateway(cls, value: GatewayDispatchResult) -> FileDispatchResult:
-        return cls(value.command, value.action, value.result)
+    def from_gateway(
+        cls,
+        value: GatewayDispatchResult,
+    ) -> FileDispatchResult:
+        return cls(
+            value.command,
+            value.action,
+            value.result,
+        )
 
 
 class FileActionDispatcher:
     """Build file proposals and submit every supported action to one gateway."""
 
     def __init__(
-        self, manager: FileManager, *, gateway: SafeExecutionGateway | None = None
+        self,
+        manager: FileManager,
+        *,
+        gateway: SafeExecutionGateway | None = None,
     ) -> None:
         self.manager = manager
         self.gateway = gateway or SafeExecutionGateway()
 
-    def dispatch(self, parsed: CommandParseResult) -> FileDispatchResult | None:
+    def dispatch(
+        self,
+        parsed: CommandParseResult,
+    ) -> FileDispatchResult | None:
         command = parsed.command
+
         if (
             not parsed.matched
             or parsed.requires_clarification
             or command.intent not in _FILE_INTENTS
         ):
             return None
+
         values = self._values(command)
         action = self._action(command)
-        source, destination = self._preview_paths(command.intent, values)
+        source, destination = self._preview_paths(
+            command.intent,
+            values,
+        )
+
         conflict = (
             destination is not None
             and destination.exists()
@@ -112,6 +133,7 @@ class FileActionDispatcher:
                 IntentType.MOVE_FILE,
             }
         )
+
         target = destination or source
         has_content = bool(
             command.intent is IntentType.WRITE_FILE
@@ -119,6 +141,7 @@ class FileActionDispatcher:
             and target.exists()
             and target.stat().st_size > 0
         )
+
         context = SafetyContext(
             command=command,
             action=action,
@@ -127,23 +150,44 @@ class FileActionDispatcher:
             destination_path=destination,
             logical_source=self._logical_source(values),
             logical_destination=self._logical_destination(values),
-            target_exists=target.exists() if target is not None else None,
+            target_exists=(target.exists() if target is not None else None),
             target_type="file",
             additional_context={
                 "destination_conflict": conflict,
                 "target_has_content": has_content,
+                "recoverable_deletion": (command.intent is IntentType.DELETE_FILE),
+                "permanent_deletion": False,
             },
         )
+
         executor = self._executor(
-            command, action, values, target_has_content=has_content
+            command,
+            action,
+            values,
+            target_has_content=has_content,
         )
+
         if executor is None:
             return None
-        confirmation = self._confirmation(command.intent, values, source, destination)
-        fingerprint = self._fingerprint(command.intent, source, destination)
+
+        confirmation = self._confirmation(
+            command.intent,
+            values,
+            source,
+            destination,
+        )
+        fingerprint = self._fingerprint(
+            command.intent,
+            source,
+            destination,
+        )
 
         def revalidator() -> ResourceFingerprint | None:
-            return self._fingerprint(command.intent, source, destination)
+            return self._fingerprint(
+                command.intent,
+                source,
+                destination,
+            )
 
         submitted = self.gateway.submit(
             context,
@@ -155,9 +199,14 @@ class FileActionDispatcher:
         return FileDispatchResult.from_gateway(submitted)
 
     def dispatch_control(
-        self, text: str, session_id: UUID | None = None
+        self,
+        text: str,
+        session_id: UUID | None = None,
     ) -> FileDispatchResult | None:
-        handled = self.gateway.handle_confirmation(text, session_id or UUID(int=0))
+        handled = self.gateway.handle_confirmation(
+            text,
+            session_id or UUID(int=0),
+        )
         return FileDispatchResult.from_gateway(handled) if handled else None
 
     def clear_pending_confirmations(self) -> None:
@@ -172,114 +221,213 @@ class FileActionDispatcher:
         target_has_content: bool,
     ) -> Callable[[], ActionResult] | None:
         location = values.get("location")
-        action_id, command_id = action.action_id, command.command_id
+        action_id = action.action_id
+        command_id = command.command_id
+        session_id = command.session_id or UUID(int=0)
+
         if command.intent is IntentType.CREATE_FILE:
             name = self._with_subpath(
-                values.get("file_name"), values.get("relative_subpath")
+                values.get("file_name"),
+                values.get("relative_subpath"),
             )
-            if not name:
+
+            if name is None:
                 return None
-            safe_name = name
-            return lambda: self.manager.create_file(
-                safe_name,
+
+            return partial(
+                self.manager.create_file,
+                name,
                 location,
                 action_id,
                 command_id,
                 requested_extension=values.get("file_extension"),
             )
+
         if command.intent is IntentType.READ_FILE:
             return self._named_executor(
-                values, self.manager.read_text_file, location, action, command
+                values,
+                self.manager.read_text_file,
+                location,
+                action,
+                command,
             )
+
         if command.intent is IntentType.WRITE_FILE:
-            name, content = values.get("file_name"), values.get("text_content")
+            name = values.get("file_name")
+            content = values.get("text_content")
+
             if name is None or content is None:
                 return None
-            safe_name, safe_content = name, content
+
             if target_has_content:
-                return lambda: self.manager.replace_text_file(
-                    safe_name, location, safe_content, action_id, command_id
+                return partial(
+                    self.manager.replace_text_file,
+                    name,
+                    location,
+                    content,
+                    action_id,
+                    command_id,
                 )
-            return lambda: self.manager.write_text_file(
-                safe_name, location, safe_content, action_id, command_id
+
+            return partial(
+                self.manager.write_text_file,
+                name,
+                location,
+                content,
+                action_id,
+                command_id,
             )
+
         if command.intent is IntentType.APPEND_FILE:
-            name, content = values.get("file_name"), values.get("text_content")
+            name = values.get("file_name")
+            content = values.get("text_content")
+
             if name is None or content is None:
                 return None
-            return lambda: self.manager.append_text_file(
-                name, location, content, action_id, command_id
+
+            return partial(
+                self.manager.append_text_file,
+                name,
+                location,
+                content,
+                action_id,
+                command_id,
             )
+
         if command.intent is IntentType.RENAME_FILE:
-            source, new_name = values.get("source_file"), values.get("new_name")
-            if not source or not new_name:
+            source = values.get("source_file")
+            new_name = values.get("new_name")
+
+            if source is None or new_name is None:
                 return None
-            safe_source, safe_new_name = source, new_name
-            return lambda: self.manager.rename_file(
-                safe_source, safe_new_name, location, action_id, command_id
+
+            return partial(
+                self.manager.rename_file,
+                source,
+                new_name,
+                location,
+                action_id,
+                command_id,
             )
-        if command.intent in {IntentType.COPY_FILE, IntentType.MOVE_FILE}:
-            source, destination = values.get("source_file"), values.get("destination")
-            if not source or not destination:
+
+        if command.intent in {
+            IntentType.COPY_FILE,
+            IntentType.MOVE_FILE,
+        }:
+            source = values.get("source_file")
+            destination = values.get("destination")
+
+            if source is None or destination is None:
                 return None
+
+            source_location = values.get("source_location")
+
             if command.intent is IntentType.COPY_FILE:
-                return lambda: self.manager.copy_file(
+                return partial(
+                    self.manager.copy_file,
                     source,
-                    values.get("source_location"),
+                    source_location,
                     destination,
                     action_id,
                     command_id,
                 )
-            return lambda: self.manager.move_file(
+
+            return partial(
+                self.manager.move_file,
                 source,
-                values.get("source_location"),
+                source_location,
                 destination,
                 action_id,
                 command_id,
             )
+
+        if command.intent is IntentType.DELETE_FILE:
+            name = values.get("file_name")
+
+            if name is None:
+                return None
+
+            return partial(
+                self.manager.recycle_file,
+                name,
+                location,
+                action_id,
+                command_id,
+                session_id,
+            )
+
         if command.intent is IntentType.OPEN_FILE:
             return self._named_executor(
-                values, self.manager.open_file, location, action, command
+                values,
+                self.manager.open_file,
+                location,
+                action,
+                command,
             )
+
         if command.intent is IntentType.CHECK_FILE_EXISTENCE:
             return self._named_executor(
-                values, self.manager.file_exists, location, action, command
+                values,
+                self.manager.file_exists,
+                location,
+                action,
+                command,
             )
+
         if command.intent is IntentType.GET_FILE_INFORMATION:
             return self._named_executor(
-                values, self.manager.get_file_information, location, action, command
+                values,
+                self.manager.get_file_information,
+                location,
+                action,
+                command,
             )
+
         if command.intent is IntentType.SEARCH_FILE:
             query = values.get("file_name") or values.get("search_extension")
-            if not query:
+
+            if query is None:
                 return None
-            return lambda: self.manager.search_files(
+
+            return partial(
+                self.manager.search_files,
                 query,
                 location,
                 action_id,
                 command_id,
                 extension=values.get("search_extension"),
             )
-        if command.intent is IntentType.DELETE_FILE:
-            return lambda: self._unreachable(action, command)
+
         return None
 
     def _preview_paths(
-        self, intent: IntentType, values: dict[str, str]
+        self,
+        intent: IntentType,
+        values: dict[str, str],
     ) -> tuple[Path | None, Path | None]:
         try:
             location = values.get("location")
+
             if intent is IntentType.CREATE_FILE:
                 name = self._with_subpath(
-                    values.get("file_name"), values.get("relative_subpath")
+                    values.get("file_name"),
+                    values.get("relative_subpath"),
                 )
+
                 if name:
                     safe = self.manager._normalize_text_path(
                         name,
                         values.get("file_extension"),
                         default_extension=".txt",
                     )
-                    return None, self.manager._resolve(location, safe).path
+                    return (
+                        None,
+                        self.manager._resolve(
+                            location,
+                            safe,
+                        ).path,
+                    )
+
             if intent in {
                 IntentType.READ_FILE,
                 IntentType.WRITE_FILE,
@@ -287,45 +435,70 @@ class FileActionDispatcher:
                 IntentType.OPEN_FILE,
                 IntentType.CHECK_FILE_EXISTENCE,
                 IntentType.GET_FILE_INFORMATION,
+                IntentType.DELETE_FILE,
             }:
                 name = values.get("file_name")
+
                 if name:
                     safe = (
                         self.manager._normalize_text_path(name)
                         if intent
-                        not in {
-                            IntentType.OPEN_FILE,
-                            IntentType.CHECK_FILE_EXISTENCE,
-                            IntentType.GET_FILE_INFORMATION,
+                        in {
+                            IntentType.WRITE_FILE,
+                            IntentType.APPEND_FILE,
                         }
                         else name
                     )
-                    path = self.manager._resolve(location, safe).path
-                    return path, path if intent is IntentType.WRITE_FILE else None
+                    path = self.manager._resolve(
+                        location,
+                        safe,
+                    ).path
+
+                    return (
+                        path,
+                        (path if intent is IntentType.WRITE_FILE else None),
+                    )
+
             if intent is IntentType.RENAME_FILE:
-                source_name, new_name = values.get("source_file"), values.get(
-                    "new_name"
-                )
+                source_name = values.get("source_file")
+                new_name = values.get("new_name")
+
                 if source_name and new_name:
-                    source = self.manager._resolve(location, source_name).path
+                    source = self.manager._resolve(
+                        location,
+                        source_name,
+                    ).path
                     destination = self.manager._resolve(
-                        location, str(Path(source_name).with_name(new_name))
+                        location,
+                        str(Path(source_name).with_name(new_name)),
                     ).path
                     return source, destination
-            if intent in {IntentType.COPY_FILE, IntentType.MOVE_FILE}:
-                source_name, destination_location = values.get(
-                    "source_file"
-                ), values.get("destination")
+
+            if intent in {
+                IntentType.COPY_FILE,
+                IntentType.MOVE_FILE,
+            }:
+                source_name = values.get("source_file")
+                destination_location = values.get("destination")
+
                 if source_name and destination_location:
                     source = self.manager._resolve(
-                        values.get("source_location"), source_name
+                        values.get("source_location"),
+                        source_name,
                     ).path
                     destination = self.manager.path_resolver.resolve(
-                        destination_location, source.name
+                        destination_location,
+                        source.name,
                     ).path
                     return source, destination
-        except (FileManagementError, OSError, ValueError):
+
+        except (
+            FileManagementError,
+            OSError,
+            ValueError,
+        ):
             return None, None
+
         return None, None
 
     def _confirmation(
@@ -353,6 +526,7 @@ class FileActionDispatcher:
                 exact,
                 f"cancel overwrite {name} on {location}",
             )
+
         if (
             intent is IntentType.MOVE_FILE
             and source is not None
@@ -363,79 +537,140 @@ class FileActionDispatcher:
             )
             destination_location = self._display(values.get("destination"))
             exact = (
-                f"confirm move {source.name} from {source_location} "
-                f"to {destination_location}"
+                f"confirm move {source.name} from "
+                f"{source_location} to {destination_location}"
             )
             return ConfirmationSpec(
                 source.name,
-                f"Moving {source.name} will remove it from {source_location}. "
+                f"Moving {source.name} will remove it from "
+                f'{source_location}. Type "{exact}" to continue.',
+                exact,
+                f"cancel move {source.name} from "
+                f"{source_location} to {destination_location}",
+            )
+
+        if intent is IntentType.DELETE_FILE and source is not None:
+            location = self._display(
+                values.get("location") or self.manager.settings.default_location
+            )
+            exact = f"confirm recycle {source.name} from {location}"
+            return ConfirmationSpec(
+                source.name,
+                f"{source.name} will be moved to the Windows Recycle Bin. "
                 f'Type "{exact}" to continue.',
                 exact,
-                f"cancel move {source.name} from {source_location} "
-                f"to {destination_location}",
+                f"cancel recycle {source.name} from {location}",
             )
+
         return None
 
     def _fingerprint(
-        self, intent: IntentType, source: Path | None, destination: Path | None
+        self,
+        intent: IntentType,
+        source: Path | None,
+        destination: Path | None,
     ) -> ResourceFingerprint | None:
-        if intent not in {IntentType.WRITE_FILE, IntentType.MOVE_FILE}:
+        if intent not in {
+            IntentType.WRITE_FILE,
+            IntentType.MOVE_FILE,
+            IntentType.DELETE_FILE,
+        }:
             return None
+
         items = [
             SafeExecutionGateway.fingerprint_path(path)
-            for path in (source, destination)
+            for path in (
+                source,
+                destination,
+            )
             if path is not None
         ]
+
         if not items:
             return None
+
         digest = hashlib.sha256(repr(items).encode("utf-8")).hexdigest()
+
         return ResourceFingerprint(
-            "file_operation", digest, True, item_count=len(items)
+            "file_operation",
+            digest,
+            True,
+            item_count=len(items),
         )
 
     @staticmethod
-    def _values(command: UserCommand) -> dict[str, str]:
+    def _values(
+        command: UserCommand,
+    ) -> dict[str, str]:
         values: dict[str, str] = {}
         duplicate: set[str] = set()
+
         for entity in command.entities:
             if entity.name is None or not isinstance(entity.value, str):
                 continue
+
             if entity.name in values:
                 duplicate.add(entity.name)
+
             values[entity.name] = entity.value
+
         for name in duplicate:
             values.pop(name, None)
+
         return values
 
     @staticmethod
-    def _with_subpath(name: str | None, subpath: str | None) -> str | None:
+    def _with_subpath(
+        name: str | None,
+        subpath: str | None,
+    ) -> str | None:
         if name is None:
             return None
+
         return str(PureWindowsPath(subpath, name)) if subpath else name
 
     @staticmethod
     def _named_executor(
         values: dict[str, str],
-        method: Callable[[str, str | None, UUID, UUID | None], ActionResult],
+        method: Callable[
+            [
+                str,
+                str | None,
+                UUID,
+                UUID | None,
+            ],
+            ActionResult,
+        ],
         location: str | None,
         action: Action,
         command: UserCommand,
     ) -> Callable[[], ActionResult] | None:
         name = values.get("file_name")
+
         if name is None:
             return None
-        return lambda: method(name, location, action.action_id, command.command_id)
+
+        return lambda: method(
+            name,
+            location,
+            action.action_id,
+            command.command_id,
+        )
 
     @staticmethod
     def _display(value: str | None) -> str:
         return (value or "Desktop").replace("_", " ").title()
 
     @staticmethod
-    def _logical_source(values: dict[str, str]) -> str | None:
+    def _logical_source(
+        values: dict[str, str],
+    ) -> str | None:
         return values.get("source_location") or values.get("location")
 
     @staticmethod
-    def _logical_destination(values: dict[str, str]) -> str | None:
+    def _logical_destination(
+        values: dict[str, str],
+    ) -> str | None:
         return values.get("destination") or values.get("location")
 
     @staticmethod
@@ -448,12 +683,6 @@ class FileActionDispatcher:
             },
             risk_level=_RISK[command.intent],
             permission_decision=PermissionDecision.ALLOW,
-            confirmation_status=ConfirmationStatus.NOT_REQUIRED,
+            confirmation_status=(ConfirmationStatus.NOT_REQUIRED),
             requires_confirmation=False,
-        )
-
-    @staticmethod
-    def _unreachable(action: Action, command: UserCommand) -> ActionResult:
-        raise RuntimeError(
-            f"Denied deletion reached executor {action.action_id} {command.command_id}."
         )

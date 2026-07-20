@@ -1,4 +1,4 @@
-"""Coordinating facade for validated, structured Phase 5 file operations."""
+"""Coordinating facade for validated, structured file operations."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from omega.core.exceptions import (
     FileReadError,
     FileSearchError,
     FileWriteError,
+    RecoveryRecordError,
 )
 from omega.files.definitions import FileOperationSettings
 from omega.files.locations import FileLocationResolver
@@ -29,10 +30,15 @@ from omega.files.validator import WindowsFilenameValidator
 from omega.files.writer import TextFileWriter
 from omega.models import ActionResult, ErrorCategory, OmegaErrorDetails
 from omega.models._serialization import JsonValue
+from omega.recovery import (
+    RecoveryRegistry,
+    RecoveryResourceType,
+    WindowsRecycleBinService,
+)
 
 
 class FileManager:
-    """Expose structured file operations over injected, separately testable services."""
+    """Expose structured file operations over injected, testable services."""
 
     def __init__(
         self,
@@ -45,6 +51,8 @@ class FileManager:
         opener: WindowsFileOpener,
         *,
         settings: FileOperationSettings,
+        recycle_bin_service: WindowsRecycleBinService | None = None,
+        recovery_registry: RecoveryRegistry | None = None,
         monotonic_clock: object | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
@@ -56,6 +64,8 @@ class FileManager:
         self.search = search
         self.opener = opener
         self.settings = settings
+        self.recycle_bin_service = recycle_bin_service
+        self.recovery_registry = recovery_registry
         del monotonic_clock
         self._logger = logger or logging.getLogger("omega.files.manager")
 
@@ -69,10 +79,13 @@ class FileManager:
         requested_extension: str | None = None,
     ) -> ActionResult:
         """Create one empty supported text/data file without overwriting."""
+
         try:
             selected = self._location(location)
             safe_name = self._normalize_text_path(
-                file_name, requested_extension, default_extension=".txt"
+                file_name,
+                requested_extension,
+                default_extension=".txt",
             )
             target = self.path_resolver.resolve(selected, safe_name)
             self.writer.create(target)
@@ -109,6 +122,7 @@ class FileManager:
         command_id: UUID | None = None,
     ) -> ActionResult:
         """Check regular-file existence without accessing file contents."""
+
         try:
             target = self._resolve(location, file_name)
             exists = self.operations.exists(target)
@@ -124,7 +138,10 @@ class FileManager:
                 action_id,
                 "File existence checked.",
                 message,
-                {**self._target_data(target), "exists": exists},
+                {
+                    **self._target_data(target),
+                    "exists": exists,
+                },
             )
         except FileManagementError as error:
             return self._managed_failure(action_id, command_id, error)
@@ -137,6 +154,7 @@ class FileManager:
         command_id: UUID | None = None,
     ) -> ActionResult:
         """Return bounded basic metadata without private absolute paths."""
+
         try:
             target = self._resolve(location, file_name)
             metadata = self.operations.metadata(target)
@@ -171,12 +189,15 @@ class FileManager:
         command_id: UUID | None = None,
     ) -> ActionResult:
         """Read and sanitize one bounded UTF-8 file without logging contents."""
+
         try:
             target = self._resolve(location, file_name)
             read = self.reader.read(target)
             displayed = read.content
+
             if read.truncated:
                 displayed += "\n[Output truncated by Omega's safety limit.]"
+
             self._logger.info(
                 "File read succeeded: location=%s relative=%s size=%d",
                 target.location.logical_name,
@@ -206,9 +227,11 @@ class FileManager:
         command_id: UUID | None = None,
     ) -> ActionResult:
         """Write empty files; reject direct replacement outside the gateway."""
+
         try:
             target = self._resolve_text(location, file_name)
             snapshot = self.writer.snapshot(target.path)
+
             if snapshot.size_bytes == 0:
                 self.writer.replace(target, content, snapshot)
                 return self._success(
@@ -217,6 +240,7 @@ class FileManager:
                     f"{target.path.name} was updated successfully.",
                     self._target_data(target),
                 )
+
             return self._failure(
                 action_id,
                 command_id,
@@ -238,7 +262,11 @@ class FileManager:
         command_id: UUID | None = None,
     ) -> ActionResult:
         """Reject legacy confirmation; only ConfirmationManager can approve."""
-        return self._legacy_confirmation_failure(action_id, command_id)
+
+        return self._legacy_confirmation_failure(
+            action_id,
+            command_id,
+        )
 
     def replace_text_file(
         self,
@@ -249,6 +277,7 @@ class FileManager:
         command_id: UUID | None = None,
     ) -> ActionResult:
         """Replace text only after the central gateway grants confirmation."""
+
         try:
             target = self._resolve_text(location, file_name)
             snapshot = self.writer.snapshot(target.path)
@@ -269,8 +298,12 @@ class FileManager:
         action_id: UUID,
         command_id: UUID | None = None,
     ) -> ActionResult:
-        """Reject legacy cancellation because no domain confirmation is stored."""
-        return self._legacy_confirmation_failure(action_id, command_id)
+        """Reject legacy cancellation because no confirmation is stored."""
+
+        return self._legacy_confirmation_failure(
+            action_id,
+            command_id,
+        )
 
     def append_text_file(
         self,
@@ -281,6 +314,7 @@ class FileManager:
         command_id: UUID | None = None,
     ) -> ActionResult:
         """Append exactly supplied text to one validated existing text file."""
+
         try:
             target = self._resolve_text(location, file_name)
             self.writer.append(target, content)
@@ -302,6 +336,7 @@ class FileManager:
         command_id: UUID | None = None,
     ) -> ActionResult:
         """Rename one file in place without replacing another file."""
+
         try:
             source = self._resolve(location, source_name)
             safe_new_name = WindowsFilenameValidator.normalize_text_filename(new_name)
@@ -327,7 +362,8 @@ class FileManager:
         action_id: UUID,
         command_id: UUID | None = None,
     ) -> ActionResult:
-        """Copy one validated regular file to an approved root without overwrite."""
+        """Copy one validated regular file without overwrite."""
+
         return self._transfer(
             "copy",
             source_name,
@@ -345,7 +381,8 @@ class FileManager:
         action_id: UUID,
         command_id: UUID | None = None,
     ) -> ActionResult:
-        """Move one validated regular file to an approved root without overwrite."""
+        """Move one validated regular file without overwrite."""
+
         return self._transfer(
             "move",
             source_name,
@@ -355,6 +392,121 @@ class FileManager:
             command_id,
         )
 
+    def recycle_file(
+        self,
+        file_name: str,
+        location: str | None,
+        action_id: UUID,
+        command_id: UUID,
+        session_id: UUID,
+    ) -> ActionResult:
+        """Move one validated file to the Recycle Bin and register undo."""
+
+        if self.recycle_bin_service is None or self.recovery_registry is None:
+            return self._failure(
+                action_id,
+                command_id,
+                "FILE_RECOVERY_NOT_CONFIGURED",
+                ErrorCategory.INTERNAL,
+                "File recovery services are not configured.",
+                "Omega could not prepare a safe Recycle Bin operation.",
+                True,
+            )
+
+        try:
+            target = self._resolve(location, file_name)
+            recycle_result = self.recycle_bin_service.recycle(
+                target.path,
+                logical_location=target.location.logical_name,
+                relative_path=target.relative_path.as_posix(),
+                command_id=command_id,
+                action_id=action_id,
+                session_id=session_id,
+            )
+
+            if not recycle_result.success:
+                return self._failure(
+                    action_id,
+                    command_id,
+                    recycle_result.code.upper(),
+                    ErrorCategory.EXECUTION,
+                    recycle_result.message,
+                    recycle_result.message,
+                    True,
+                )
+
+            if recycle_result.record is None:
+                return self._failure(
+                    action_id,
+                    command_id,
+                    "FILE_RECOVERY_RECORD_MISSING",
+                    ErrorCategory.INTERNAL,
+                    "The Recycle Bin operation returned no recovery record.",
+                    "The file was processed, but Omega could not register undo.",
+                    True,
+                )
+
+            if recycle_result.record.resource_type is not RecoveryResourceType.FILE:
+                return self._failure(
+                    action_id,
+                    command_id,
+                    "FILE_RECOVERY_TYPE_MISMATCH",
+                    ErrorCategory.INTERNAL,
+                    "The recovery record did not describe a file.",
+                    "Omega rejected an invalid file recovery result.",
+                    True,
+                )
+
+            registered = self.recovery_registry.register(
+                recycle_result.record,
+                registered_at=recycle_result.completed_at,
+            )
+
+            self._logger.info(
+                "File recycled: location=%s relative=%s record=%s",
+                target.location.logical_name,
+                target.relative_path.as_posix(),
+                registered.record_id,
+            )
+
+            return self._success(
+                action_id,
+                "File moved to the Recycle Bin and registered for undo.",
+                f"{target.path.name} was moved to the Recycle Bin. "
+                "You can undo this action for a limited time.",
+                {
+                    **self._target_data(target),
+                    "recovery_record_id": str(registered.record_id),
+                    "recovery_status": registered.status.value,
+                    "can_undo": registered.can_restore,
+                    "expires_at": (
+                        registered.expires_at.isoformat()
+                        if registered.expires_at is not None
+                        else None
+                    ),
+                },
+            )
+        except FileManagementError as error:
+            return self._managed_failure(
+                action_id,
+                command_id,
+                error,
+            )
+        except RecoveryRecordError as error:
+            self._logger.warning(
+                "File recovery registration failed: %s",
+                error,
+            )
+            return self._failure(
+                action_id,
+                command_id,
+                "FILE_RECOVERY_REGISTRATION_FAILED",
+                ErrorCategory.INTERNAL,
+                str(error),
+                "The file was processed, but Omega could not register undo.",
+                True,
+            )
+
     def open_file(
         self,
         file_name: str,
@@ -362,7 +514,8 @@ class FileManager:
         action_id: UUID,
         command_id: UUID | None = None,
     ) -> ActionResult:
-        """Open a validated safe document using its registered default application."""
+        """Open a validated safe document using its default application."""
+
         try:
             WindowsFilenameValidator.validate_open_filename(Path(file_name).name)
             target = self._resolve(location, file_name)
@@ -385,7 +538,8 @@ class FileManager:
         *,
         extension: str | None = None,
     ) -> ActionResult:
-        """Run one bounded exact-name or extension search in an approved root."""
+        """Run one bounded exact-name or extension search."""
+
         try:
             resolved = self.location_resolver.resolve(self._location(location))
             matches, truncated = self.search.search(
@@ -399,15 +553,18 @@ class FileManager:
                 len(matches),
                 truncated,
             )
+
             if not matches:
                 user_message = f"I did not find {query} in {resolved.display_name}."
             else:
                 user_message = "\n".join(match.relative_path for match in matches)
+
                 if truncated:
                     user_message += (
                         "\nI found more results than I can safely display. "
                         f"Showing the first {self.settings.search_max_results}."
                     )
+
             return self._success(
                 action_id,
                 "Bounded filename search completed.",
@@ -429,7 +586,7 @@ class FileManager:
             return self._managed_failure(action_id, command_id, error)
 
     def clear_pending_confirmations(self) -> None:
-        """Compatibility no-op; pending text exists only in ConfirmationManager."""
+        """Compatibility no-op; confirmation lives in the gateway."""
 
     def _transfer(
         self,
@@ -441,15 +598,22 @@ class FileManager:
         command_id: UUID | None,
     ) -> ActionResult:
         try:
-            source = self._resolve(source_location, source_name)
-            destination = self.path_resolver.resolve(
-                destination_location, source.path.name
+            source = self._resolve(
+                source_location,
+                source_name,
             )
+            destination = self.path_resolver.resolve(
+                destination_location,
+                source.path.name,
+            )
+
             if operation == "copy":
                 self.operations.copy(source, destination)
             else:
                 self.operations.move(source, destination)
+
             past_tense = "copied" if operation == "copy" else "moved"
+
             return self._success(
                 action_id,
                 f"File {operation} completed and verified.",
@@ -463,11 +627,20 @@ class FileManager:
     def _location(self, location: str | None) -> str:
         return location or self.settings.default_location
 
-    def _resolve(self, location: str | None, relative_path: str) -> ValidatedFilePath:
-        return self.path_resolver.resolve(self._location(location), relative_path)
+    def _resolve(
+        self,
+        location: str | None,
+        relative_path: str,
+    ) -> ValidatedFilePath:
+        return self.path_resolver.resolve(
+            self._location(location),
+            relative_path,
+        )
 
     def _resolve_text(
-        self, location: str | None, relative_path: str
+        self,
+        location: str | None,
+        relative_path: str,
     ) -> ValidatedFilePath:
         safe = self._normalize_text_path(relative_path)
         return self._resolve(location, safe)
@@ -480,17 +653,27 @@ class FileManager:
         default_extension: str | None = None,
     ) -> str:
         parsed = PureWindowsPath(relative_path)
+
         if not parsed.parts:
             raise FilePathValidationError("A file name is required.")
+
         name = WindowsFilenameValidator.normalize_text_filename(
             parsed.name,
             requested_extension,
             default_extension=default_extension,
         )
-        return str(PureWindowsPath(*parsed.parts[:-1], name))
+
+        return str(
+            PureWindowsPath(
+                *parsed.parts[:-1],
+                name,
+            )
+        )
 
     @staticmethod
-    def _target_data(target: ValidatedFilePath) -> dict[str, JsonValue]:
+    def _target_data(
+        target: ValidatedFilePath,
+    ) -> dict[str, JsonValue]:
         return {
             "name": target.path.name,
             "logical_location": target.location.logical_name,
@@ -499,9 +682,17 @@ class FileManager:
 
     @staticmethod
     def _success(
-        action_id: UUID, message: str, user_message: str, data: JsonValue
+        action_id: UUID,
+        message: str,
+        user_message: str,
+        data: JsonValue,
     ) -> ActionResult:
-        return ActionResult.success_result(action_id, message, user_message, data=data)
+        return ActionResult.success_result(
+            action_id,
+            message,
+            user_message,
+            data=data,
+        )
 
     def _managed_failure(
         self,
@@ -512,7 +703,13 @@ class FileManager:
         if isinstance(error, FileConflictError):
             code = "FILE_CONFLICT"
             category = ErrorCategory.ALREADY_EXISTS
-        elif isinstance(error, (FilePathValidationError, FileLocationError)):
+        elif isinstance(
+            error,
+            (
+                FilePathValidationError,
+                FileLocationError,
+            ),
+        ):
             code = "FILE_PATH_REJECTED"
             category = ErrorCategory.SAFETY
         elif isinstance(error, FileReadError):
@@ -533,7 +730,12 @@ class FileManager:
         else:
             code = "FILE_MANAGEMENT_FAILED"
             category = ErrorCategory.INTERNAL
-        self._logger.warning("File operation failed: code=%s", code)
+
+        self._logger.warning(
+            "File operation failed: code=%s",
+            code,
+        )
+
         return self._failure(
             action_id,
             command_id,
@@ -563,18 +765,26 @@ class FileManager:
             action_id=action_id,
             command_id=command_id,
         )
-        return ActionResult.failure_result(action_id, message, user_message, error)
+
+        return ActionResult.failure_result(
+            action_id,
+            message,
+            user_message,
+            error,
+        )
 
     @classmethod
     def _legacy_confirmation_failure(
-        cls, action_id: UUID, command_id: UUID | None
+        cls,
+        action_id: UUID,
+        command_id: UUID | None,
     ) -> ActionResult:
         return cls._failure(
             action_id,
             command_id,
             "CENTRAL_GATEWAY_REQUIRED",
             ErrorCategory.SAFETY,
-            "Direct file confirmation is disabled in Phase 7.",
+            "Direct file confirmation is disabled.",
             "A central safety confirmation is required for that file operation.",
             True,
         )

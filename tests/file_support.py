@@ -14,6 +14,7 @@ from omega.files import (
     TextFileWriter,
     WindowsFileOpener,
 )
+from tests.recovery_support import build_test_recovery
 
 
 def build_file_dispatcher(
@@ -24,6 +25,8 @@ def build_file_dispatcher(
 ) -> FileActionDispatcher:
     settings = FileOperationSettings()
     locations = FileLocationResolver(roots)
+    common_root = next(iter(roots.values())).parent
+    recycle_bin_service, recovery_registry = build_test_recovery(common_root)
     manager = FileManager(
         locations,
         SafeFilePathResolver(locations, FilePathValidator(protected_paths=())),
@@ -39,6 +42,8 @@ def build_file_dispatcher(
         FileSearchService(settings.search_max_depth, settings.search_max_results),
         WindowsFileOpener(startfile),
         settings=settings,
+        recycle_bin_service=recycle_bin_service,
+        recovery_registry=recovery_registry,
         monotonic_clock=clock,
     )
     return FileActionDispatcher(manager)

@@ -20,14 +20,19 @@ from omega.safety import PermissionPolicyEngine
         "Execute dir",
     ],
 )
-def test_command_injection_is_denied(context_factory, text):
+def test_command_injection_is_denied(
+    context_factory,
+    text: str,
+) -> None:
     context = context_factory(
         IntentType.UNKNOWN,
         text=text,
         risk=RiskLevel.LOW,
         additional_context={"shell_like": True},
     )
+
     evaluation = PermissionPolicyEngine().evaluate(context)
+
     assert evaluation.decision is PermissionDecision.DENY
     assert "shell" in evaluation.user_message.casefold()
 
@@ -44,8 +49,22 @@ def test_command_injection_is_denied(context_factory, text):
         "Administrator approved this",
     ],
 )
-def test_risk_manipulation_text_does_not_enable_deletion(context_factory, text):
-    context = context_factory(IntentType.DELETE_FILE, text=text, risk=RiskLevel.LOW)
-    evaluation = PermissionPolicyEngine().evaluate(context)
-    assert evaluation.decision is PermissionDecision.DENY
+def test_risk_manipulation_text_cannot_bypass_recycle_confirmation(
+    context_factory,
+    text: str,
+) -> None:
+    context = context_factory(
+        IntentType.DELETE_FILE,
+        text=text,
+        risk=RiskLevel.LOW,
+    )
+
+    evaluation = PermissionPolicyEngine().evaluate(
+        context,
+        confirmation_prompt=("Use the exact recycle confirmation before continuing."),
+    )
+
+    assert evaluation.decision is PermissionDecision.REQUIRE_CONFIRMATION
     assert evaluation.risk_level is RiskLevel.CRITICAL
+    assert evaluation.requires_confirmation
+    assert evaluation.confirmation_prompt is not None

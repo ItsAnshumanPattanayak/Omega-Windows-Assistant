@@ -27,63 +27,97 @@ _RISK_ORDER = {
     RiskLevel.HIGH: 2,
     RiskLevel.CRITICAL: 3,
 }
-_HARD_PROHIBITED = frozenset({IntentType.DELETE_FILE, IntentType.DELETE_FOLDER})
+
+_RECOVERABLE_DELETION_INTENTS = frozenset(
+    {
+        IntentType.DELETE_FILE,
+        IntentType.DELETE_FOLDER,
+    }
+)
 
 
 @dataclass(frozen=True)
 class ActionPermissionRule:
+    """Static permission rule for one typed Omega intent."""
+
     enabled: bool
     maximum_risk: RiskLevel = RiskLevel.HIGH
     requires_confirmation: bool = False
 
     @classmethod
     def from_mapping(
-        cls, intent: IntentType, values: Mapping[str, Any]
+        cls,
+        intent: IntentType,
+        values: Mapping[str, Any],
     ) -> ActionPermissionRule:
         enabled = values.get("enabled", False)
         required = values.get("requires_confirmation", False)
+
         if not isinstance(enabled, bool) or not isinstance(required, bool):
             raise PolicyConfigurationError(
                 f"Permission rule {intent.value} contains an invalid boolean."
             )
+
         try:
             maximum = RiskLevel(values.get("maximum_risk", "high"))
         except ValueError as error:
             raise PolicyConfigurationError(
                 f"Permission rule {intent.value} contains an invalid risk."
             ) from error
-        if intent in _HARD_PROHIBITED and enabled:
-            raise PolicyConfigurationError(
-                f"Critical operation {intent.value} cannot be enabled in Phase 7."
-            )
-        return cls(enabled, maximum, required)
+
+        if intent in _RECOVERABLE_DELETION_INTENTS:
+            if enabled and not required:
+                raise PolicyConfigurationError(
+                    f"Recoverable operation {intent.value} must require confirmation."
+                )
+
+            if enabled and maximum is not RiskLevel.CRITICAL:
+                raise PolicyConfigurationError(
+                    f"Recoverable operation {intent.value} must allow critical risk."
+                )
+
+        return cls(
+            enabled=enabled,
+            maximum_risk=maximum,
+            requires_confirmation=required,
+        )
 
 
 @dataclass(frozen=True)
 class PermissionConfiguration:
-    """Static restrictions that may tighten, but never weaken, hard boundaries."""
+    """Static restrictions that may tighten but never weaken safety boundaries."""
 
     default_decision: PermissionDecision
     actions: Mapping[IntentType, ActionPermissionRule]
 
     def __post_init__(self) -> None:
         if self.default_decision is not PermissionDecision.DENY:
-            raise PolicyConfigurationError("The Phase 7 default decision must be deny.")
+            raise PolicyConfigurationError(
+                "The default permission decision must remain deny."
+            )
+
         if len(self.actions) != len(set(self.actions)):
             raise PolicyConfigurationError("Permission rules must not be duplicated.")
 
     @classmethod
     def defaults(cls) -> PermissionConfiguration:
+        confirmation_intents = {
+            IntentType.CLOSE_APPLICATION,
+            IntentType.MOVE_FILE,
+            IntentType.MOVE_FOLDER,
+            IntentType.DELETE_FILE,
+            IntentType.DELETE_FOLDER,
+        }
+
         supported = {
             intent: ActionPermissionRule(
-                intent not in _HARD_PROHIBITED,
-                RiskLevel.CRITICAL if intent in _HARD_PROHIBITED else RiskLevel.HIGH,
-                intent
-                in {
-                    IntentType.CLOSE_APPLICATION,
-                    IntentType.MOVE_FILE,
-                    IntentType.MOVE_FOLDER,
-                },
+                enabled=True,
+                maximum_risk=(
+                    RiskLevel.CRITICAL
+                    if intent in _RECOVERABLE_DELETION_INTENTS
+                    else RiskLevel.HIGH
+                ),
+                requires_confirmation=intent in confirmation_intents,
             )
             for intent in IntentType
             if intent
@@ -96,20 +130,31 @@ class PermissionConfiguration:
                 IntentType.SHOW_HISTORY,
             }
         }
-        return cls(PermissionDecision.DENY, supported)
+
+        return cls(
+            default_decision=PermissionDecision.DENY,
+            actions=supported,
+        )
 
     @classmethod
-    def from_mapping(cls, values: Mapping[str, Any]) -> PermissionConfiguration:
+    def from_mapping(
+        cls,
+        values: Mapping[str, Any],
+    ) -> PermissionConfiguration:
         try:
             default = PermissionDecision(values.get("default_decision", "deny"))
         except ValueError as error:
             raise PolicyConfigurationError(
                 "Invalid default permission decision."
             ) from error
+
         raw_actions = values.get("actions")
+
         if not isinstance(raw_actions, Mapping):
             raise PolicyConfigurationError("permissions.actions must be a mapping.")
+
         actions: dict[IntentType, ActionPermissionRule] = {}
+
         for raw_intent, raw_rule in raw_actions.items():
             try:
                 intent = IntentType(raw_intent)
@@ -117,29 +162,47 @@ class PermissionConfiguration:
                 raise PolicyConfigurationError(
                     f"Unknown intent in permission configuration: {raw_intent}"
                 ) from error
+
             if intent in actions:
                 raise PolicyConfigurationError(
                     f"Duplicate permission rule: {intent.value}"
                 )
+
             if not isinstance(raw_rule, Mapping):
                 raise PolicyConfigurationError(
                     f"Permission rule {intent.value} must be an object."
                 )
-            actions[intent] = ActionPermissionRule.from_mapping(intent, raw_rule)
-        return cls(default, actions)
+
+            actions[intent] = ActionPermissionRule.from_mapping(
+                intent,
+                raw_rule,
+            )
+
+        return cls(
+            default_decision=default,
+            actions=actions,
+        )
 
     @classmethod
-    def from_file(cls, path: Path | None = None) -> PermissionConfiguration:
+    def from_file(
+        cls,
+        path: Path | None = None,
+    ) -> PermissionConfiguration:
         selected = path or config_dir() / "permissions.json"
 
-        def unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        def unique_object(
+            pairs: list[tuple[str, Any]],
+        ) -> dict[str, Any]:
             result: dict[str, Any] = {}
+
             for key, value in pairs:
                 if key in result:
                     raise PolicyConfigurationError(
                         f"Duplicate configuration key: {key}"
                     )
+
                 result[key] = value
+
             return result
 
         try:
@@ -151,15 +214,17 @@ class PermissionConfiguration:
             raise PolicyConfigurationError(
                 "Permission configuration is invalid."
             ) from error
+
         if not isinstance(raw, Mapping):
             raise PolicyConfigurationError(
                 "Permission configuration must be an object."
             )
+
         return cls.from_mapping(raw)
 
 
 class PermissionPolicyEngine:
-    """Evaluate every policy deterministically with DENY-first precedence."""
+    """Evaluate every safety policy with deterministic deny-first precedence."""
 
     def __init__(
         self,
@@ -170,21 +235,34 @@ class PermissionPolicyEngine:
         protected_resources: ProtectedResourceEvaluator | None = None,
     ) -> None:
         ordered = tuple(
-            sorted(policies, key=lambda policy: (policy.priority, policy.policy_id))
+            sorted(
+                policies,
+                key=lambda policy: (
+                    policy.priority,
+                    policy.policy_id,
+                ),
+            )
         )
+
         ids = [policy.policy_id for policy in ordered]
+
         if len(ids) != len(set(ids)):
             raise PolicyConfigurationError("Safety policy IDs must be unique.")
+
         self.policies = ordered
         self.configuration = configuration or PermissionConfiguration.defaults()
         self.classifier = classifier or RiskClassifier()
         self.protected_resources = protected_resources or ProtectedResourceEvaluator()
 
     def evaluate(
-        self, context: SafetyContext, *, confirmation_prompt: str | None = None
+        self,
+        context: SafetyContext,
+        *,
+        confirmation_prompt: str | None = None,
     ) -> SafetyEvaluation:
         protected = self.protected_resources.evaluate(context)
         augmented = context
+
         if protected.denied and not context.additional_context.get(
             "protected_resource"
         ):
@@ -206,22 +284,34 @@ class PermissionPolicyEngine:
                     "protected_resource": True,
                 },
             )
+
         risk = self.classifier.classify(augmented)
+
         results = [
-            policy.evaluate(augmented, risk_level=risk, protected=protected)
+            policy.evaluate(
+                augmented,
+                risk_level=risk,
+                protected=protected,
+            )
             for policy in self.policies
         ]
+
         applicable = [
             item
             for item in results
             if item.disposition is not PolicyDisposition.NOT_APPLICABLE
         ]
 
-        configured_denial = self._configuration_denial(augmented, risk)
+        configured_denial = self._configuration_denial(
+            augmented,
+            risk,
+        )
+
         if configured_denial is not None:
             applicable.append(configured_denial)
         else:
             rule = self.configuration.actions.get(augmented.action.intent)
+
             if rule is not None and rule.requires_confirmation:
                 applicable.append(
                     PolicyResult(
@@ -236,14 +326,17 @@ class PermissionPolicyEngine:
         denials = [
             item for item in applicable if item.disposition is PolicyDisposition.DENY
         ]
+
         confirmations = [
             item
             for item in applicable
             if item.disposition is PolicyDisposition.REQUIRE_CONFIRMATION
         ]
+
         allows = [
             item for item in applicable if item.disposition is PolicyDisposition.ALLOW
         ]
+
         if denials:
             selected = self._select_denial(denials)
             decision = PermissionDecision.DENY
@@ -263,20 +356,23 @@ class PermissionPolicyEngine:
             )
             applicable.append(selected)
             decision = PermissionDecision.DENY
+
         prompt = (
             confirmation_prompt
             if decision is PermissionDecision.REQUIRE_CONFIRMATION
             else None
         )
+
         if decision is PermissionDecision.REQUIRE_CONFIRMATION and not prompt:
             prompt = "Exact confirmation is required before Omega can continue."
+
         return SafetyEvaluation(
             decision=decision,
             risk_level=risk,
             reason_code=selected.reason_code,
             reason=selected.reason,
             user_message=selected.user_message,
-            requires_confirmation=decision is PermissionDecision.REQUIRE_CONFIRMATION,
+            requires_confirmation=(decision is PermissionDecision.REQUIRE_CONFIRMATION),
             confirmation_prompt=prompt,
             matched_policies=tuple(item.policy_id for item in applicable),
             denied_by=(
@@ -285,9 +381,12 @@ class PermissionPolicyEngine:
         )
 
     def _configuration_denial(
-        self, context: SafetyContext, risk: RiskLevel
+        self,
+        context: SafetyContext,
+        risk: RiskLevel,
     ) -> PolicyResult | None:
         rule = self.configuration.actions.get(context.action.intent)
+
         if rule is None or not rule.enabled:
             return PolicyResult(
                 "SAFETY-CONFIG-DENY-001",
@@ -296,6 +395,7 @@ class PermissionPolicyEngine:
                 "The operation is disabled by configuration.",
                 "Omega does not have permission to perform that operation.",
             )
+
         if _RISK_ORDER[risk] > _RISK_ORDER[rule.maximum_risk]:
             return PolicyResult(
                 "SAFETY-CONFIG-RISK-001",
@@ -304,12 +404,14 @@ class PermissionPolicyEngine:
                 "The action exceeds its configured maximum risk.",
                 "Omega does not have permission to perform that operation.",
             )
+
         return None
 
     @staticmethod
-    def _select_denial(denials: list[PolicyResult]) -> PolicyResult:
+    def _select_denial(
+        denials: list[PolicyResult],
+    ) -> PolicyResult:
         for reason in (
-            "PERMANENT_DELETION_DISABLED",
             "ARBITRARY_SHELL_DENIED",
             "PROTECTED_APPLICATION",
             "PROTECTED_PATH",
@@ -317,8 +419,11 @@ class PermissionPolicyEngine:
             "UNSAFE_EXTENSION_DENIED",
         ):
             selected = next(
-                (item for item in denials if item.reason_code == reason), None
+                (item for item in denials if item.reason_code == reason),
+                None,
             )
+
             if selected is not None:
                 return selected
+
         return denials[0]

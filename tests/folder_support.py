@@ -13,6 +13,7 @@ from omega.folders import (
     FolderSearch,
     WindowsFolderOpener,
 )
+from tests.recovery_support import build_test_recovery
 
 
 def build_folder_dispatcher(
@@ -25,6 +26,8 @@ def build_folder_dispatcher(
     locations = FileLocationResolver(roots)
     validator = FolderPathValidator(protected_paths=())
     inspector = FolderInspector(validator)
+    common_root = next(iter(roots.values())).parent
+    recycle_bin_service, recovery_registry = build_test_recovery(common_root)
     manager = FolderManager(
         locations,
         validator,
@@ -34,5 +37,7 @@ def build_folder_dispatcher(
         FolderSearch(validator),
         WindowsFolderOpener(startfile),
         settings=selected,
+        recycle_bin_service=recycle_bin_service,
+        recovery_registry=recovery_registry,
     )
     return FolderActionDispatcher(manager)

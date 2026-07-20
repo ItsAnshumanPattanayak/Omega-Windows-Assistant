@@ -54,7 +54,11 @@ class _BasePolicy:
         user_message: str,
     ) -> PolicyResult:
         return PolicyResult(
-            cls.policy_id, disposition, reason_code, reason, user_message
+            cls.policy_id,
+            disposition,
+            reason_code,
+            reason,
+            user_message,
         )
 
     @classmethod
@@ -71,7 +75,11 @@ class UnknownActionDenyPolicy(_BasePolicy):
     policy_id = "SAFETY-UNKNOWN-DENY-001"
     priority = 20
 
-    def evaluate(self, context: SafetyContext, **_: object) -> PolicyResult:
+    def evaluate(
+        self,
+        context: SafetyContext,
+        **_: object,
+    ) -> PolicyResult:
         if context.action.intent is IntentType.UNKNOWN:
             return self.result(
                 PolicyDisposition.DENY,
@@ -79,6 +87,7 @@ class UnknownActionDenyPolicy(_BasePolicy):
                 "Unknown actions are not executable.",
                 "Omega does not have permission to perform that operation.",
             )
+
         return self.na()
 
 
@@ -86,16 +95,31 @@ class CriticalRiskDenyPolicy(_BasePolicy):
     policy_id = "SAFETY-CRITICAL-DENY-001"
     priority = 30
 
+    _RECOVERABLE_DELETION_INTENTS = frozenset(
+        {
+            IntentType.DELETE_FILE,
+            IntentType.DELETE_FOLDER,
+        }
+    )
+
     def evaluate(
-        self, context: SafetyContext, *, risk_level: RiskLevel, **_: object
+        self,
+        context: SafetyContext,
+        *,
+        risk_level: RiskLevel,
+        **_: object,
     ) -> PolicyResult:
-        if risk_level is RiskLevel.CRITICAL:
+        if (
+            risk_level is RiskLevel.CRITICAL
+            and context.action.intent not in self._RECOVERABLE_DELETION_INTENTS
+        ):
             return self.result(
                 PolicyDisposition.DENY,
                 "CRITICAL_RISK_DENIED",
                 "Critical-risk operations are prohibited.",
-                "Omega does not have permission to perform that critical operation.",
+                "Omega does not have permission to perform that critical " "operation.",
             )
+
         return self.na()
 
 
@@ -104,7 +128,11 @@ class ProtectedResourceDenyPolicy(_BasePolicy):
     priority = 40
 
     def evaluate(
-        self, context: SafetyContext, *, protected: ProtectedResourceResult, **_: object
+        self,
+        context: SafetyContext,
+        *,
+        protected: ProtectedResourceResult,
+        **_: object,
     ) -> PolicyResult:
         if protected.denied:
             return PolicyResult(
@@ -114,6 +142,7 @@ class ProtectedResourceDenyPolicy(_BasePolicy):
                 protected.reason_code.replace("_", " ").title(),
                 protected.user_message,
             )
+
         return self.na()
 
 
@@ -121,10 +150,19 @@ class ArbitraryShellDenyPolicy(_BasePolicy):
     policy_id = "SAFETY-SHELL-DENY-001"
     priority = 31
 
-    _PREFIXES = ("run ", "execute ", "launch command ")
+    _PREFIXES = (
+        "run ",
+        "execute ",
+        "launch command ",
+    )
 
-    def evaluate(self, context: SafetyContext, **_: object) -> PolicyResult:
+    def evaluate(
+        self,
+        context: SafetyContext,
+        **_: object,
+    ) -> PolicyResult:
         text = context.command.original_text.strip().casefold()
+
         if (
             text.startswith(self._PREFIXES)
             or context.additional_context.get("shell_like") is True
@@ -135,37 +173,49 @@ class ArbitraryShellDenyPolicy(_BasePolicy):
                 "Arbitrary shell execution is outside Omega's capabilities.",
                 "Omega does not execute arbitrary shell commands.",
             )
+
         return self.na()
 
 
-class PermanentDeletionDenyPolicy(_BasePolicy):
-    policy_id = "SAFETY-DELETE-DEFER-001"
+class RecoverableDeletionPolicy(_BasePolicy):
+    """Require confirmation for Recycle Bin deletion.
+
+    This policy authorizes only the typed delete intents. The domain manager
+    must still execute WindowsRecycleBinService rather than permanent
+    filesystem deletion.
+    """
+
+    policy_id = "SAFETY-RECOVERABLE-DELETE-001"
     priority = 32
 
-    def evaluate(self, context: SafetyContext, **_: object) -> PolicyResult:
+    def evaluate(
+        self,
+        context: SafetyContext,
+        **_: object,
+    ) -> PolicyResult:
         if context.action.intent is IntentType.DELETE_FILE:
-            message = (
-                "Permanent file deletion is disabled. Safe Recycle Bin deletion "
-                "will be added in Phase 8."
+            return self.result(
+                PolicyDisposition.REQUIRE_CONFIRMATION,
+                "FILE_RECYCLE_CONFIRMATION",
+                "Moving a file to the Recycle Bin requires confirmation.",
+                "Moving this file to the Recycle Bin requires exact " "confirmation.",
             )
-        elif context.action.intent is IntentType.DELETE_FOLDER:
-            message = (
-                "Permanent folder deletion is disabled. Safe Recycle Bin deletion "
-                "will be added in Phase 8."
+
+        if context.action.intent is IntentType.DELETE_FOLDER:
+            return self.result(
+                PolicyDisposition.REQUIRE_CONFIRMATION,
+                "FOLDER_RECYCLE_CONFIRMATION",
+                "Moving a folder to the Recycle Bin requires confirmation.",
+                "Moving this folder to the Recycle Bin requires exact " "confirmation.",
             )
-        else:
-            return self.na()
-        return self.result(
-            PolicyDisposition.DENY,
-            "PERMANENT_DELETION_DISABLED",
-            "Permanent deletion is prohibited in Phase 7.",
-            message,
-        )
+
+        return self.na()
 
 
 class UnsafeExtensionDenyPolicy(_BasePolicy):
     policy_id = "SAFETY-UNSAFE-EXTENSION-001"
     priority = 45
+
     _BLOCKED = frozenset(
         {
             ".exe",
@@ -184,10 +234,25 @@ class UnsafeExtensionDenyPolicy(_BasePolicy):
         }
     )
 
-    def evaluate(self, context: SafetyContext, **_: object) -> PolicyResult:
+    _DELETION_INTENTS = frozenset(
+        {
+            IntentType.DELETE_FILE,
+            IntentType.DELETE_FOLDER,
+        }
+    )
+
+    def evaluate(
+        self,
+        context: SafetyContext,
+        **_: object,
+    ) -> PolicyResult:
+        if context.action.intent in self._DELETION_INTENTS:
+            return self.na()
+
         for key, value in context.action.parameters.items():
             if not isinstance(value, str) or "file" not in key and "name" not in key:
                 continue
+
             if Path(PureWindowsPath(value).name).suffix.casefold() in self._BLOCKED:
                 return self.result(
                     PolicyDisposition.DENY,
@@ -196,6 +261,7 @@ class UnsafeExtensionDenyPolicy(_BasePolicy):
                     "Omega does not create, modify, open, or execute "
                     "command-script files.",
                 )
+
         return self.na()
 
 
@@ -203,14 +269,19 @@ class DestinationConflictPolicy(_BasePolicy):
     policy_id = "SAFETY-DESTINATION-CONFLICT-001"
     priority = 50
 
-    def evaluate(self, context: SafetyContext, **_: object) -> PolicyResult:
+    def evaluate(
+        self,
+        context: SafetyContext,
+        **_: object,
+    ) -> PolicyResult:
         if context.additional_context.get("destination_conflict") is True:
             return self.result(
                 PolicyDisposition.DENY,
                 "DESTINATION_CONFLICT",
                 "Destination replacement and folder merging are disabled.",
-                "That destination already exists, and Omega does not replace it.",
+                "That destination already exists, and Omega does not replace " "it.",
             )
+
         return self.na()
 
 
@@ -219,7 +290,11 @@ class AbsolutePathDenyPolicy(_BasePolicy):
     priority = 41
 
     def evaluate(
-        self, context: SafetyContext, *, protected: ProtectedResourceResult, **_: object
+        self,
+        context: SafetyContext,
+        *,
+        protected: ProtectedResourceResult,
+        **_: object,
     ) -> PolicyResult:
         if protected.reason_code in {
             "ABSOLUTE_PATH_REJECTED",
@@ -235,6 +310,7 @@ class AbsolutePathDenyPolicy(_BasePolicy):
                 "The requested path is outside approved logical roots.",
                 protected.user_message,
             )
+
         return self.na()
 
 
@@ -243,7 +319,11 @@ class SymlinkAndJunctionDenyPolicy(_BasePolicy):
     priority = 42
 
     def evaluate(
-        self, context: SafetyContext, *, protected: ProtectedResourceResult, **_: object
+        self,
+        context: SafetyContext,
+        *,
+        protected: ProtectedResourceResult,
+        **_: object,
     ) -> PolicyResult:
         if protected.reason_code == "LINKED_PATH_REJECTED":
             return PolicyResult(
@@ -253,6 +333,7 @@ class SymlinkAndJunctionDenyPolicy(_BasePolicy):
                 "Linked path rejected.",
                 protected.user_message,
             )
+
         return self.na()
 
 
@@ -262,13 +343,18 @@ class _IntentPolicy(_BasePolicy):
     reason_code: ClassVar[str]
     message: ClassVar[str]
 
-    def evaluate(self, context: SafetyContext, **_: object) -> PolicyResult:
+    def evaluate(
+        self,
+        context: SafetyContext,
+        **_: object,
+    ) -> PolicyResult:
         if context.action.intent not in self.intents:
             return self.na()
+
         return self.result(
             self.disposition,
             self.reason_code,
-            "The action matched an explicit Phase 7 operation policy.",
+            "The action matched an explicit Omega operation policy.",
             self.message,
         )
 
@@ -340,11 +426,17 @@ class FileWritePolicy(_IntentPolicy):
         "Replacing file content requires exact confirmation.",
     )
 
-    def evaluate(self, context: SafetyContext, **_: object) -> PolicyResult:
+    def evaluate(
+        self,
+        context: SafetyContext,
+        **_: object,
+    ) -> PolicyResult:
         if context.action.intent is not IntentType.WRITE_FILE:
             return self.na()
+
         if not context.additional_context.get(
-            "target_has_content", context.target_exists
+            "target_has_content",
+            context.target_exists,
         ):
             return self.result(
                 PolicyDisposition.ALLOW,
@@ -352,6 +444,7 @@ class FileWritePolicy(_IntentPolicy):
                 "Writing a new validated text file does not replace data.",
                 "Writing the new text file is allowed after validation.",
             )
+
         return super().evaluate(context)
 
 
@@ -459,7 +552,7 @@ DEFAULT_POLICIES = cast(
         UnknownActionDenyPolicy(),
         CriticalRiskDenyPolicy(),
         ArbitraryShellDenyPolicy(),
-        PermanentDeletionDenyPolicy(),
+        RecoverableDeletionPolicy(),
         AbsolutePathDenyPolicy(),
         SymlinkAndJunctionDenyPolicy(),
         ProtectedResourceDenyPolicy(),
@@ -484,11 +577,16 @@ DEFAULT_POLICIES = cast(
 )
 
 
-def disposition_decision(value: PolicyDisposition) -> PermissionDecision | None:
+def disposition_decision(
+    value: PolicyDisposition,
+) -> PermissionDecision | None:
     if value is PolicyDisposition.ALLOW:
         return PermissionDecision.ALLOW
+
     if value is PolicyDisposition.REQUIRE_CONFIRMATION:
         return PermissionDecision.REQUIRE_CONFIRMATION
+
     if value is PolicyDisposition.DENY:
         return PermissionDecision.DENY
+
     return None
