@@ -9,10 +9,13 @@ from dataclasses import dataclass
 from omega.core.exceptions import DatabaseMigrationError
 from omega.database.connection import DatabaseConnectionFactory
 from omega.database.schema import (
+    ACTION_MIGRATION_NAME,
+    ACTION_SCHEMA_VERSION,
     BASELINE_MIGRATION_NAME,
     BASELINE_SCHEMA_VERSION,
     COMMAND_MIGRATION_NAME,
     COMMAND_SCHEMA_VERSION,
+    apply_action_schema,
     apply_baseline_schema,
     apply_command_schema,
     ensure_migrations_table,
@@ -51,9 +54,16 @@ COMMAND_MIGRATION = Migration(
     apply=apply_command_schema,
 )
 
+ACTION_MIGRATION = Migration(
+    version=ACTION_SCHEMA_VERSION,
+    name=ACTION_MIGRATION_NAME,
+    apply=apply_action_schema,
+)
+
 DEFAULT_MIGRATIONS = (
     BASELINE_MIGRATION,
     COMMAND_MIGRATION,
+    ACTION_MIGRATION,
 )
 
 

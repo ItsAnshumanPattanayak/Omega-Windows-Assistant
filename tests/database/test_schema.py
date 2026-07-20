@@ -35,11 +35,12 @@ def test_schema_initialization_creates_all_version_records(
         ).fetchall()
 
         assert version == LATEST_SCHEMA_VERSION
-        assert [int(row["version"]) for row in rows] == [1, 2]
+        assert [int(row["version"]) for row in rows] == [1, 2, 3]
 
         assert [str(row["name"]) for row in rows] == [
             "phase_9a_database_foundation",
             "phase_9b_command_repository",
+            "phase_9c_action_repository",
         ]
 
         assert all(row["applied_at"] for row in rows)
@@ -47,7 +48,7 @@ def test_schema_initialization_creates_all_version_records(
         connection.close()
 
 
-def test_schema_initialization_creates_command_table_and_indexes(
+def test_schema_initialization_creates_history_tables(
     tmp_path: Path,
 ) -> None:
     connection = _factory(tmp_path).connect()
@@ -66,6 +67,24 @@ def test_schema_initialization_creates_command_table_and_indexes(
             )
         }
 
+        assert {
+            "schema_migrations",
+            "commands",
+            "actions",
+            "action_results",
+        }.issubset(tables)
+    finally:
+        connection.close()
+
+
+def test_schema_initialization_creates_history_indexes(
+    tmp_path: Path,
+) -> None:
+    connection = _factory(tmp_path).connect()
+
+    try:
+        initialize_schema(connection)
+
         indexes = {
             str(row[0])
             for row in connection.execute(
@@ -73,17 +92,39 @@ def test_schema_initialization_creates_command_table_and_indexes(
                 SELECT name
                 FROM sqlite_master
                 WHERE type = 'index'
-                AND name LIKE 'idx_commands_%'
+                AND (
+                    name LIKE 'idx_commands_%'
+                    OR name LIKE 'idx_actions_%'
+                )
                 """
             )
         }
 
-        assert "commands" in tables
         assert indexes == {
+            "idx_actions_command_id",
+            "idx_actions_created_at",
+            "idx_actions_intent",
+            "idx_actions_status",
             "idx_commands_intent",
             "idx_commands_received_at",
             "idx_commands_session_id",
         }
+    finally:
+        connection.close()
+
+
+def test_action_foreign_keys_are_enabled(
+    tmp_path: Path,
+) -> None:
+    connection = _factory(tmp_path).connect()
+
+    try:
+        initialize_schema(connection)
+
+        foreign_keys = connection.execute("PRAGMA foreign_keys").fetchone()
+
+        assert foreign_keys is not None
+        assert int(foreign_keys[0]) == 1
     finally:
         connection.close()
 
@@ -104,10 +145,10 @@ def test_schema_initialization_is_idempotent(
             """
         ).fetchone()
 
-        assert first == 2
-        assert second == 2
+        assert first == 3
+        assert second == 3
         assert count is not None
-        assert int(count[0]) == 2
+        assert int(count[0]) == 3
     finally:
         connection.close()
 

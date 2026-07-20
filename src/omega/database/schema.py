@@ -9,10 +9,12 @@ from omega.core.exceptions import DatabaseSchemaError
 
 BASELINE_SCHEMA_VERSION = 1
 COMMAND_SCHEMA_VERSION = 2
-LATEST_SCHEMA_VERSION = COMMAND_SCHEMA_VERSION
+ACTION_SCHEMA_VERSION = 3
+LATEST_SCHEMA_VERSION = ACTION_SCHEMA_VERSION
 
 BASELINE_MIGRATION_NAME = "phase_9a_database_foundation"
 COMMAND_MIGRATION_NAME = "phase_9b_command_repository"
+ACTION_MIGRATION_NAME = "phase_9c_action_repository"
 
 CREATE_MIGRATIONS_TABLE = """
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -57,6 +59,76 @@ ON commands(session_id)
 CREATE_COMMANDS_INTENT_INDEX = """
 CREATE INDEX IF NOT EXISTS idx_commands_intent
 ON commands(intent)
+"""
+
+CREATE_ACTIONS_TABLE = """
+CREATE TABLE IF NOT EXISTS actions (
+    action_id TEXT PRIMARY KEY,
+    command_id TEXT NOT NULL,
+    intent TEXT NOT NULL,
+    parameters_json TEXT NOT NULL,
+    risk_level TEXT NOT NULL,
+    status TEXT NOT NULL,
+    permission_decision TEXT NOT NULL,
+    confirmation_status TEXT NOT NULL,
+    requires_confirmation INTEGER NOT NULL,
+    dependencies_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    started_at TEXT,
+    completed_at TEXT,
+    metadata_json TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (command_id)
+        REFERENCES commands(command_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CHECK (requires_confirmation IN (0, 1))
+)
+"""
+
+CREATE_ACTION_RESULTS_TABLE = """
+CREATE TABLE IF NOT EXISTS action_results (
+    action_id TEXT PRIMARY KEY,
+    success INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    message TEXT NOT NULL,
+    user_message TEXT NOT NULL,
+    data_json TEXT NOT NULL,
+    error_json TEXT,
+    started_at TEXT,
+    completed_at TEXT,
+    duration_ms INTEGER,
+    metadata_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (action_id)
+        REFERENCES actions(action_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CHECK (success IN (0, 1)),
+    CHECK (duration_ms IS NULL OR duration_ms >= 0),
+    CHECK (length(trim(message)) > 0),
+    CHECK (length(trim(user_message)) > 0)
+)
+"""
+
+CREATE_ACTIONS_COMMAND_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_actions_command_id
+ON actions(command_id)
+"""
+
+CREATE_ACTIONS_CREATED_AT_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_actions_created_at
+ON actions(created_at DESC)
+"""
+
+CREATE_ACTIONS_STATUS_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_actions_status
+ON actions(status)
+"""
+
+CREATE_ACTIONS_INTENT_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_actions_intent
+ON actions(intent)
 """
 
 
@@ -128,6 +200,24 @@ def apply_command_schema(
         ) from error
 
 
+def apply_action_schema(
+    connection: sqlite3.Connection,
+) -> None:
+    """Create the persistent action and result schema."""
+
+    try:
+        connection.execute(CREATE_ACTIONS_TABLE)
+        connection.execute(CREATE_ACTION_RESULTS_TABLE)
+        connection.execute(CREATE_ACTIONS_COMMAND_INDEX)
+        connection.execute(CREATE_ACTIONS_CREATED_AT_INDEX)
+        connection.execute(CREATE_ACTIONS_STATUS_INDEX)
+        connection.execute(CREATE_ACTIONS_INTENT_INDEX)
+    except sqlite3.Error as error:
+        raise DatabaseSchemaError(
+            "Omega could not create the action-history schema."
+        ) from error
+
+
 def _record_migration(
     connection: sqlite3.Connection,
     *,
@@ -171,6 +261,13 @@ def initialize_schema(
             connection,
             version=COMMAND_SCHEMA_VERSION,
             name=COMMAND_MIGRATION_NAME,
+        )
+
+        apply_action_schema(connection)
+        _record_migration(
+            connection,
+            version=ACTION_SCHEMA_VERSION,
+            name=ACTION_MIGRATION_NAME,
         )
 
         connection.commit()

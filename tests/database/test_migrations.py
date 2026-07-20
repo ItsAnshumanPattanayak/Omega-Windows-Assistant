@@ -30,8 +30,8 @@ def test_default_migrations_apply_once(
     first = runner.migrate()
     second = runner.migrate()
 
-    assert first == 2
-    assert second == 2
+    assert first == 3
+    assert second == 3
 
     connection = factory.connect()
 
@@ -47,18 +47,47 @@ def test_default_migrations_apply_once(
             )
         ]
 
-        assert versions == [1, 2]
+        assert versions == [1, 2, 3]
     finally:
         connection.close()
 
 
+@pytest.mark.parametrize(
+    ("target_version", "expected_tables"),
+    [
+        (
+            1,
+            {
+                "schema_migrations",
+            },
+        ),
+        (
+            2,
+            {
+                "schema_migrations",
+                "commands",
+            },
+        ),
+        (
+            3,
+            {
+                "schema_migrations",
+                "commands",
+                "actions",
+                "action_results",
+            },
+        ),
+    ],
+)
 def test_runner_can_stop_at_requested_target(
     tmp_path: Path,
+    target_version: int,
+    expected_tables: set[str],
 ) -> None:
     factory = _factory(tmp_path)
     runner = MigrationRunner(factory)
 
-    assert runner.migrate(target_version=1) == 1
+    assert runner.migrate(target_version=target_version) == target_version
 
     connection = factory.connect()
 
@@ -72,13 +101,12 @@ def test_runner_can_stop_at_requested_target(
                 WHERE type = 'table'
                 """
             )
+            if not str(row[0]).startswith("sqlite_")
         }
 
-        assert "commands" not in tables
+        assert tables == expected_tables
     finally:
         connection.close()
-
-    assert runner.migrate() == 2
 
 
 def test_migration_runner_applies_custom_ordered_migrations(
