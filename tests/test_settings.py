@@ -15,6 +15,7 @@ application: {}
 user: {}
 assistant: {}
 logging: {}
+database: {}
 safety: {}
 applications: {}
 files: {}
@@ -26,6 +27,7 @@ recovery: {}
 def test_load_settings_applies_sensible_defaults() -> None:
     with TemporaryDirectory(dir=Path.cwd() / "data") as temporary_directory:
         config_path = Path(temporary_directory) / "app_config.yaml"
+
         config_path.write_text(
             _valid_config(),
             encoding="utf-8",
@@ -44,6 +46,15 @@ def test_load_settings_applies_sensible_defaults() -> None:
         assert settings.safety["default_decision"] == "deny"
         assert settings.safety["maximum_confirmation_attempts"] == 3
 
+        database = settings.database_configuration
+
+        assert database.enabled
+        assert database.filename == "omega.db"
+        assert database.busy_timeout_ms == 5_000
+        assert database.journal_mode == "WAL"
+        assert database.synchronous == "NORMAL"
+        assert database.foreign_keys
+
         assert settings.recovery["enabled"] is True
         assert settings.recovery["allow_permanent_deletion"] is False
         assert settings.recovery["require_confirmation_for_recycle"] is True
@@ -56,6 +67,7 @@ def test_load_settings_applies_sensible_defaults() -> None:
 def test_missing_required_section_raises_configuration_error() -> None:
     with TemporaryDirectory(dir=Path.cwd() / "data") as temporary_directory:
         config_path = Path(temporary_directory) / "app_config.yaml"
+
         config_path.write_text(
             "application: {}\nuser: {}\n",
             encoding="utf-8",
@@ -71,6 +83,7 @@ def test_missing_required_section_raises_configuration_error() -> None:
 def test_invalid_yaml_raises_configuration_error() -> None:
     with TemporaryDirectory(dir=Path.cwd() / "data") as temporary_directory:
         config_path = Path(temporary_directory) / "app_config.yaml"
+
         config_path.write_text(
             "application: [unterminated\n",
             encoding="utf-8",
@@ -80,6 +93,40 @@ def test_invalid_yaml_raises_configuration_error() -> None:
             ConfigurationError,
             match="Could not read configuration",
         ):
+            load_settings(config_path)
+
+
+@pytest.mark.parametrize(
+    "database",
+    [
+        "enabled: invalid",
+        "filename: ../omega.db",
+        "filename: omega.txt",
+        "busy_timeout_ms: 0",
+        "busy_timeout_ms: 60001",
+        "journal_mode: invalid",
+        "synchronous: invalid",
+        "foreign_keys: false",
+        "unknown_setting: true",
+    ],
+)
+def test_unsafe_database_settings_are_rejected(
+    database: str,
+) -> None:
+    config = _valid_config().replace(
+        "database: {}",
+        f"database:\n  {database}",
+    )
+
+    with TemporaryDirectory(dir=Path.cwd() / "data") as temporary_directory:
+        config_path = Path(temporary_directory) / "app_config.yaml"
+
+        config_path.write_text(
+            config,
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ConfigurationError):
             load_settings(config_path)
 
 
@@ -94,7 +141,9 @@ def test_invalid_yaml_raises_configuration_error() -> None:
         "allow_permanent_deletion: true",
     ],
 )
-def test_unsafe_file_settings_are_rejected(files: str) -> None:
+def test_unsafe_file_settings_are_rejected(
+    files: str,
+) -> None:
     config = _valid_config().replace(
         "files: {}",
         f"files:\n  {files}",
@@ -102,6 +151,7 @@ def test_unsafe_file_settings_are_rejected(files: str) -> None:
 
     with TemporaryDirectory(dir=Path.cwd() / "data") as temporary_directory:
         config_path = Path(temporary_directory) / "app_config.yaml"
+
         config_path.write_text(
             config,
             encoding="utf-8",
@@ -135,6 +185,7 @@ def test_unsafe_folder_settings_are_rejected(
 
     with TemporaryDirectory(dir=Path.cwd() / "data") as temporary_directory:
         config_path = Path(temporary_directory) / "app_config.yaml"
+
         config_path.write_text(
             config,
             encoding="utf-8",
@@ -174,6 +225,7 @@ def test_unsafe_central_safety_settings_are_rejected(
 
     with TemporaryDirectory(dir=Path.cwd() / "data") as temporary_directory:
         config_path = Path(temporary_directory) / "app_config.yaml"
+
         config_path.write_text(
             config,
             encoding="utf-8",
@@ -206,6 +258,7 @@ def test_unsafe_recovery_settings_are_rejected(
 
     with TemporaryDirectory(dir=Path.cwd() / "data") as temporary_directory:
         config_path = Path(temporary_directory) / "app_config.yaml"
+
         config_path.write_text(
             config,
             encoding="utf-8",
@@ -223,6 +276,7 @@ def test_unknown_recovery_setting_is_rejected() -> None:
 
     with TemporaryDirectory(dir=Path.cwd() / "data") as temporary_directory:
         config_path = Path(temporary_directory) / "app_config.yaml"
+
         config_path.write_text(
             config,
             encoding="utf-8",
@@ -242,6 +296,7 @@ def test_unknown_recovery_setting_is_rejected() -> None:
         "user",
         "assistant",
         "logging",
+        "database",
         "safety",
         "applications",
         "files",
@@ -259,6 +314,7 @@ def test_configuration_sections_must_be_mappings(
 
     with TemporaryDirectory(dir=Path.cwd() / "data") as temporary_directory:
         config_path = Path(temporary_directory) / "app_config.yaml"
+
         config_path.write_text(
             config,
             encoding="utf-8",

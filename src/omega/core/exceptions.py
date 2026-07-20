@@ -163,3 +163,23 @@ class RecoveryRecordError(RecoveryError):
 
 class RestoreError(RecoveryError):
     """Raised when a recycled item cannot be restored safely."""
+
+
+class DatabaseError(OmegaError):
+    """Base exception for Omega database failures."""
+
+
+class DatabaseConfigurationError(ConfigurationError, DatabaseError):
+    """Raised when database configuration is missing or unsafe."""
+
+
+class DatabaseConnectionError(DatabaseError):
+    """Raised when a SQLite connection cannot be opened or configured."""
+
+
+class DatabaseSchemaError(DatabaseError):
+    """Raised when the SQLite schema cannot be initialized or inspected."""
+
+
+class DatabaseMigrationError(DatabaseError):
+    """Raised when a database migration cannot complete safely."""

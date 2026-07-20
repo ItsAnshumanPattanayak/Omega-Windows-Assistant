@@ -10,6 +10,7 @@ from typing import Any
 import yaml
 
 from omega.core.exceptions import ConfigurationError
+from omega.database.configuration import DatabaseConfiguration
 from omega.utils.constants import (
     APP_CONFIG_FILENAME,
     APP_NAME,
@@ -25,6 +26,7 @@ REQUIRED_SECTIONS = frozenset(
         "user",
         "assistant",
         "logging",
+        "database",
         "safety",
         "applications",
         "files",
@@ -55,6 +57,7 @@ class Settings:
     user: Mapping[str, Any]
     assistant: Mapping[str, Any]
     logging: Mapping[str, Any]
+    database: Mapping[str, Any]
     safety: Mapping[str, Any]
     applications: Mapping[str, Any]
     files: Mapping[str, Any]
@@ -65,13 +68,29 @@ class Settings:
     def application_name(self) -> str:
         """Return the configured application name."""
 
-        return str(self.application.get("name", APP_NAME))
+        return str(
+            self.application.get(
+                "name",
+                APP_NAME,
+            )
+        )
 
     @property
     def application_version(self) -> str:
         """Return the configured application version."""
 
-        return str(self.application.get("version", APP_VERSION))
+        return str(
+            self.application.get(
+                "version",
+                APP_VERSION,
+            )
+        )
+
+    @property
+    def database_configuration(self) -> DatabaseConfiguration:
+        """Return the validated database configuration."""
+
+        return DatabaseConfiguration.from_mapping(self.database)
 
 
 def _defaults() -> dict[str, dict[str, Any]]:
@@ -93,6 +112,14 @@ def _defaults() -> dict[str, dict[str, Any]]:
             "file_enabled": True,
             "max_file_size_mb": 5,
             "backup_count": 3,
+        },
+        "database": {
+            "enabled": True,
+            "filename": "omega.db",
+            "busy_timeout_ms": 5_000,
+            "journal_mode": "WAL",
+            "synchronous": "NORMAL",
+            "foreign_keys": True,
         },
         "safety": {
             "allow_administrator_operations": False,
@@ -155,7 +182,9 @@ def _defaults() -> dict[str, dict[str, Any]]:
     }
 
 
-def _validate_files(values: Mapping[str, Any]) -> None:
+def _validate_files(
+    values: Mapping[str, Any],
+) -> None:
     default_location = values.get("default_location")
 
     if default_location not in _FILE_LOCATIONS:
@@ -196,7 +225,9 @@ def _validate_files(values: Mapping[str, Any]) -> None:
         raise ConfigurationError("Phase 5 requires permanent deletion to be disabled.")
 
 
-def _validate_folders(values: Mapping[str, Any]) -> None:
+def _validate_folders(
+    values: Mapping[str, Any],
+) -> None:
     if values.get("default_location") not in _FILE_LOCATIONS:
         raise ConfigurationError("folders.default_location must be registered.")
 
@@ -229,10 +260,22 @@ def _validate_folders(values: Mapping[str, Any]) -> None:
         ):
             raise ConfigurationError(f"folders.{key} must be between 0 and 50.")
 
-    if values.get("maximum_listing_items", 0) > 1_000:
+    if (
+        values.get(
+            "maximum_listing_items",
+            0,
+        )
+        > 1_000
+    ):
         raise ConfigurationError("folders.maximum_listing_items must not exceed 1000.")
 
-    if values.get("search_max_results", 0) > 500:
+    if (
+        values.get(
+            "search_max_results",
+            0,
+        )
+        > 500
+    ):
         raise ConfigurationError("folders.search_max_results must not exceed 500.")
 
     switches = (
@@ -248,16 +291,28 @@ def _validate_folders(values: Mapping[str, Any]) -> None:
         )
 
 
-def _validate_recovery(values: Mapping[str, Any]) -> None:
+def _validate_database(
+    values: Mapping[str, Any],
+) -> None:
+    DatabaseConfiguration.from_mapping(values)
+
+
+def _validate_recovery(
+    values: Mapping[str, Any],
+) -> None:
     """Validate immutable Phase 8 recovery boundaries."""
 
-    from omega.recovery.configuration import RecoveryConfiguration
+    from omega.recovery.configuration import (
+        RecoveryConfiguration,
+    )
 
     RecoveryConfiguration.from_mapping(values)
 
 
-def _validate_safety(values: Mapping[str, Any]) -> None:
-    """Enforce immutable Phase 7 boundaries before services are created."""
+def _validate_safety(
+    values: Mapping[str, Any],
+) -> None:
+    """Enforce immutable Phase 7 boundaries."""
 
     disabled = (
         "allow_administrator_operations",
@@ -288,7 +343,7 @@ def _validate_safety(values: Mapping[str, Any]) -> None:
         or not 0 < timeout <= 300
     ):
         raise ConfigurationError(
-            "safety.confirmation_timeout_seconds must be between 0 and 300."
+            "safety.confirmation_timeout_seconds " "must be between 0 and 300."
         )
 
     attempts = values.get("maximum_confirmation_attempts")
@@ -299,7 +354,7 @@ def _validate_safety(values: Mapping[str, Any]) -> None:
         or not 1 <= attempts <= 10
     ):
         raise ConfigurationError(
-            "safety.maximum_confirmation_attempts must be between 1 and 10."
+            "safety.maximum_confirmation_attempts " "must be between 1 and 10."
         )
 
 
@@ -311,22 +366,33 @@ def _merge_defaults(
     for section, values in _defaults().items():
         supplied = raw[section]
 
-        if not isinstance(supplied, Mapping):
-            message = f"Configuration section '{section}' must be a mapping."
+        if not isinstance(
+            supplied,
+            Mapping,
+        ):
+            message = f"Configuration section " f"'{section}' must be a mapping."
             raise ConfigurationError(message)
 
-        merged[section] = {**values, **supplied}
+        merged[section] = {
+            **values,
+            **supplied,
+        }
 
     return merged
 
 
-def load_settings(config_path: Path | None = None) -> Settings:
-    """Load and validate Omega's project-level YAML configuration."""
+def load_settings(
+    config_path: Path | None = None,
+) -> Settings:
+    """Load and validate Omega's YAML configuration."""
 
     path = config_path or config_dir() / APP_CONFIG_FILENAME
 
     try:
-        with path.open("r", encoding="utf-8") as config_file:
+        with path.open(
+            "r",
+            encoding="utf-8",
+        ) as config_file:
             raw = yaml.safe_load(config_file)
     except FileNotFoundError as error:
         raise ConfigurationError(f"Configuration file was not found: {path}") from error
@@ -335,18 +401,22 @@ def load_settings(config_path: Path | None = None) -> Settings:
             f"Could not read configuration file: {path}"
         ) from error
 
-    if not isinstance(raw, Mapping):
+    if not isinstance(
+        raw,
+        Mapping,
+    ):
         raise ConfigurationError("Configuration root must be a YAML mapping.")
 
     missing_sections = REQUIRED_SECTIONS.difference(raw)
 
     if missing_sections:
         missing = ", ".join(sorted(missing_sections))
-        message = f"Configuration is missing required section(s): {missing}"
+        message = "Configuration is missing required " f"section(s): {missing}"
         raise ConfigurationError(message)
 
     values = _merge_defaults(raw)
 
+    _validate_database(values["database"])
     _validate_safety(values["safety"])
     _validate_files(values["files"])
     _validate_folders(values["folders"])

@@ -18,6 +18,14 @@ logging:
   max_file_size_mb: 5
   backup_count: 3
 
+database:
+  enabled: true
+  filename: omega.db
+  busy_timeout_ms: 5000
+  journal_mode: WAL
+  synchronous: NORMAL
+  foreign_keys: true
+
 safety:
   allow_administrator_operations: false
   allow_arbitrary_shell_commands: false
