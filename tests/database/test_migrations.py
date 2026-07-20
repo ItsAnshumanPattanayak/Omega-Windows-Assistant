@@ -3,9 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from omega.core.exceptions import (
-    DatabaseMigrationError,
-)
+from omega.core.exceptions import DatabaseMigrationError
 from omega.database import (
     DatabaseConfiguration,
     DatabaseConnectionFactory,
@@ -23,7 +21,7 @@ def _factory(
     )
 
 
-def test_migration_runner_applies_baseline_once(
+def test_default_migrations_apply_once(
     tmp_path: Path,
 ) -> None:
     factory = _factory(tmp_path)
@@ -32,23 +30,55 @@ def test_migration_runner_applies_baseline_once(
     first = runner.migrate()
     second = runner.migrate()
 
-    assert first == 1
-    assert second == 1
+    assert first == 2
+    assert second == 2
 
     connection = factory.connect()
 
     try:
-        count = connection.execute(
-            """
-            SELECT COUNT(*)
-            FROM schema_migrations
-            """
-        ).fetchone()
+        versions = [
+            int(row[0])
+            for row in connection.execute(
+                """
+                SELECT version
+                FROM schema_migrations
+                ORDER BY version
+                """
+            )
+        ]
 
-        assert count is not None
-        assert int(count[0]) == 1
+        assert versions == [1, 2]
     finally:
         connection.close()
+
+
+def test_runner_can_stop_at_requested_target(
+    tmp_path: Path,
+) -> None:
+    factory = _factory(tmp_path)
+    runner = MigrationRunner(factory)
+
+    assert runner.migrate(target_version=1) == 1
+
+    connection = factory.connect()
+
+    try:
+        tables = {
+            str(row[0])
+            for row in connection.execute(
+                """
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'table'
+                """
+            )
+        }
+
+        assert "commands" not in tables
+    finally:
+        connection.close()
+
+    assert runner.migrate() == 2
 
 
 def test_migration_runner_applies_custom_ordered_migrations(

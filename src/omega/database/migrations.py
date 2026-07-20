@@ -9,7 +9,12 @@ from dataclasses import dataclass
 from omega.core.exceptions import DatabaseMigrationError
 from omega.database.connection import DatabaseConnectionFactory
 from omega.database.schema import (
+    BASELINE_MIGRATION_NAME,
+    BASELINE_SCHEMA_VERSION,
+    COMMAND_MIGRATION_NAME,
+    COMMAND_SCHEMA_VERSION,
     apply_baseline_schema,
+    apply_command_schema,
     ensure_migrations_table,
     get_schema_version,
     utc_timestamp,
@@ -35,9 +40,20 @@ class Migration:
 
 
 BASELINE_MIGRATION = Migration(
-    version=1,
-    name="phase_9a_database_foundation",
+    version=BASELINE_SCHEMA_VERSION,
+    name=BASELINE_MIGRATION_NAME,
     apply=apply_baseline_schema,
+)
+
+COMMAND_MIGRATION = Migration(
+    version=COMMAND_SCHEMA_VERSION,
+    name=COMMAND_MIGRATION_NAME,
+    apply=apply_command_schema,
+)
+
+DEFAULT_MIGRATIONS = (
+    BASELINE_MIGRATION,
+    COMMAND_MIGRATION,
 )
 
 
@@ -47,7 +63,7 @@ class MigrationRunner:
     def __init__(
         self,
         connection_factory: DatabaseConnectionFactory,
-        migrations: Iterable[Migration] = (BASELINE_MIGRATION,),
+        migrations: Iterable[Migration] = DEFAULT_MIGRATIONS,
     ) -> None:
         self.connection_factory = connection_factory
         self.migrations = tuple(

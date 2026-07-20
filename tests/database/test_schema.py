@@ -18,7 +18,7 @@ def _factory(
     )
 
 
-def test_schema_initialization_creates_version_record(
+def test_schema_initialization_creates_all_version_records(
     tmp_path: Path,
 ) -> None:
     connection = _factory(tmp_path).connect()
@@ -26,18 +26,64 @@ def test_schema_initialization_creates_version_record(
     try:
         version = initialize_schema(connection)
 
-        row = connection.execute(
+        rows = connection.execute(
             """
             SELECT version, name, applied_at
             FROM schema_migrations
+            ORDER BY version
             """
-        ).fetchone()
+        ).fetchall()
 
         assert version == LATEST_SCHEMA_VERSION
-        assert row is not None
-        assert int(row["version"]) == 1
-        assert row["name"] == "phase_9a_database_foundation"
-        assert row["applied_at"]
+        assert [int(row["version"]) for row in rows] == [1, 2]
+
+        assert [str(row["name"]) for row in rows] == [
+            "phase_9a_database_foundation",
+            "phase_9b_command_repository",
+        ]
+
+        assert all(row["applied_at"] for row in rows)
+    finally:
+        connection.close()
+
+
+def test_schema_initialization_creates_command_table_and_indexes(
+    tmp_path: Path,
+) -> None:
+    connection = _factory(tmp_path).connect()
+
+    try:
+        initialize_schema(connection)
+
+        tables = {
+            str(row[0])
+            for row in connection.execute(
+                """
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'table'
+                """
+            )
+        }
+
+        indexes = {
+            str(row[0])
+            for row in connection.execute(
+                """
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'index'
+                AND name LIKE 'idx_commands_%'
+                """
+            )
+        }
+
+        assert "commands" in tables
+        assert indexes == {
+            "idx_commands_intent",
+            "idx_commands_received_at",
+            "idx_commands_session_id",
+        }
     finally:
         connection.close()
 
@@ -58,10 +104,10 @@ def test_schema_initialization_is_idempotent(
             """
         ).fetchone()
 
-        assert first == 1
-        assert second == 1
+        assert first == 2
+        assert second == 2
         assert count is not None
-        assert int(count[0]) == 1
+        assert int(count[0]) == 2
     finally:
         connection.close()
 
