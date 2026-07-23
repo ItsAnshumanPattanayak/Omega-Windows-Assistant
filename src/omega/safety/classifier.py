@@ -26,6 +26,13 @@ _LOW = frozenset(
         IntentType.CHECK_FOLDER_EXISTENCE,
         IntentType.GET_FOLDER_INFORMATION,
         IntentType.SHOW_HISTORY,
+        IntentType.CLOSE_TAB,
+        IntentType.LIST_TABS,
+        IntentType.REFRESH_PAGE,
+        IntentType.GO_BACK,
+        IntentType.GO_FORWARD,
+        IntentType.GET_PAGE_INFORMATION,
+        IntentType.FIND_TEXT_ON_PAGE,
     }
 )
 _MEDIUM = frozenset(
@@ -39,6 +46,12 @@ _MEDIUM = frozenset(
         IntentType.RENAME_FOLDER,
         IntentType.COPY_FOLDER,
         IntentType.EXPORT_HISTORY,
+        IntentType.OPEN_BROWSER,
+        IntentType.OPEN_WEBSITE,
+        IntentType.SEARCH_WEB,
+        IntentType.OPEN_NEW_TAB,
+        IntentType.SWITCH_TAB,
+        IntentType.OPEN_BOOKMARK,
     }
 )
 _HIGH = frozenset(
@@ -49,6 +62,8 @@ _HIGH = frozenset(
         IntentType.MOVE_FOLDER,
         IntentType.UNDO_LAST_ACTION,
         IntentType.CLEAR_HISTORY,
+        IntentType.CLOSE_BROWSER,
+        IntentType.SAVE_BOOKMARK,
     }
 )
 _CRITICAL = frozenset({IntentType.DELETE_FILE, IntentType.DELETE_FOLDER})

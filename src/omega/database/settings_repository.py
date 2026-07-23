@@ -149,7 +149,13 @@ class RuntimeSettingsRepository:
             raise SettingsRepositoryError("Runtime setting name is invalid.")
         normalized = name.casefold()
         if normalized in _RESERVED or normalized.startswith(
-            ("safety.", "database.", "files.allow_", "folders.allow_")
+            (
+                "safety.",
+                "database.",
+                "files.allow_",
+                "folders.allow_",
+                "browser.allow_",
+            )
         ):
             raise SettingsRepositoryError(
                 "That setting is an immutable safety boundary."

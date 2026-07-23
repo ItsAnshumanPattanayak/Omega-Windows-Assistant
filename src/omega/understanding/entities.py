@@ -62,7 +62,18 @@ class RuleBasedEntityExtractor:
 
     def extract(self, original: str, intent: IntentType) -> list[CommandEntity]:
         entities: list[CommandEntity] = []
-        self._application(original, intent, entities)
+        if intent in {
+            IntentType.OPEN_WEBSITE,
+            IntentType.SEARCH_WEB,
+            IntentType.CLOSE_TAB,
+            IntentType.SWITCH_TAB,
+            IntentType.FIND_TEXT_ON_PAGE,
+            IntentType.OPEN_BOOKMARK,
+            IntentType.SAVE_BOOKMARK,
+        }:
+            self._browser(original, intent, entities)
+        else:
+            self._application(original, intent, entities)
         self._file_type(original, entities)
         if intent in {
             IntentType.CREATE_FILE,
@@ -94,6 +105,98 @@ class RuleBasedEntityExtractor:
         }:
             self._folder_command(original, intent, entities)
         return entities
+
+    @staticmethod
+    def _browser(
+        original: str,
+        intent: IntentType,
+        entities: list[CommandEntity],
+    ) -> None:
+        text = original.strip().rstrip("?!")
+        if intent is IntentType.OPEN_WEBSITE:
+            value = re.sub(
+                r"^(?:open|visit|go to)\s+(?:the\s+)?(?:website\s+)?",
+                "",
+                text,
+                flags=re.IGNORECASE,
+            ).strip()
+            if re.fullmatch(
+                r"(?:[a-z0-9-]+\s+dot\s+)+[a-z]{2,}",
+                value,
+                flags=re.IGNORECASE,
+            ):
+                value = re.sub(r"\s+dot\s+", ".", value, flags=re.IGNORECASE)
+            if "://" not in value:
+                value = f"https://{value}"
+            entities.append(_entity(EntityType.URL, "url", value, value))
+            return
+        if intent is IntentType.SEARCH_WEB:
+            query = re.sub(
+                r"^(?:search\s+(?:the\s+)?web\s+for|web\s+search\s+for)\s+",
+                "",
+                text,
+                flags=re.IGNORECASE,
+            ).strip()
+            if query:
+                entities.append(
+                    _entity(EntityType.WEB_QUERY, "search_query", query, query)
+                )
+            return
+        if intent in {IntentType.CLOSE_TAB, IntentType.SWITCH_TAB}:
+            reference = re.sub(
+                r"^(?:close|switch(?:\s+to)?)\s+tab\s*",
+                "",
+                text,
+                flags=re.IGNORECASE,
+            ).strip()
+            word_numbers = {
+                "one": "1",
+                "two": "2",
+                "three": "3",
+                "four": "4",
+                "five": "5",
+                "six": "6",
+                "seven": "7",
+                "eight": "8",
+                "nine": "9",
+                "ten": "10",
+            }
+            reference = word_numbers.get(reference.casefold(), reference)
+            if reference:
+                entities.append(_entity(EntityType.TAB, "tab", reference, reference))
+            return
+        if intent is IntentType.FIND_TEXT_ON_PAGE:
+            match = re.match(
+                r"^find\s+(?:the\s+)?(?:word|text)\s+(.+?)\s+on\s+(?:this|the)\s+page$",
+                text,
+                flags=re.IGNORECASE,
+            )
+            if match:
+                value = match.group(1).strip(" \"'")
+                entities.append(
+                    _entity(EntityType.TEXT_CONTENT, "text_content", value, value)
+                )
+            return
+        if intent in {IntentType.OPEN_BOOKMARK, IntentType.SAVE_BOOKMARK}:
+            if intent is IntentType.OPEN_BOOKMARK:
+                name = re.sub(
+                    r"^open\s+bookmark\s+",
+                    "",
+                    text,
+                    flags=re.IGNORECASE,
+                )
+            else:
+                name = re.sub(
+                    r"^save\s+(?:this\s+page\s+as\s+|bookmark\s+)" r"(?:bookmark\s+)?",
+                    "",
+                    text,
+                    flags=re.IGNORECASE,
+                )
+            name = name.strip(" \"'")
+            if name:
+                entities.append(
+                    _entity(EntityType.BOOKMARK, "bookmark_name", name, name)
+                )
 
     def _application(
         self, original: str, intent: IntentType, entities: list[CommandEntity]

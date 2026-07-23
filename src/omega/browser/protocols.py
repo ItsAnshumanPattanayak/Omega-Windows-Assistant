@@ -1,0 +1,36 @@
+"""Dependency-injection boundary for controlled browser backends."""
+
+from __future__ import annotations
+
+from typing import Protocol
+from uuid import UUID
+
+from omega.browser.models import PageSummary, TabSummary
+
+
+class BrowserBackend(Protocol):
+    """Operations a real or fake backend must implement."""
+
+    def start(self, browser_name: str, timeout_ms: int) -> None: ...
+
+    def stop(self, timeout_ms: int) -> None: ...
+
+    def navigate(
+        self, url: str, timeout_ms: int, *, new_tab: bool = False
+    ) -> PageSummary: ...
+
+    def close_tab(self, tab_id: UUID, timeout_ms: int) -> TabSummary: ...
+
+    def switch_tab(self, tab_id: UUID, timeout_ms: int) -> TabSummary: ...
+
+    def list_tabs(self) -> tuple[TabSummary, ...]: ...
+
+    def refresh(self, timeout_ms: int) -> PageSummary: ...
+
+    def go_back(self, timeout_ms: int) -> PageSummary: ...
+
+    def go_forward(self, timeout_ms: int) -> PageSummary: ...
+
+    def page_information(self, timeout_ms: int) -> PageSummary: ...
+
+    def find_text(self, text: str, timeout_ms: int) -> PageSummary: ...

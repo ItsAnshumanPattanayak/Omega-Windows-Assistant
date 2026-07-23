@@ -109,6 +109,8 @@ class PermissionConfiguration:
             IntentType.DELETE_FOLDER,
             IntentType.UNDO_LAST_ACTION,
             IntentType.CLEAR_HISTORY,
+            IntentType.CLOSE_BROWSER,
+            IntentType.SAVE_BOOKMARK,
         }
 
         supported = {

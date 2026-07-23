@@ -19,6 +19,29 @@ _DANGEROUS = (
     "powershell script",
     "execute rm",
     "execute this powershell",
+    "javascript:",
+    "enter my password",
+    "enter password",
+    "submit payment",
+    "buy this",
+    "accept the terms",
+    "bypass captcha",
+    "download executable",
+    "install extension",
+    "developer console",
+)
+
+_BROWSER_NO_PARAMETER = frozenset(
+    {
+        IntentType.OPEN_BROWSER,
+        IntentType.CLOSE_BROWSER,
+        IntentType.OPEN_NEW_TAB,
+        IntentType.LIST_TABS,
+        IntentType.REFRESH_PAGE,
+        IntentType.GO_BACK,
+        IntentType.GO_FORWARD,
+        IntentType.GET_PAGE_INFORMATION,
+    }
 )
 
 
@@ -155,6 +178,23 @@ class CommandParser:
                 if intent is IntentType.OPEN_APPLICATION
                 else "Which application do you mean?"
             )
+        if intent in _BROWSER_NO_PARAMETER:
+            return [], None
+        if intent is IntentType.OPEN_WEBSITE and "url" not in names:
+            return ["url"], "Which HTTPS website should I open?"
+        if intent is IntentType.SEARCH_WEB and "search_query" not in names:
+            return ["search_query"], "What should I search the web for?"
+        if (
+            intent in {IntentType.CLOSE_TAB, IntentType.SWITCH_TAB}
+            and "tab" not in names
+        ):
+            return ["tab"], "Which tab do you mean?"
+        if intent is IntentType.FIND_TEXT_ON_PAGE and "text_content" not in names:
+            return ["text_content"], "Which text should I find on the page?"
+        if intent in {IntentType.OPEN_BOOKMARK, IntentType.SAVE_BOOKMARK} and (
+            "bookmark_name" not in names
+        ):
+            return ["bookmark_name"], "Which bookmark name should I use?"
         if intent is IntentType.CREATE_FOLDER and "folder_name" not in names:
             return ["folder_name"], "What should I name the folder?"
         if intent in {

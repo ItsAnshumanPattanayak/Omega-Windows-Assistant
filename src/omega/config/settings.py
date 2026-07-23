@@ -9,6 +9,7 @@ from typing import Any
 
 import yaml
 
+from omega.browser.configuration import BrowserConfiguration
 from omega.core.exceptions import ConfigurationError
 from omega.database.configuration import DatabaseConfiguration
 from omega.utils.constants import (
@@ -67,6 +68,7 @@ class Settings:
     recovery: Mapping[str, Any]
     history: Mapping[str, Any]
     voice: Mapping[str, Any]
+    browser: Mapping[str, Any]
 
     @property
     def application_name(self) -> str:
@@ -106,6 +108,12 @@ class Settings:
             shutdown_phrase=str(self.assistant["shutdown_phrase"]),
             model_root=data_dir() / "voice_models",
         )
+
+    @property
+    def browser_configuration(self) -> BrowserConfiguration:
+        """Return strict browser policy without initializing a backend."""
+
+        return BrowserConfiguration.from_mapping(self.browser)
 
 
 def _defaults() -> dict[str, dict[str, Any]]:
@@ -220,6 +228,32 @@ def _defaults() -> dict[str, dict[str, Any]]:
             "voice_name": None,
             "confirmation_confidence_threshold": 0.85,
             "return_to_passive_after_session": True,
+        },
+        "browser": {
+            "enabled": True,
+            "preferred_browser": "edge",
+            "automation_enabled": True,
+            "allowed_schemes": ["https"],
+            "allow_http": False,
+            "allow_file_urls": False,
+            "allow_localhost": False,
+            "allow_private_networks": False,
+            "allow_url_credentials": False,
+            "allow_javascript_urls": False,
+            "allow_data_urls": False,
+            "allow_downloads": False,
+            "allow_form_submission": False,
+            "allow_sensitive_input": False,
+            "allow_private_mode": False,
+            "navigation_timeout_seconds": 20,
+            "operation_timeout_seconds": 10,
+            "maximum_open_tabs": 10,
+            "maximum_url_characters": 2048,
+            "maximum_page_title_characters": 300,
+            "maximum_page_text_characters": 10_000,
+            "maximum_search_query_characters": 500,
+            "maximum_bookmark_name_characters": 100,
+            "default_search_engine": "duckduckgo",
         },
     }
 
@@ -439,7 +473,9 @@ def _merge_defaults(
     merged: dict[str, Mapping[str, Any]] = {}
 
     for section, values in _defaults().items():
-        supplied = raw.get(section, {}) if section == "voice" else raw[section]
+        supplied = (
+            raw.get(section, {}) if section in {"voice", "browser"} else raw[section]
+        )
 
         if not isinstance(
             supplied,
@@ -503,5 +539,6 @@ def load_settings(
         shutdown_phrase=str(values["assistant"]["shutdown_phrase"]),
         model_root=data_dir() / "voice_models",
     )
+    BrowserConfiguration.from_mapping(values["browser"])
 
     return Settings(**values)

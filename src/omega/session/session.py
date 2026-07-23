@@ -11,6 +11,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from omega.core.exceptions import InvalidSessionTransitionError, ModelValidationError
+from omega.execution.browser_dispatcher import BrowserActionDispatcher
 from omega.execution.dispatcher import ApplicationActionDispatcher
 from omega.execution.file_dispatcher import FileActionDispatcher
 from omega.execution.folder_dispatcher import FolderActionDispatcher
@@ -50,6 +51,7 @@ class OmegaSession:
         file_dispatcher: FileActionDispatcher | None = None,
         folder_dispatcher: FolderActionDispatcher | None = None,
         history_dispatcher: HistoryActionDispatcher | None = None,
+        browser_dispatcher: BrowserActionDispatcher | None = None,
         safety_gateway: SafeExecutionGateway | None = None,
     ) -> None:
         self.display_name = self._required_text(user_settings, "display_name")
@@ -68,6 +70,7 @@ class OmegaSession:
         self._file_dispatcher = file_dispatcher
         self._folder_dispatcher = folder_dispatcher
         self._history_dispatcher = history_dispatcher
+        self._browser_dispatcher = browser_dispatcher
         self._safety_gateway = (
             safety_gateway
             or getattr(application_dispatcher, "gateway", None)
@@ -141,6 +144,8 @@ class OmegaSession:
     def shutdown(self) -> str:
         """Safely terminate this terminal session."""
         self._clear_confirmations()
+        if self._browser_dispatcher is not None:
+            self._browser_dispatcher.shutdown()
         if self.state is SessionState.INACTIVE:
             self.transition_to(SessionState.TERMINATED)
             self._logger.info("Omega terminated while inactive.")
@@ -158,6 +163,8 @@ class OmegaSession:
     def interrupt(self) -> str:
         """Terminate gracefully in response to Ctrl+C or EOF."""
         self._clear_confirmations()
+        if self._browser_dispatcher is not None:
+            self._browser_dispatcher.shutdown()
         if self.state is not SessionState.TERMINATED:
             if self.state is SessionState.ACTIVE:
                 self.transition_to(SessionState.TERMINATED)
@@ -183,6 +190,8 @@ class OmegaSession:
             raise InvalidSessionTransitionError("Only an active session can time out.")
         self.transition_to(SessionState.INACTIVE)
         self._clear_confirmations()
+        if self._browser_dispatcher is not None:
+            self._browser_dispatcher.shutdown()
         self.session_id = None
         self.activated_at = None
         self.last_activity_at = None
@@ -252,6 +261,10 @@ class OmegaSession:
                 history_result = self._history_dispatcher.dispatch(result)
                 if history_result is not None:
                     return history_result
+            if self._browser_dispatcher is not None:
+                browser_result = self._browser_dispatcher.dispatch(result)
+                if browser_result is not None:
+                    return browser_result.user_message
             if self._application_dispatcher is not None:
                 dispatched = self._application_dispatcher.dispatch(result)
                 if dispatched is not None:

@@ -41,6 +41,21 @@ class IntentType(StrEnum):
     SHOW_HISTORY = "show_history"
     CLEAR_HISTORY = "clear_history"
     EXPORT_HISTORY = "export_history"
+    OPEN_BROWSER = "open_browser"
+    CLOSE_BROWSER = "close_browser"
+    OPEN_WEBSITE = "open_website"
+    SEARCH_WEB = "search_web"
+    OPEN_NEW_TAB = "open_new_tab"
+    CLOSE_TAB = "close_tab"
+    SWITCH_TAB = "switch_tab"
+    LIST_TABS = "list_tabs"
+    REFRESH_PAGE = "refresh_page"
+    GO_BACK = "go_back"
+    GO_FORWARD = "go_forward"
+    GET_PAGE_INFORMATION = "get_page_information"
+    FIND_TEXT_ON_PAGE = "find_text_on_page"
+    OPEN_BOOKMARK = "open_bookmark"
+    SAVE_BOOKMARK = "save_bookmark"
 
 
 class ActionStatus(StrEnum):
@@ -102,6 +117,10 @@ class EntityType(StrEnum):
     BOOLEAN = "boolean"
     NUMBER = "number"
     DURATION = "duration"
+    URL = "url"
+    TAB = "tab"
+    BOOKMARK = "bookmark"
+    WEB_QUERY = "web_query"
     UNKNOWN = "unknown"
 
 

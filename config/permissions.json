@@ -123,6 +123,68 @@
       "enabled": true,
       "maximum_risk": "high",
       "requires_confirmation": true
+    },
+    "open_browser": {
+      "enabled": true,
+      "maximum_risk": "medium"
+    },
+    "close_browser": {
+      "enabled": true,
+      "maximum_risk": "high",
+      "requires_confirmation": true
+    },
+    "open_website": {
+      "enabled": true,
+      "maximum_risk": "medium"
+    },
+    "search_web": {
+      "enabled": true,
+      "maximum_risk": "medium"
+    },
+    "open_new_tab": {
+      "enabled": true,
+      "maximum_risk": "medium"
+    },
+    "close_tab": {
+      "enabled": true,
+      "maximum_risk": "low"
+    },
+    "switch_tab": {
+      "enabled": true,
+      "maximum_risk": "medium"
+    },
+    "list_tabs": {
+      "enabled": true,
+      "maximum_risk": "low"
+    },
+    "refresh_page": {
+      "enabled": true,
+      "maximum_risk": "low"
+    },
+    "go_back": {
+      "enabled": true,
+      "maximum_risk": "low"
+    },
+    "go_forward": {
+      "enabled": true,
+      "maximum_risk": "low"
+    },
+    "get_page_information": {
+      "enabled": true,
+      "maximum_risk": "low"
+    },
+    "find_text_on_page": {
+      "enabled": true,
+      "maximum_risk": "low"
+    },
+    "open_bookmark": {
+      "enabled": true,
+      "maximum_risk": "medium"
+    },
+    "save_bookmark": {
+      "enabled": true,
+      "maximum_risk": "high",
+      "requires_confirmation": true
     }
   }
 }

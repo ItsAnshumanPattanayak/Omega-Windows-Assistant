@@ -16,6 +16,8 @@ The approved roadmap is intentionally incremental. Each phase should be designed
 12. **Phase 11 — Desktop GUI — Completed:** optional tkinter/ttk interface, headless controller, bounded workers, exact confirmations, persistent activity, undo visibility, history operations, and safe mutable preferences.
 13. **Phase 12 — Voice Interaction and Wake-Word Support — Completed:** optional offline microphone capture, Vosk transcription, exact wake activation, active voice sessions, strict confirmation handling, local SAPI responses, GUI controls, explicit CLI startup, privacy boundaries, and fake-based tests.
 
-14. **Phase 13 — Next:** to be defined after Phase 12 review.
+14. **Phase 13 — Safe Web Browser Automation — Completed:** optional lazy Playwright adapter, isolated Omega-controlled sessions, centralized HTTPS and network-boundary validation, bounded tabs/page information, allowlisted search, process-local bookmarks, gateway-only dispatch, GUI controls, shared voice/text parsing, privacy-safe results, and fake-backend tests.
+
+15. **Phase 14 — Next:** to be defined after Phase 13 review.
 
 Later phases may cover local AI-assisted intent suggestions, additional Windows integrations, accessibility, packaging, installer support, and release hardening.

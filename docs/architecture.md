@@ -223,20 +223,20 @@ Confirmation dialogs display the existing prompt, target, exact confirmation phr
 
 The desktop uses standard-library tkinter/ttk with system, light, and dark styles, keyboard navigation, visible text labels, resizable panes, selectable conversation text, and no external assets. Headless tests cover controller, task runner, formatting, preferences, import safety, and explicit bootstrap without opening a visible window.
 
-## Planned layers
+## Implemented layered flow
 
-The following components are planned, not implemented:
+Omega currently composes these reviewed layers:
 
-- **Input layer:** text and, later, voice input. Voice activation will use `Hello Omega`.
-- **Command-processing layer:** converts approved user intent into structured commands.
+- **Input layer:** terminal text, tkinter GUI commands, and optional offline voice transcripts.
+- **Command-processing layer:** converts supported user intent into typed commands and entities.
 - **Safety layer:** implemented in Phase 7; checks permissions, protected paths, confirmations, and action policies before execution.
-- **Executor layer:** performs allowlisted application operations and validated file/folder operations through separate domain dispatchers. Future domains require separate review.
+- **Executor layer:** performs allowlisted application, validated file/folder, history, recovery, and controlled browser operations through separate domain dispatchers.
 
 Command understanding remains separate from execution. An interpreter may recognize a request, but only the implemented safety layer may authorize it and only an approved dispatcher may call a manager. This separation makes behavior testable and prevents a parser or future AI suggestion from becoming an action automatically.
 
 Arbitrary shell execution will be prohibited because it would allow ambiguous natural-language input to become unrestricted operating-system access.
 
-## Planned session lifecycle
+## Session lifecycle
 
 ```text
 Inactive
@@ -305,3 +305,85 @@ widget update. Speaker output uses a single bounded sequential queue and cannot
 cause command retry if synthesis fails.
 
 See [voice.md](voice.md) for configuration, dependencies, privacy, and operations.
+
+## Phase 13 browser adapter
+
+Browser automation is an optional execution domain over the existing lifecycle.
+It does not parse commands, authorize itself, or expose Playwright objects to
+models:
+
+```text
+terminal / GUI / voice
+        ↓ UserCommand
+existing CommandParser
+        ↓ typed browser intent and bounded entities
+BrowserActionDispatcher
+        ↓ Action + SafetyContext
+SafeExecutionGateway
+        ↓ allow or exact scoped confirmation
+BrowserManager
+        ↓ validated, lock-serialized request
+BrowserBackend protocol
+        ├─ PlaywrightBrowserBackend (explicit real session)
+        └─ FakeBrowserBackend (offline deterministic tests)
+        ↓
+ActionResult → existing SQLite lifecycle persistence
+```
+
+`BrowserConfiguration` rejects unknown keys, loose types, unsupported browsers
+or search engines, unsafe ranges, dangerous schemes, and attempts to enable
+credentials, files, scripts, downloads, forms, sensitive input, or private
+mode. HTTPS is the default. HTTP, localhost, and private networks are disabled
+unless trusted YAML explicitly permits the first two configurable boundaries;
+permanent prohibitions cannot be loosened through settings.
+
+`UrlValidator` uses standard URL and IP parsing, IDNA host canonicalization,
+strict host labels, length/control/backslash checks, and explicit local,
+loopback, private, link-local, unspecified, reserved, multicast, and metadata
+endpoint rejection. It returns a canonical navigation URL plus a query- and
+fragment-free audit URL. The Playwright adapter validates every routed request
+before continuing it; the manager validates the reported final URL again so an
+unsafe redirect fails closed.
+
+`BrowserManager` owns a single bounded state machine and serializes operations
+with a re-entrant lock. Stable UUID tab IDs replace backend references.
+Maximum tabs, timeouts, title length, visible-text length, query length, and
+bookmark names are bounded. It performs no automatic retry. A crash,
+disconnect, timeout, missing backend, externally closed tab, or invalid URL
+returns one safe structured failure. Shutdown closes only Omega's context and
+browser instance, never unrelated Edge, Chrome, or Firefox processes.
+
+Playwright is imported only inside explicit backend startup and creates one
+isolated non-persistent context with downloads and service workers disabled.
+Importing `omega.browser`, loading settings, or constructing the application
+does not start Playwright, a process, worker, network request, profile, or
+download. The optional package and browser binary have separate explicit
+installation steps.
+
+Browser intents share the Phase 3 parser for text, GUI, and voice. Navigation,
+search, tabs, history movement, page information, visible-text matching, and
+Omega-managed bookmarks become ordinary actions. Closing the browser and
+saving a bookmark require exact confirmation scoped to the command, action,
+session, browser target, expiry, and fingerprint. The gateway remains the only
+production execution path and persists each proposal/result once.
+
+Page records contain only validated/redacted URLs, bounded visible text, bounded
+titles, load state, tab ID, and match count. They contain no raw HTML, cookies,
+storage, headers, password values, or backend objects. Search result persistence
+omits titles and page text because they commonly repeat the query. Action
+parameters store query/text lengths rather than content. Bookmarks are
+process-local Omega data in Phase 13 and never read or modify native browser
+profiles or bookmark databases.
+
+GUI controls submit ordinary commands through `GuiController`; browser work
+uses the existing bounded worker and Tk callbacks remain on the Tk thread.
+Voice preserves `CommandSource.VOICE` and cannot create a browser-specific
+parser, permission path, or confirmation shortcut.
+
+Passwords, logins, forms, uploads, downloads, payments, banking, legal
+acceptance, CAPTCHA/authentication/security bypass, arbitrary JavaScript,
+DevTools commands, extensions, native profile access, authenticated scraping,
+and high-volume crawling are unsupported or denied.
+
+See [browser.md](browser.md) for setup, commands, privacy, testing, and known
+limitations.

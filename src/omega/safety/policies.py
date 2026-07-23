@@ -576,6 +576,55 @@ class HistoryMutationPolicy(_IntentPolicy):
     )
 
 
+class BrowserInspectPolicy(_IntentPolicy):
+    policy_id, priority = "SAFETY-BROWSER-INSPECT-001", 80
+    intents = frozenset(
+        {
+            IntentType.CLOSE_TAB,
+            IntentType.LIST_TABS,
+            IntentType.REFRESH_PAGE,
+            IntentType.GO_BACK,
+            IntentType.GO_FORWARD,
+            IntentType.GET_PAGE_INFORMATION,
+            IntentType.FIND_TEXT_ON_PAGE,
+        }
+    )
+    disposition, reason_code, message = (
+        PolicyDisposition.ALLOW,
+        "BROWSER_INSPECTION_ALLOWED",
+        "Bounded Omega browser inspection is allowed.",
+    )
+
+
+class BrowserNavigationPolicy(_IntentPolicy):
+    policy_id, priority = "SAFETY-BROWSER-NAVIGATE-001", 80
+    intents = frozenset(
+        {
+            IntentType.OPEN_BROWSER,
+            IntentType.OPEN_WEBSITE,
+            IntentType.SEARCH_WEB,
+            IntentType.OPEN_NEW_TAB,
+            IntentType.SWITCH_TAB,
+            IntentType.OPEN_BOOKMARK,
+        }
+    )
+    disposition, reason_code, message = (
+        PolicyDisposition.ALLOW,
+        "VALIDATED_BROWSER_NAVIGATION_ALLOWED",
+        "Validated browser navigation is allowed.",
+    )
+
+
+class BrowserMutationPolicy(_IntentPolicy):
+    policy_id, priority = "SAFETY-BROWSER-MUTATION-001", 70
+    intents = frozenset({IntentType.CLOSE_BROWSER, IntentType.SAVE_BOOKMARK})
+    disposition, reason_code, message = (
+        PolicyDisposition.REQUIRE_CONFIRMATION,
+        "BROWSER_MUTATION_CONFIRMATION",
+        "Closing the controlled browser or saving a bookmark requires confirmation.",
+    )
+
+
 DEFAULT_POLICIES = cast(
     tuple[SafetyPolicy, ...],
     (
@@ -593,6 +642,7 @@ DEFAULT_POLICIES = cast(
         FileMovePolicy(),
         FolderMovePolicy(),
         HistoryMutationPolicy(),
+        BrowserMutationPolicy(),
         ApplicationOpenPolicy(),
         ApplicationStatusPolicy(),
         FileReadPolicy(),
@@ -606,6 +656,8 @@ DEFAULT_POLICIES = cast(
         FolderCopyPolicy(),
         HistoryReadPolicy(),
         HistoryExportPolicy(),
+        BrowserInspectPolicy(),
+        BrowserNavigationPolicy(),
     ),
 )
 

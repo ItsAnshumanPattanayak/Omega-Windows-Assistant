@@ -16,6 +16,11 @@ from omega.applications import (
     WindowsApplicationDiscovery,
     WindowsApplicationLauncher,
 )
+from omega.browser import (
+    BrowserManager,
+    PlaywrightBrowserBackend,
+    UrlValidator,
+)
 from omega.config.settings import Settings, load_settings
 from omega.core.exceptions import (
     DatabaseError,
@@ -33,6 +38,7 @@ from omega.database import (
 )
 from omega.execution import (
     ApplicationActionDispatcher,
+    BrowserActionDispatcher,
     FileActionDispatcher,
     FolderActionDispatcher,
     HistoryActionDispatcher,
@@ -248,6 +254,13 @@ class OmegaApplication:
                 else None
             ),
         )
+        browser_configuration = self.settings.browser_configuration
+        browser_validator = UrlValidator(browser_configuration)
+        self.browser_manager = BrowserManager(
+            browser_configuration,
+            PlaywrightBrowserBackend(browser_validator),
+            validator=browser_validator,
+        )
 
         self.session = OmegaSession(
             self.settings.user,
@@ -269,6 +282,11 @@ class OmegaApplication:
             history_dispatcher=HistoryActionDispatcher(
                 self.history_service,
                 safety_gateway,
+            ),
+            browser_dispatcher=BrowserActionDispatcher(
+                self.browser_manager,
+                safety_gateway,
+                browser_validator,
             ),
             safety_gateway=safety_gateway,
         )
@@ -322,6 +340,8 @@ class OmegaApplication:
             raise InitializationError(
                 "Omega could not complete startup logging."
             ) from error
+        finally:
+            self.browser_manager.shutdown()
 
     def run_gui(self) -> int:
         """Run the optional desktop presentation over this composition root."""
@@ -330,6 +350,11 @@ class OmegaApplication:
 
         self.logger.info("Starting Omega's optional desktop interface.")
         return OmegaGuiApplication(self).run()
+
+    def shutdown(self) -> None:
+        """Release only resources explicitly owned by this Omega instance."""
+
+        self.browser_manager.shutdown()
 
     def create_voice_service(
         self,
@@ -393,10 +418,13 @@ class OmegaApplication:
 
         from omega.voice.terminal import VoiceTerminalInterface
 
-        return VoiceTerminalInterface(
-            lambda sink: self.create_voice_service(event_sink=sink),
-            output_func=output_func,
-        ).run()
+        try:
+            return VoiceTerminalInterface(
+                lambda sink: self.create_voice_service(event_sink=sink),
+                output_func=output_func,
+            ).run()
+        finally:
+            self.browser_manager.shutdown()
 
     def list_audio_devices(self) -> tuple[AudioDevice, ...]:
         """Enumerate bounded safe microphone metadata on explicit request."""

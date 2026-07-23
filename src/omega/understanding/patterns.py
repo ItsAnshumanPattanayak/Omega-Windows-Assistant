@@ -20,6 +20,49 @@ def _rule(name: str, intent: IntentType, expression: str) -> IntentPattern:
 
 
 INTENT_PATTERNS = (
+    _rule("open_browser", IntentType.OPEN_BROWSER, r"^open (?:the )?browser$"),
+    _rule("close_browser", IntentType.CLOSE_BROWSER, r"^close (?:the )?browser$"),
+    _rule(
+        "open_website",
+        IntentType.OPEN_WEBSITE,
+        r"^(?:open|visit|go to) (?:the )?(?:website )?"
+        r"(?:https?://\S+|(?:[a-z0-9-]+\s+dot\s+)+"
+        r"(?:com|org|net|io|dev|edu|gov|co|ai|app|info|me|in|uk|us)|"
+        r"(?:[a-z0-9-]+\.)+(?:com|org|net|io|dev|edu|gov|co|ai|app|info|"
+        r"me|in|uk|us)(?:/\S*)?)$",
+    ),
+    _rule(
+        "search_web",
+        IntentType.SEARCH_WEB,
+        r"^(?:search (?:the )?web for|web search for) .+$",
+    ),
+    _rule("open_new_tab", IntentType.OPEN_NEW_TAB, r"^open (?:a )?new tab$"),
+    _rule("close_tab", IntentType.CLOSE_TAB, r"^close tab(?: .+)?$"),
+    _rule(
+        "switch_tab",
+        IntentType.SWITCH_TAB,
+        r"^switch (?:to )?tab(?: .+)?$",
+    ),
+    _rule("list_tabs", IntentType.LIST_TABS, r"^(?:list|show) (?:open )?tabs$"),
+    _rule("refresh_page", IntentType.REFRESH_PAGE, r"^refresh(?: the)? page$"),
+    _rule("go_back", IntentType.GO_BACK, r"^go back$"),
+    _rule("go_forward", IntentType.GO_FORWARD, r"^go forward$"),
+    _rule(
+        "page_information",
+        IntentType.GET_PAGE_INFORMATION,
+        r"^(?:get|show) (?:page information|page info|current url|page title)$",
+    ),
+    _rule(
+        "find_text_on_page",
+        IntentType.FIND_TEXT_ON_PAGE,
+        r"^find (?:the )?(?:word|text) .+ on (?:this|the) page$",
+    ),
+    _rule("open_bookmark", IntentType.OPEN_BOOKMARK, r"^open bookmark .+$"),
+    _rule(
+        "save_bookmark",
+        IntentType.SAVE_BOOKMARK,
+        r"^save (?:this page as |bookmark )(?:bookmark )?.+$",
+    ),
     _rule(
         "show_history",
         IntentType.SHOW_HISTORY,

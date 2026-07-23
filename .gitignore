@@ -42,6 +42,20 @@ data/history_exports/*.json
 data/pytest-temp/
 data/voice_models/
 data/voice_audio/
+data/browser_profiles/
+data/browser_cache/
+data/browser_sessions/
+data/browser_downloads/
+data/browser_screenshots/
+data/browser_storage/
+playwright-report/
+test-results/
+blob-report/
+*.storage-state.json
+chromedriver.exe
+msedgedriver.exe
+geckodriver.exe
+ms-playwright/
 
 # Temporary and platform files
 *.tmp

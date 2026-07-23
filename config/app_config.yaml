@@ -110,3 +110,30 @@ voice:
   voice_name: null
   confirmation_confidence_threshold: 0.85
   return_to_passive_after_session: true
+
+browser:
+  enabled: true
+  preferred_browser: edge
+  automation_enabled: true
+  allowed_schemes:
+    - https
+  allow_http: false
+  allow_file_urls: false
+  allow_localhost: false
+  allow_private_networks: false
+  allow_url_credentials: false
+  allow_javascript_urls: false
+  allow_data_urls: false
+  allow_downloads: false
+  allow_form_submission: false
+  allow_sensitive_input: false
+  allow_private_mode: false
+  navigation_timeout_seconds: 20
+  operation_timeout_seconds: 10
+  maximum_open_tabs: 10
+  maximum_url_characters: 2048
+  maximum_page_title_characters: 300
+  maximum_page_text_characters: 10000
+  maximum_search_query_characters: 500
+  maximum_bookmark_name_characters: 100
+  default_search_engine: duckduckgo

@@ -21,6 +21,9 @@ voice = [
     "sounddevice>=0.5.5,<0.6",
     "vosk>=0.3.45,<0.4",
 ]
+browser = [
+    "playwright>=1.49,<2.0",
+]
 
 [project.scripts]
 omega = "omega.__main__:main"

@@ -109,6 +109,11 @@ class OmegaMainWindow(GuiView):
             ("Help / About", self._help),
             ("Start voice", self._start_voice),
             ("Stop voice", self._stop_voice),
+            ("Open browser", self._open_browser),
+            ("List tabs", self._list_tabs),
+            ("Back", self._browser_back),
+            ("Forward", self._browser_forward),
+            ("Refresh page", self._browser_refresh),
         )
         self.operation_buttons: list[ttk.Button] = []
         for toolbar_index, (label, command) in enumerate(actions):
@@ -333,6 +338,7 @@ class OmegaMainWindow(GuiView):
         self._closing = True
         self.dismiss_confirmation()
         self.controller.close()
+        self.application.shutdown()
         self.root.destroy()
 
     def _send(self) -> None:
@@ -411,3 +417,18 @@ class OmegaMainWindow(GuiView):
 
     def _stop_voice(self) -> None:
         self.controller.stop_voice()
+
+    def _open_browser(self) -> None:
+        self.controller.submit_command("open browser")
+
+    def _list_tabs(self) -> None:
+        self.controller.submit_command("list tabs")
+
+    def _browser_back(self) -> None:
+        self.controller.submit_command("go back")
+
+    def _browser_forward(self) -> None:
+        self.controller.submit_command("go forward")
+
+    def _browser_refresh(self) -> None:
+        self.controller.submit_command("refresh page")

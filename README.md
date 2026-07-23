@@ -1,14 +1,34 @@
 # Omega
 
-Omega is a safety-first Windows desktop assistant project. **Current phase: Phase 12 — Voice Interaction and Wake-Word Support.**
+Omega is a safety-first Windows desktop assistant project. **Current phase: Phase 13 — Safe Web Browser Automation.**
 
 ## Current status
 
 Omega is a locally controlled assistant that understands narrowly approved Windows tasks while enforcing clear safety boundaries. It starts inactive, accepts `Hello Omega` as a standalone activation phrase, greets Anshuman based on the current time, accepts commands without repeating its name, and uses `Shut down Omega` for safe termination.
 
-Phases 8–10 add recoverable Recycle Bin operations, SQLite command/action/result history, persistent recovery records, JSON-only mutable settings, transactional cleanup, bounded JSON export, explicit startup migrations, and lifecycle persistence around the central safety gateway. Phase 11 adds an optional native tkinter/ttk desktop presentation. Phase 12 adds explicitly started, offline-first microphone input, Vosk transcription, strict wake-phrase handling, and local Windows SAPI responses over those same production services.
+Phases 8–10 add recoverable Recycle Bin operations, SQLite command/action/result history, persistent recovery records, JSON-only mutable settings, transactional cleanup, bounded JSON export, explicit startup migrations, and lifecycle persistence around the central safety gateway. Phase 11 adds an optional native tkinter/ttk desktop presentation. Phase 12 adds explicitly started, offline-first voice interaction. Phase 13 adds optional, controlled Playwright browser sessions, centralized HTTPS validation, bounded tab and page operations, allowlisted web search, and process-local Omega bookmarks over the same command, safety, confirmation, and persistence lifecycle.
 
-Omega still cannot permanently delete files or folders, run arbitrary shell commands, modify protected Windows paths, elevate to administrator, modify the Registry, merge or replace folders, automate browser pages, or execute AI-generated actions. Voice is optional and does not change these boundaries. Recovery records are persistent when configured, but user-facing restoration remains fail-closed until a native restore backend is configured.
+Omega still cannot permanently delete files or folders, run arbitrary shell commands, modify protected Windows paths, elevate to administrator, modify the Registry, merge or replace folders, log in to websites, submit forms or payments, enter sensitive data, download files, bypass browser security, execute arbitrary JavaScript, or execute AI-generated actions. Browser and voice support are optional and do not change these boundaries. Recovery records are persistent when configured, but user-facing restoration remains fail-closed until a native restore backend is configured.
+
+## Optional safe browser automation
+
+Install the optional Playwright adapter:
+
+```powershell
+python -m pip install -e ".[browser]"
+```
+
+Omega defaults to the installed Microsoft Edge channel and does not download or launch a browser during installation, import, or normal startup. To use Playwright-managed Chromium instead, set `browser.preferred_browser: chromium` and explicitly install its binary:
+
+```powershell
+python -m playwright install chromium
+```
+
+Browser startup occurs only after an active session receives a browser command. Supported commands include `Open browser`, `Open example.com`, `Search the web for Python decorators`, `Open a new tab`, `List tabs`, `Switch to tab 2`, `Close tab 1`, `Refresh page`, `Go back`, `Go forward`, `Get page information`, `Find the word installation on this page`, `Open bookmark Docs`, and `Save this page as Docs`.
+
+Navigation is HTTPS-only by default. Embedded credentials, dangerous/internal schemes, malformed URLs, localhost, private/link-local/reserved addresses, and cloud metadata endpoints are rejected. All initial requests, redirects, and subresources are checked. Downloads, uploads, form submission, sensitive input, payments, logins, CAPTCHAs, extensions, developer commands, cookies, storage export, and arbitrary JavaScript remain unavailable.
+
+Browser actions use the same parser for text, GUI, and voice, then pass through `SafeExecutionGateway` once. Closing the controlled session and saving a bookmark require exact scoped confirmation. Omega closes only its own Playwright context/browser and never broadly terminates Chrome, Edge, or Firefox processes. Bookmarks are Omega-managed and process-local in Phase 13; browser-native bookmarks and profiles are never read or changed. See [browser.md](docs/browser.md).
 
 ## Optional offline voice
 
@@ -82,6 +102,7 @@ All commands—including toolbar operations—go through the existing `OmegaSess
 - PyYAML for safe YAML configuration
 - psutil for controlled process inspection and termination
 - optional Vosk, sounddevice, and comtypes for offline Windows voice interaction
+- optional Playwright for isolated, controlled browser sessions
 - pytest, Ruff, Black, and mypy for quality checks
 
 ## Architecture
@@ -178,7 +199,7 @@ Omega never passes user text to a shell or executable argument list. Every sessi
 
 ## Roadmap
 
-Phase 0 establishes the base. The planned sequence then introduces command models, text interaction, rule-based understanding, Windows application and file/folder management, safety confirmations, undo/history, GUI, and voice interaction. Details are in [development_roadmap.md](docs/development_roadmap.md).
+Phase 0 establishes the base. The completed sequence then introduces command models, text interaction, rule-based understanding, Windows application and file/folder management, safety confirmations, undo/history, GUI, voice interaction, and safe browser automation. Details are in [development_roadmap.md](docs/development_roadmap.md).
 
 ## License
 

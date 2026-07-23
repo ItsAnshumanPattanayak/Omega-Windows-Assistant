@@ -66,4 +66,6 @@ Malformed UI preferences fall back to safe defaults. Administrator operations, s
 
 Headless tests exercise imports, bootstrap, controller behavior, duplicate prevention, confirmation routing, history formatting, undo state, settings, task marshalling, and CLI mode selection. A real Tk smoke session depends on an interactive Windows desktop.
 
-Voice input, text-to-speech, browser automation, installers, and native restoration are not part of Phase 11. The current undo interface remains fail-closed when the Phase 8 native restore backend is unavailable.
+Phase 13 adds toolbar commands for opening the controlled browser, listing tabs, navigating backward/forward, and refreshing. These buttons submit ordinary text commands through `GuiController`; they never call the browser backend directly. The existing busy state prevents duplicate clicks, browser work runs on the bounded GUI task runner, and Tk updates remain on the Tk thread. The GUI remains usable when the optional Playwright package or browser channel is unavailable.
+
+Automatic login, form submission, downloads, embedded browsing, browser-native bookmarks, unrestricted clicking, and native restoration are not available. The current undo interface remains fail-closed when the Phase 8 native restore backend is unavailable.
