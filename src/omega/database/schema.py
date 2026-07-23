@@ -13,7 +13,8 @@ ACTION_SCHEMA_VERSION = 3
 RECOVERY_SCHEMA_VERSION = 4
 SETTINGS_SCHEMA_VERSION = 5
 SCHEDULING_SCHEMA_VERSION = 6
-LATEST_SCHEMA_VERSION = SCHEDULING_SCHEMA_VERSION
+PRODUCTIVITY_SCHEMA_VERSION = 7
+LATEST_SCHEMA_VERSION = PRODUCTIVITY_SCHEMA_VERSION
 
 BASELINE_MIGRATION_NAME = "phase_9a_database_foundation"
 COMMAND_MIGRATION_NAME = "phase_9b_command_repository"
@@ -21,6 +22,7 @@ ACTION_MIGRATION_NAME = "phase_9c_action_repository"
 RECOVERY_MIGRATION_NAME = "phase_10_recovery_repository"
 SETTINGS_MIGRATION_NAME = "phase_10_runtime_settings"
 SCHEDULING_MIGRATION_NAME = "phase_15_scheduling"
+PRODUCTIVITY_MIGRATION_NAME = "phase_16_productivity"
 
 CREATE_SCHEDULED_ITEMS_TABLE = """
 CREATE TABLE IF NOT EXISTS scheduled_items (
@@ -46,6 +48,83 @@ CREATE TABLE IF NOT EXISTS schedule_deliveries (
  UNIQUE(schedule_id, occurrence_at_utc),
  CHECK(delivery_status IN ('claimed','delivered','failed','missed')),
  CHECK(attempt_count >= 1)
+)
+"""
+
+CREATE_NOTES_TABLE = """
+CREATE TABLE IF NOT EXISTS notes (
+ note_id TEXT PRIMARY KEY, title TEXT NOT NULL, body TEXT NOT NULL,
+ is_pinned INTEGER NOT NULL, is_archived INTEGER NOT NULL,
+ created_at TEXT NOT NULL, updated_at TEXT NOT NULL, archived_at TEXT,
+ source_command_id TEXT, metadata_json TEXT NOT NULL, revision INTEGER NOT NULL,
+ FOREIGN KEY(source_command_id) REFERENCES commands(command_id) ON DELETE SET NULL,
+ CHECK(is_pinned IN (0,1)), CHECK(is_archived IN (0,1)), CHECK(revision >= 1),
+ CHECK(length(trim(title)) > 0 OR length(trim(body)) > 0),
+ CHECK((is_archived=1 AND archived_at IS NOT NULL) OR
+       (is_archived=0 AND archived_at IS NULL))
+)
+"""
+CREATE_TASK_LISTS_TABLE = """
+CREATE TABLE IF NOT EXISTS task_lists (
+ task_list_id TEXT PRIMARY KEY, name TEXT NOT NULL COLLATE NOCASE,
+ description TEXT NOT NULL, is_archived INTEGER NOT NULL,
+ created_at TEXT NOT NULL, updated_at TEXT NOT NULL, archived_at TEXT,
+ metadata_json TEXT NOT NULL, revision INTEGER NOT NULL,
+ UNIQUE(name), CHECK(length(trim(name)) > 0), CHECK(is_archived IN (0,1)),
+ CHECK(revision >= 1), CHECK((is_archived=1 AND archived_at IS NOT NULL) OR
+ (is_archived=0 AND archived_at IS NULL))
+)
+"""
+CREATE_TASKS_TABLE = """
+CREATE TABLE IF NOT EXISTS tasks (
+ task_id TEXT PRIMARY KEY, task_list_id TEXT NOT NULL, title TEXT NOT NULL,
+ description TEXT NOT NULL, status TEXT NOT NULL, priority TEXT NOT NULL,
+ due_at_utc TEXT, completed_at TEXT, cancelled_at TEXT,
+ is_archived INTEGER NOT NULL, archived_at TEXT, created_at TEXT NOT NULL,
+ updated_at TEXT NOT NULL, source_command_id TEXT, metadata_json TEXT NOT NULL,
+ revision INTEGER NOT NULL,
+ FOREIGN KEY(task_list_id) REFERENCES task_lists(task_list_id) ON DELETE CASCADE,
+ FOREIGN KEY(source_command_id) REFERENCES commands(command_id) ON DELETE SET NULL,
+ CHECK(status IN ('pending','in_progress','completed','cancelled')),
+ CHECK(priority IN ('none','low','medium','high','urgent')),
+ CHECK(is_archived IN (0,1)), CHECK(revision >= 1),
+ CHECK(length(trim(title)) > 0),
+ CHECK((status='completed' AND completed_at IS NOT NULL AND cancelled_at IS NULL) OR
+       (status='cancelled' AND cancelled_at IS NOT NULL AND completed_at IS NULL) OR
+       (status IN ('pending','in_progress') AND completed_at IS NULL
+        AND cancelled_at IS NULL)),
+ CHECK((is_archived=1 AND archived_at IS NOT NULL) OR
+       (is_archived=0 AND archived_at IS NULL))
+)
+"""
+CREATE_TAGS_TABLE = """
+CREATE TABLE IF NOT EXISTS tags (
+ tag_id TEXT PRIMARY KEY, normalized_name TEXT NOT NULL UNIQUE,
+ display_name TEXT NOT NULL, created_at TEXT NOT NULL,
+ CHECK(length(trim(normalized_name)) > 0)
+)
+"""
+CREATE_NOTE_TAGS_TABLE = """
+CREATE TABLE IF NOT EXISTS note_tags (
+ note_id TEXT NOT NULL, tag_id TEXT NOT NULL, PRIMARY KEY(note_id,tag_id),
+ FOREIGN KEY(note_id) REFERENCES notes(note_id) ON DELETE CASCADE,
+ FOREIGN KEY(tag_id) REFERENCES tags(tag_id) ON DELETE CASCADE
+)
+"""
+CREATE_TASK_TAGS_TABLE = """
+CREATE TABLE IF NOT EXISTS task_tags (
+ task_id TEXT NOT NULL, tag_id TEXT NOT NULL, PRIMARY KEY(task_id,tag_id),
+ FOREIGN KEY(task_id) REFERENCES tasks(task_id) ON DELETE CASCADE,
+ FOREIGN KEY(tag_id) REFERENCES tags(tag_id) ON DELETE CASCADE
+)
+"""
+CREATE_TASK_REMINDER_LINKS_TABLE = """
+CREATE TABLE IF NOT EXISTS task_reminder_links (
+ task_id TEXT NOT NULL, schedule_id TEXT NOT NULL, link_type TEXT NOT NULL,
+ created_at TEXT NOT NULL, PRIMARY KEY(task_id,schedule_id),
+ FOREIGN KEY(task_id) REFERENCES tasks(task_id) ON DELETE CASCADE,
+ FOREIGN KEY(schedule_id) REFERENCES scheduled_items(schedule_id) ON DELETE RESTRICT,
+ CHECK(link_type IN ('deadline','manual'))
 )
 """
 
@@ -355,6 +434,41 @@ def apply_scheduling_schema(connection: sqlite3.Connection) -> None:
         ) from error
 
 
+def apply_productivity_schema(connection: sqlite3.Connection) -> None:
+    """Create revisioned notes, tasks, tags, and schedule links."""
+
+    try:
+        for statement in (
+            CREATE_NOTES_TABLE,
+            CREATE_TASK_LISTS_TABLE,
+            CREATE_TASKS_TABLE,
+            CREATE_TAGS_TABLE,
+            CREATE_NOTE_TAGS_TABLE,
+            CREATE_TASK_TAGS_TABLE,
+            CREATE_TASK_REMINDER_LINKS_TABLE,
+            "CREATE INDEX IF NOT EXISTS idx_notes_archive_update "
+            "ON notes(is_archived,updated_at DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_notes_pinned "
+            "ON notes(is_pinned,updated_at DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_lists_archive_name "
+            "ON task_lists(is_archived,name)",
+            "CREATE INDEX IF NOT EXISTS idx_tasks_list_status "
+            "ON tasks(task_list_id,status)",
+            "CREATE INDEX IF NOT EXISTS idx_tasks_due ON tasks(due_at_utc)",
+            "CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority)",
+            "CREATE INDEX IF NOT EXISTS idx_tasks_archive_update "
+            "ON tasks(is_archived,updated_at DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_tags_normalized ON tags(normalized_name)",
+            "CREATE INDEX IF NOT EXISTS idx_links_schedule "
+            "ON task_reminder_links(schedule_id)",
+        ):
+            connection.execute(statement)
+    except sqlite3.Error as error:
+        raise DatabaseSchemaError(
+            "Omega could not create the productivity schema."
+        ) from error
+
+
 def _record_migration(
     connection: sqlite3.Connection,
     *,
@@ -425,6 +539,12 @@ def initialize_schema(
             connection,
             version=SCHEDULING_SCHEMA_VERSION,
             name=SCHEDULING_MIGRATION_NAME,
+        )
+        apply_productivity_schema(connection)
+        _record_migration(
+            connection,
+            version=PRODUCTIVITY_SCHEMA_VERSION,
+            name=PRODUCTIVITY_MIGRATION_NAME,
         )
 
         connection.commit()

@@ -117,6 +117,9 @@ class PermissionConfiguration:
             IntentType.SIGN_OUT_USER,
             IntentType.RESTART_COMPUTER,
             IntentType.SHUT_DOWN_COMPUTER,
+            IntentType.DELETE_NOTE,
+            IntentType.DELETE_TASK,
+            IntentType.DELETE_TASK_LIST,
         }
 
         supported = {

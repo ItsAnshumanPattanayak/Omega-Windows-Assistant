@@ -456,3 +456,39 @@ the GUI drains them on Tk's main-thread polling loop. Voice command creation and
 mutations use the same session and parser. Optional spoken notifications use
 only an already initialized local speech adapter and do not affect delivery
 success.
+
+## Phase 16 productivity workspace
+
+Productivity commands remain ordinary command-lifecycle data:
+
+```text
+terminal / GUI / voice
+        ↓
+existing CommandParser
+        ↓ typed note/task intent and inert entities
+ProductivityActionDispatcher
+        ↓ Action + revision-scoped SafetyContext
+SafeExecutionGateway
+        ↓ policy, persistence, exact confirmation, execute-once
+ProductivityService
+        ↓ parameterized repository / existing ScheduleRepository
+ActionResult → existing lifecycle persistence
+```
+
+Migration 7 adds notes, task lists, tasks, normalized tags and associations,
+plus stable task/reminder links. Foreign keys are enabled by the existing
+connection factory. Multi-record imports and tag changes use explicit
+transactions; mutations use optimistic revisions so stale editors or
+confirmations fail closed.
+
+Productivity models contain only UUIDs, aware UTC timestamps, enums, bounded
+text, and JSON-compatible metadata. They never contain repository connections,
+widgets, open files, scheduler objects, callbacks, or executable content.
+Markdown is stored or exported as plain text, with no HTML renderer, link
+launcher, macro facility, or command interpretation.
+
+The productivity repository never creates schema. Search uses parameterized
+SQL, escaped LIKE values, deterministic ordering, and bounded results. Task
+deadline reminders reuse Phase 15 schedule IDs and services; no second
+scheduler exists and due tasks are informational unless explicitly linked to a
+notification.

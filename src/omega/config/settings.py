@@ -12,6 +12,7 @@ import yaml
 from omega.browser.configuration import BrowserConfiguration
 from omega.core.exceptions import ConfigurationError
 from omega.database.configuration import DatabaseConfiguration
+from omega.productivity.configuration import ProductivityConfiguration
 from omega.scheduling.configuration import SchedulingConfiguration
 from omega.system.configuration import SystemConfiguration
 from omega.utils.constants import (
@@ -73,6 +74,7 @@ class Settings:
     browser: Mapping[str, Any]
     system: Mapping[str, Any]
     scheduling: Mapping[str, Any]
+    productivity: Mapping[str, Any]
 
     @property
     def application_name(self) -> str:
@@ -128,6 +130,12 @@ class Settings:
     @property
     def scheduling_configuration(self) -> SchedulingConfiguration:
         return SchedulingConfiguration.from_mapping(self.scheduling)
+
+    @property
+    def productivity_configuration(self) -> ProductivityConfiguration:
+        """Return strict local productivity limits without creating storage."""
+
+        return ProductivityConfiguration.from_mapping(self.productivity)
 
 
 def _defaults() -> dict[str, dict[str, Any]]:
@@ -271,6 +279,7 @@ def _defaults() -> dict[str, dict[str, Any]]:
         },
         "system": {},
         "scheduling": {},
+        "productivity": {},
     }
 
 
@@ -491,7 +500,7 @@ def _merge_defaults(
     for section, values in _defaults().items():
         supplied = (
             raw.get(section, {})
-            if section in {"voice", "browser", "system", "scheduling"}
+            if section in {"voice", "browser", "system", "scheduling", "productivity"}
             else raw[section]
         )
 
@@ -560,5 +569,6 @@ def load_settings(
     BrowserConfiguration.from_mapping(values["browser"])
     SystemConfiguration.from_mapping(values["system"])
     SchedulingConfiguration.from_mapping(values["scheduling"])
+    ProductivityConfiguration.from_mapping(values["productivity"])
 
     return Settings(**values)

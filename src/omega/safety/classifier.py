@@ -56,6 +56,26 @@ _LOW = frozenset(
         IntentType.SHOW_REMINDER,
         IntentType.SHOW_ALARM,
         IntentType.SHOW_TIMER,
+        IntentType.CREATE_NOTE,
+        IntentType.LIST_NOTES,
+        IntentType.SHOW_NOTE,
+        IntentType.SEARCH_NOTES,
+        IntentType.PIN_NOTE,
+        IntentType.UNPIN_NOTE,
+        IntentType.CREATE_TASK_LIST,
+        IntentType.LIST_TASK_LISTS,
+        IntentType.SHOW_TASK_LIST,
+        IntentType.CREATE_TASK,
+        IntentType.LIST_TASKS,
+        IntentType.SHOW_TASK,
+        IntentType.COMPLETE_TASK,
+        IntentType.REOPEN_TASK,
+        IntentType.SET_TASK_PRIORITY,
+        IntentType.SET_TASK_DEADLINE,
+        IntentType.REMOVE_TASK_DEADLINE,
+        IntentType.SEARCH_TASKS,
+        IntentType.SHOW_DUE_TASKS,
+        IntentType.SHOW_OVERDUE_TASKS,
     }
 )
 _MEDIUM = frozenset(
@@ -96,6 +116,26 @@ _MEDIUM = frozenset(
         IntentType.UPDATE_ALARM,
         IntentType.CANCEL_ALARM,
         IntentType.DISMISS_ALARM,
+        IntentType.UPDATE_NOTE,
+        IntentType.APPEND_NOTE,
+        IntentType.TAG_NOTE,
+        IntentType.UNTAG_NOTE,
+        IntentType.ARCHIVE_NOTE,
+        IntentType.RESTORE_NOTE,
+        IntentType.UPDATE_TASK_LIST,
+        IntentType.ARCHIVE_TASK_LIST,
+        IntentType.RESTORE_TASK_LIST,
+        IntentType.UPDATE_TASK,
+        IntentType.CANCEL_TASK,
+        IntentType.ARCHIVE_TASK,
+        IntentType.RESTORE_TASK,
+        IntentType.MOVE_TASK,
+        IntentType.TAG_TASK,
+        IntentType.UNTAG_TASK,
+        IntentType.LINK_TASK_REMINDER,
+        IntentType.UNLINK_TASK_REMINDER,
+        IntentType.EXPORT_NOTES,
+        IntentType.IMPORT_NOTES,
     }
 )
 _HIGH = frozenset(
@@ -111,6 +151,9 @@ _HIGH = frozenset(
         IntentType.LOCK_COMPUTER,
         IntentType.SLEEP_COMPUTER,
         IntentType.HIBERNATE_COMPUTER,
+        IntentType.DELETE_NOTE,
+        IntentType.DELETE_TASK,
+        IntentType.DELETE_TASK_LIST,
     }
 )
 _CRITICAL = frozenset(

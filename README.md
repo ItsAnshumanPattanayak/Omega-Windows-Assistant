@@ -1,7 +1,7 @@
 # Omega
 
 Omega is a safety-first Windows desktop assistant project. **Current phase:
-Phase 15 — Reminders, Timers, Alarms, and Scheduled Tasks (completed).**
+Phase 16 — Notes, To-Do Lists, and Personal Productivity (completed).**
 
 ## Current status
 
@@ -10,6 +10,25 @@ Omega is a locally controlled assistant that understands narrowly approved Windo
 Phases 8–13 add recovery, persistence, desktop, voice, and controlled browser support. Phase 14 adds bounded read-only CPU, memory, disk, battery, network, and process information; allowlisted Windows Settings pages; bounded audio/brightness control adapters; and exactly confirmed Windows power actions over the same command, safety, confirmation, and persistence lifecycle.
 
 Omega still cannot permanently delete files or folders, run arbitrary shell commands, modify protected Windows paths, elevate to administrator, modify the Registry or security controls, kill arbitrary processes, retrieve credentials, install software or drivers, or execute AI-generated actions. Browser, voice, audio, and brightness support are optional and do not change these boundaries.
+
+## Local productivity
+
+Omega now stores revisioned notes, task lists, tasks, priorities, deadlines,
+archives, and case-insensitive tags in its local SQLite database. Bounded search
+supports note text, task text, status, priority, due/overdue views, task-list
+membership, and tags. Tasks can link to existing Phase 15 reminders without
+creating another scheduler or turning task text into scheduled commands.
+
+Typed, GUI, and voice requests all use the existing parser, session, safety
+gateway, and persistence lifecycle. The GUI productivity shortcuts submit
+ordinary commands through its controller; terminal and offline voice use the
+same handler. Deletions require exact revision-aware confirmation.
+
+JSON import is versioned, UTF-8, bounded, path-confined, fully validated, and
+transactional. JSON and plain Markdown exports are bounded and confined to
+Omega's productivity data directory. Markdown, code blocks, HTML, links, task
+text, and reminder text remain inert data and are never executed or opened
+automatically. See [productivity.md](docs/productivity.md).
 
 ## Safe system controls
 

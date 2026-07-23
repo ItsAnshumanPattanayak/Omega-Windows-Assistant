@@ -74,6 +74,16 @@ _SCHEDULING_NO_PARAMETER = frozenset(
         IntentType.LIST_SCHEDULED_ITEMS,
     }
 )
+_PRODUCTIVITY_NO_PARAMETER = frozenset(
+    {
+        IntentType.LIST_NOTES,
+        IntentType.LIST_TASK_LISTS,
+        IntentType.LIST_TASKS,
+        IntentType.SHOW_DUE_TASKS,
+        IntentType.SHOW_OVERDUE_TASKS,
+        IntentType.EXPORT_NOTES,
+    }
+)
 
 
 class CommandParser:
@@ -234,6 +244,36 @@ class CommandParser:
             return [], None
         if intent in _SCHEDULING_NO_PARAMETER:
             return [], None
+        if intent in _PRODUCTIVITY_NO_PARAMETER:
+            return [], None
+        required_productivity = {
+            IntentType.CREATE_NOTE: ("note_title", "What should I call the note?"),
+            IntentType.CREATE_TASK: ("task_title", "What is the task?"),
+            IntentType.CREATE_TASK_LIST: (
+                "task_list_name",
+                "What should I call the task list?",
+            ),
+            IntentType.SEARCH_NOTES: (
+                "search_query",
+                "What should I search for in notes?",
+            ),
+            IntentType.SEARCH_TASKS: (
+                "search_query",
+                "What should I search for in tasks?",
+            ),
+            IntentType.IMPORT_NOTES: (
+                "file_name",
+                "Which approved JSON file should I import?",
+            ),
+        }
+        required = required_productivity.get(intent)
+        if required and not any(
+            item.name == required[0]
+            and isinstance(item.value, str)
+            and bool(item.value.strip())
+            for item in entities
+        ):
+            return [required[0]], required[1]
         if intent is IntentType.START_TIMER and "duration_seconds" not in names:
             return ["duration"], "How long should the timer run?"
         if intent in {

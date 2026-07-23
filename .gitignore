@@ -56,6 +56,13 @@ data/brightness_debug/
 data/scheduler_debug/
 data/schedule_exports/
 data/notification_audio/
+data/productivity/
+data/productivity_exports/
+data/productivity_imports/
+data/personal_notes/
+data/personal_tasks/
+*.task-export.json
+*.notes-export.json
 *.db-journal
 *.db-shm
 *.db-wal

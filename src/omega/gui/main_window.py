@@ -117,6 +117,10 @@ class OmegaMainWindow(GuiView):
             ("List reminders", self._list_reminders),
             ("List alarms", self._list_alarms),
             ("List timers", self._list_timers),
+            ("Notes", self._list_notes),
+            ("Tasks", self._list_tasks),
+            ("Due today", self._due_tasks),
+            ("Overdue", self._overdue_tasks),
         )
         self.operation_buttons: list[ttk.Button] = []
         for toolbar_index, (label, command) in enumerate(actions):
@@ -460,3 +464,15 @@ class OmegaMainWindow(GuiView):
 
     def _list_timers(self) -> None:
         self.controller.submit_command("list timers")
+
+    def _list_notes(self) -> None:
+        self.controller.submit_command("list notes")
+
+    def _list_tasks(self) -> None:
+        self.controller.submit_command("list tasks")
+
+    def _due_tasks(self) -> None:
+        self.controller.submit_command("show tasks due today")
+
+    def _overdue_tasks(self) -> None:
+        self.controller.submit_command("show overdue tasks")

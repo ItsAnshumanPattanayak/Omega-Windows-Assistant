@@ -20,6 +20,122 @@ def _rule(name: str, intent: IntentType, expression: str) -> IntentPattern:
 
 
 INTENT_PATTERNS = (
+    _rule("list_notes", IntentType.LIST_NOTES, r"^(?:show|list) (?:my )?notes$"),
+    _rule("search_notes", IntentType.SEARCH_NOTES, r"^search (?:my )?notes for .+$"),
+    _rule("show_note", IntentType.SHOW_NOTE, r"^(?:show|open|view) (?:the )?.+ note$"),
+    _rule(
+        "append_note",
+        IntentType.APPEND_NOTE,
+        r"^(?:add|append) .+ to (?:the )?.+ note$",
+    ),
+    _rule(
+        "update_note",
+        IntentType.UPDATE_NOTE,
+        r"^update (?:the )?.+ note(?: to| with) .+$",
+    ),
+    _rule("pin_note", IntentType.PIN_NOTE, r"^pin (?:the )?.+ note$"),
+    _rule("unpin_note", IntentType.UNPIN_NOTE, r"^unpin (?:the )?.+ note$"),
+    _rule("archive_note", IntentType.ARCHIVE_NOTE, r"^archive (?:the )?.+ note$"),
+    _rule("restore_note", IntentType.RESTORE_NOTE, r"^restore (?:the )?.+ note$"),
+    _rule("delete_note", IntentType.DELETE_NOTE, r"^delete (?:the )?.+ note$"),
+    _rule("tag_note", IntentType.TAG_NOTE, r"^tag (?:the )?.+ note with .+$"),
+    _rule(
+        "untag_note", IntentType.UNTAG_NOTE, r"^remove tag .+ from (?:the )?.+ note$"
+    ),
+    _rule(
+        "create_note",
+        IntentType.CREATE_NOTE,
+        r"^create (?:a )?note(?: called| titled| named)? .+$",
+    ),
+    _rule("export_notes", IntentType.EXPORT_NOTES, r"^export notes(?: to .+)?$"),
+    _rule("import_notes", IntentType.IMPORT_NOTES, r"^import notes from .+$"),
+    _rule("list_task_lists", IntentType.LIST_TASK_LISTS, r"^(?:show|list) task lists$"),
+    _rule(
+        "create_task_list",
+        IntentType.CREATE_TASK_LIST,
+        r"^create (?:a )?task list(?: called| named)? .+$",
+    ),
+    _rule("show_task_list", IntentType.SHOW_TASK_LIST, r"^show (?:the )?.+ task list$"),
+    _rule(
+        "update_task_list",
+        IntentType.UPDATE_TASK_LIST,
+        r"^(?:rename|update) (?:the )?.+ task list (?:to|with) .+$",
+    ),
+    _rule(
+        "archive_task_list",
+        IntentType.ARCHIVE_TASK_LIST,
+        r"^archive (?:the )?.+ task list$",
+    ),
+    _rule(
+        "restore_task_list",
+        IntentType.RESTORE_TASK_LIST,
+        r"^restore (?:the )?.+ task list$",
+    ),
+    _rule(
+        "delete_task_list",
+        IntentType.DELETE_TASK_LIST,
+        r"^delete (?:the )?.+ task list$",
+    ),
+    _rule("show_overdue_tasks", IntentType.SHOW_OVERDUE_TASKS, r"^show overdue tasks$"),
+    _rule("show_due_tasks", IntentType.SHOW_DUE_TASKS, r"^show tasks due today$"),
+    _rule("list_tasks", IntentType.LIST_TASKS, r"^(?:show|list) (?:my )?tasks$"),
+    _rule("search_tasks", IntentType.SEARCH_TASKS, r"^search (?:my )?tasks for .+$"),
+    _rule(
+        "complete_task",
+        IntentType.COMPLETE_TASK,
+        r"^(?:mark|complete) (?:the )?.+ task(?: complete)?$",
+    ),
+    _rule("reopen_task", IntentType.REOPEN_TASK, r"^reopen (?:the )?.+ task$"),
+    _rule("cancel_task", IntentType.CANCEL_TASK, r"^cancel (?:the )?.+ task$"),
+    _rule("archive_task", IntentType.ARCHIVE_TASK, r"^archive (?:the )?.+ task$"),
+    _rule("restore_task", IntentType.RESTORE_TASK, r"^restore (?:the )?.+ task$"),
+    _rule("delete_task", IntentType.DELETE_TASK, r"^delete (?:the )?.+ task$"),
+    _rule(
+        "set_task_priority",
+        IntentType.SET_TASK_PRIORITY,
+        r"^set (?:the )?.+ task priority to (?:none|low|medium|high|urgent)$",
+    ),
+    _rule(
+        "set_task_deadline",
+        IntentType.SET_TASK_DEADLINE,
+        r"^set (?:the )?.+ task deadline to .+$",
+    ),
+    _rule(
+        "remove_task_deadline",
+        IntentType.REMOVE_TASK_DEADLINE,
+        r"^remove (?:the )?.+ task deadline$",
+    ),
+    _rule("move_task", IntentType.MOVE_TASK, r"^move (?:the )?.+ task to .+$"),
+    _rule("tag_task", IntentType.TAG_TASK, r"^tag (?:the )?.+ task with .+$"),
+    _rule(
+        "untag_task", IntentType.UNTAG_TASK, r"^remove tag .+ from (?:the )?.+ task$"
+    ),
+    _rule(
+        "link_task_reminder",
+        IntentType.LINK_TASK_REMINDER,
+        r"^(?:link reminder .+ to|remind me about) (?:the )?.+ task(?: at .+)?$",
+    ),
+    _rule(
+        "unlink_task_reminder",
+        IntentType.UNLINK_TASK_REMINDER,
+        r"^unlink reminder .+ from (?:the )?.+ task$",
+    ),
+    _rule("show_task", IntentType.SHOW_TASK, r"^(?:show|view) (?:the )?.+ task$"),
+    _rule(
+        "update_task",
+        IntentType.UPDATE_TASK,
+        r"^update (?:the )?.+ task(?: to| with) .+$",
+    ),
+    _rule(
+        "create_task",
+        IntentType.CREATE_TASK,
+        r"^(?:create|add) (?:a )?task(?: to .+ list)?(?: to)? .+$",
+    ),
+    _rule(
+        "create_task_incomplete",
+        IntentType.CREATE_TASK,
+        r"^(?:create|add) (?:a )?task(?: to .+ list)?$",
+    ),
     _rule(
         "update_reminder",
         IntentType.UPDATE_REMINDER,

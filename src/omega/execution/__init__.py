@@ -19,6 +19,10 @@ from omega.execution.folder_dispatcher import (
     FolderDispatchResult,
 )
 from omega.execution.history_dispatcher import HistoryActionDispatcher
+from omega.execution.productivity_dispatcher import (
+    ProductivityActionDispatcher,
+    ProductivityDispatchResult,
+)
 from omega.execution.scheduling_dispatcher import (
     SchedulingActionDispatcher,
     SchedulingDispatchResult,
@@ -40,6 +44,8 @@ __all__ = [
     "FolderActionDispatcher",
     "FolderDispatchResult",
     "HistoryActionDispatcher",
+    "ProductivityActionDispatcher",
+    "ProductivityDispatchResult",
     "SchedulingActionDispatcher",
     "SchedulingDispatchResult",
     "SystemActionDispatcher",

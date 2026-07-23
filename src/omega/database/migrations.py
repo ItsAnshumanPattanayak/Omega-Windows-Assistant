@@ -15,6 +15,8 @@ from omega.database.schema import (
     BASELINE_SCHEMA_VERSION,
     COMMAND_MIGRATION_NAME,
     COMMAND_SCHEMA_VERSION,
+    PRODUCTIVITY_MIGRATION_NAME,
+    PRODUCTIVITY_SCHEMA_VERSION,
     RECOVERY_MIGRATION_NAME,
     RECOVERY_SCHEMA_VERSION,
     SCHEDULING_MIGRATION_NAME,
@@ -24,6 +26,7 @@ from omega.database.schema import (
     apply_action_schema,
     apply_baseline_schema,
     apply_command_schema,
+    apply_productivity_schema,
     apply_recovery_schema,
     apply_scheduling_schema,
     apply_settings_schema,
@@ -83,6 +86,11 @@ SETTINGS_MIGRATION = Migration(
 SCHEDULING_MIGRATION = Migration(
     SCHEDULING_SCHEMA_VERSION, SCHEDULING_MIGRATION_NAME, apply_scheduling_schema
 )
+PRODUCTIVITY_MIGRATION = Migration(
+    PRODUCTIVITY_SCHEMA_VERSION,
+    PRODUCTIVITY_MIGRATION_NAME,
+    apply_productivity_schema,
+)
 
 DEFAULT_MIGRATIONS = (
     BASELINE_MIGRATION,
@@ -91,6 +99,7 @@ DEFAULT_MIGRATIONS = (
     RECOVERY_MIGRATION,
     SETTINGS_MIGRATION,
     SCHEDULING_MIGRATION,
+    PRODUCTIVITY_MIGRATION,
 )
 
 

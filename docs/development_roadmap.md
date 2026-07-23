@@ -22,6 +22,11 @@ The approved roadmap is intentionally incremental. Each phase should be designed
 
 16. **Phase 15 — Reminders, Timers, Alarms, and Scheduled Tasks — Completed:** persistent SQLite schedules, atomic occurrence claims and finalization, bounded recurrence, stale-claim/restart recovery, timer lifecycle controls, local GUI/terminal/optional speech notifications, shared text/GUI/voice routing, and explicit scheduler startup/shutdown.
 
-17. **Phase 16 — Next:** Notes, to-do lists, and personal productivity.
+17. **Phase 16 — Notes, To-Do Lists, and Personal Productivity — Completed:**
+    revisioned local notes, task lists, tasks, priorities, deadlines, tags,
+    bounded search, archive/restore, Phase 15 reminder links, safe JSON import,
+    JSON/Markdown export, and shared terminal/GUI/voice gateway routing.
+
+18. **Phase 17 — Next:** to be defined after Phase 16 review.
 
 Later phases may cover local AI-assisted intent suggestions, additional Windows integrations, accessibility, packaging, installer support, and release hardening.

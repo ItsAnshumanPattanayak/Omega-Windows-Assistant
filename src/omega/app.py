@@ -42,6 +42,7 @@ from omega.execution import (
     FileActionDispatcher,
     FolderActionDispatcher,
     HistoryActionDispatcher,
+    ProductivityActionDispatcher,
     SchedulingActionDispatcher,
     SystemActionDispatcher,
 )
@@ -69,6 +70,10 @@ from omega.folders import (
 )
 from omega.history import HistoryService
 from omega.interfaces.terminal import TerminalInterface
+from omega.productivity.export import ProductivityExportService
+from omega.productivity.importers import ProductivityImportService
+from omega.productivity.repositories import ProductivityRepository
+from omega.productivity.service import ProductivityService
 from omega.recovery import (
     RecoveryConfiguration,
     RecoveryRegistry,
@@ -98,7 +103,7 @@ from omega.system import (
 )
 from omega.utils.constants import MINIMUM_PYTHON_VERSION
 from omega.utils.logger import configure_logging, get_logger
-from omega.utils.paths import log_dir
+from omega.utils.paths import data_dir, log_dir
 from omega.voice.models import AudioDevice
 from omega.voice.protocols import VoiceEventSink
 
@@ -289,6 +294,28 @@ class OmegaApplication:
         scheduling_service = SchedulingService(
             self.settings.scheduling_configuration, scheduling_repository
         )
+        productivity_repository = ProductivityRepository(database_factory)
+        self.productivity_service = ProductivityService(
+            self.settings.productivity_configuration,
+            productivity_repository,
+            scheduling_repository,
+            scheduling_service,
+        )
+        productivity_root = (
+            database_path.parent / "productivity"
+            if database_path is not None
+            else data_dir() / "productivity"
+        )
+        self.productivity_export_service = ProductivityExportService(
+            self.settings.productivity_configuration,
+            productivity_repository,
+            productivity_root / "exports",
+        )
+        self.productivity_import_service = ProductivityImportService(
+            self.settings.productivity_configuration,
+            self.productivity_service,
+            productivity_root / "imports",
+        )
         self.notifications = NotificationCenter(
             get_logger("scheduling"),
             speech_enabled=self.settings.scheduling_configuration.speak_notifications,
@@ -331,6 +358,12 @@ class OmegaApplication:
             ),
             scheduling_dispatcher=SchedulingActionDispatcher(
                 scheduling_service, safety_gateway
+            ),
+            productivity_dispatcher=ProductivityActionDispatcher(
+                self.productivity_service,
+                safety_gateway,
+                self.productivity_export_service,
+                self.productivity_import_service,
             ),
             safety_gateway=safety_gateway,
         )

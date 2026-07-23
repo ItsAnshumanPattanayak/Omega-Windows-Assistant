@@ -44,6 +44,62 @@ _LOCATION_EXPRESSION = (
     r"my pictures|pictures|my music|music|my videos|videos|home folder|"
     r"user folder|home|current directory|current folder|project directory"
 )
+_NOTE_INTENTS = frozenset(
+    {
+        IntentType.CREATE_NOTE,
+        IntentType.SHOW_NOTE,
+        IntentType.UPDATE_NOTE,
+        IntentType.APPEND_NOTE,
+        IntentType.SEARCH_NOTES,
+        IntentType.PIN_NOTE,
+        IntentType.UNPIN_NOTE,
+        IntentType.ARCHIVE_NOTE,
+        IntentType.RESTORE_NOTE,
+        IntentType.DELETE_NOTE,
+        IntentType.TAG_NOTE,
+        IntentType.UNTAG_NOTE,
+        IntentType.EXPORT_NOTES,
+        IntentType.IMPORT_NOTES,
+        IntentType.LIST_NOTES,
+    }
+)
+_TASK_LIST_INTENTS = frozenset(
+    {
+        IntentType.CREATE_TASK_LIST,
+        IntentType.LIST_TASK_LISTS,
+        IntentType.SHOW_TASK_LIST,
+        IntentType.UPDATE_TASK_LIST,
+        IntentType.ARCHIVE_TASK_LIST,
+        IntentType.RESTORE_TASK_LIST,
+        IntentType.DELETE_TASK_LIST,
+    }
+)
+_TASK_INTENTS = frozenset(
+    {
+        IntentType.CREATE_TASK,
+        IntentType.LIST_TASKS,
+        IntentType.SHOW_TASK,
+        IntentType.UPDATE_TASK,
+        IntentType.COMPLETE_TASK,
+        IntentType.REOPEN_TASK,
+        IntentType.CANCEL_TASK,
+        IntentType.ARCHIVE_TASK,
+        IntentType.RESTORE_TASK,
+        IntentType.DELETE_TASK,
+        IntentType.SET_TASK_PRIORITY,
+        IntentType.SET_TASK_DEADLINE,
+        IntentType.REMOVE_TASK_DEADLINE,
+        IntentType.MOVE_TASK,
+        IntentType.TAG_TASK,
+        IntentType.UNTAG_TASK,
+        IntentType.SEARCH_TASKS,
+        IntentType.SHOW_DUE_TASKS,
+        IntentType.SHOW_OVERDUE_TASKS,
+        IntentType.LINK_TASK_REMINDER,
+        IntentType.UNLINK_TASK_REMINDER,
+    }
+)
+_PRODUCTIVITY_INTENTS = _NOTE_INTENTS | _TASK_LIST_INTENTS | _TASK_INTENTS
 
 
 def _entity(entity_type: EntityType, name: str, value: str, raw: str) -> CommandEntity:
@@ -62,7 +118,9 @@ class RuleBasedEntityExtractor:
 
     def extract(self, original: str, intent: IntentType) -> list[CommandEntity]:
         entities: list[CommandEntity] = []
-        if intent in {
+        if intent in _PRODUCTIVITY_INTENTS:
+            self._productivity(original, intent, entities)
+        elif intent in {
             IntentType.CREATE_REMINDER,
             IntentType.CREATE_RECURRING_REMINDER,
             IntentType.CREATE_ALARM,
@@ -139,6 +197,212 @@ class RuleBasedEntityExtractor:
         }:
             self._folder_command(original, intent, entities)
         return entities
+
+    @staticmethod
+    def _productivity(
+        original: str, intent: IntentType, entities: list[CommandEntity]
+    ) -> None:
+        text = original.strip().rstrip("?!")
+        quoted = re.findall(r'["“](.+?)["”]', text)
+        if intent is IntentType.CREATE_NOTE:
+            value = re.sub(
+                r"^create (?:a )?note(?: called| titled| named)?\s+",
+                "",
+                text,
+                flags=re.IGNORECASE,
+            )
+            title, body = value, ""
+            match = re.match(r"(.+?)\s+with\s+(.+)$", value, re.IGNORECASE)
+            if match:
+                title, body = match.group(1), match.group(2)
+            entities.append(_entity(EntityType.NOTE, "note_title", title, title))
+            if body:
+                entities.append(
+                    _entity(EntityType.TEXT_CONTENT, "note_body", body, body)
+                )
+        elif intent is IntentType.CREATE_TASK:
+            selected_list = re.search(
+                r"\btask\s+to\s+(?:my\s+)?(.+?)\s+list\b",
+                text,
+                re.IGNORECASE,
+            )
+            if selected_list:
+                entities.append(
+                    _entity(
+                        EntityType.TASK_LIST,
+                        "task_list_name",
+                        selected_list.group(1),
+                        selected_list.group(1),
+                    )
+                )
+            value = re.sub(
+                r"^(?:create|add) (?:a )?task(?: to .+? list)?(?: to)?\s+",
+                "",
+                text,
+                flags=re.IGNORECASE,
+            )
+            if re.fullmatch(
+                r"(?:create|add) (?:a )?task(?: to .+ list)?",
+                text,
+                re.IGNORECASE,
+            ):
+                value = ""
+            entities.append(_entity(EntityType.TASK, "task_title", value, value))
+        elif intent is IntentType.CREATE_TASK_LIST:
+            value = re.sub(
+                r"^create (?:a )?task list(?: called| named)?\s+",
+                "",
+                text,
+                flags=re.IGNORECASE,
+            )
+            entities.append(
+                _entity(EntityType.TASK_LIST, "task_list_name", value, value)
+            )
+        else:
+            transfer_file = re.search(
+                r"\b(?:to|from)\s+([^\s]+\.(?:json|md))$",
+                text,
+                re.IGNORECASE,
+            )
+            if intent in {IntentType.EXPORT_NOTES, IntentType.IMPORT_NOTES}:
+                if transfer_file:
+                    entities.append(
+                        _entity(
+                            EntityType.FILE_NAME,
+                            "file_name",
+                            transfer_file.group(1),
+                            transfer_file.group(1),
+                        )
+                    )
+                return
+            reminder_link = re.match(
+                r"^(?:link|unlink) reminder\s+"
+                r"([0-9a-f]{8}-[0-9a-f-]{27,})\s+(?:to|from)\s+"
+                r"(?:the\s+)?(.+?)\s+task$",
+                text,
+                re.IGNORECASE,
+            )
+            if (
+                intent
+                in {IntentType.LINK_TASK_REMINDER, IntentType.UNLINK_TASK_REMINDER}
+                and reminder_link
+            ):
+                entities.extend(
+                    (
+                        _entity(
+                            EntityType.SCHEDULE,
+                            "schedule_id",
+                            reminder_link.group(1),
+                            reminder_link.group(1),
+                        ),
+                        _entity(
+                            EntityType.TASK,
+                            "reference",
+                            reminder_link.group(2),
+                            reminder_link.group(2),
+                        ),
+                    )
+                )
+                return
+            deadline_link = re.match(
+                r"^remind me about (?:the )?(.+?) task at .+$",
+                text,
+                re.IGNORECASE,
+            )
+            if intent is IntentType.LINK_TASK_REMINDER and deadline_link:
+                reference = deadline_link.group(1)
+                entities.append(
+                    _entity(EntityType.TASK, "reference", reference, reference)
+                )
+                return
+            append = re.match(
+                r"^(?:add|append)\s+(.+?)\s+to\s+(?:the\s+)?(.+?)\s+note$",
+                text,
+                re.IGNORECASE,
+            )
+            if intent is IntentType.APPEND_NOTE and append:
+                content = append.group(1).strip(' "“”')
+                reference = append.group(2).strip(' "“”')
+                entities.extend(
+                    (
+                        _entity(
+                            EntityType.TEXT_CONTENT,
+                            "note_body",
+                            content,
+                            append.group(1),
+                        ),
+                        _entity(EntityType.NOTE, "reference", reference, reference),
+                    )
+                )
+                return
+            query = re.search(r"\b(?:for|with)\s+(.+)$", text, re.IGNORECASE)
+            if intent in {IntentType.SEARCH_NOTES, IntentType.SEARCH_TASKS} and query:
+                entities.append(
+                    _entity(
+                        EntityType.SEARCH_QUERY,
+                        "search_query",
+                        query.group(1),
+                        query.group(1),
+                    )
+                )
+            priority = re.search(
+                r"\b(none|low|medium|high|urgent)\b$", text, re.IGNORECASE
+            )
+            if priority:
+                entities.append(
+                    _entity(
+                        EntityType.PRIORITY,
+                        "priority",
+                        priority.group(1).casefold(),
+                        priority.group(1),
+                    )
+                )
+            tag = re.search(
+                r"\b(?:with|tag)\s+(.+?)(?:\s+(?:note|task))?$", text, re.IGNORECASE
+            )
+            if intent in {IntentType.TAG_NOTE, IntentType.TAG_TASK} and tag:
+                entities.append(
+                    _entity(EntityType.TAG, "tag", tag.group(1), tag.group(1))
+                )
+            removed_tag = re.match(
+                r"^remove tag\s+(.+?)\s+from\s+",
+                text,
+                re.IGNORECASE,
+            )
+            if intent in {IntentType.UNTAG_NOTE, IntentType.UNTAG_TASK} and removed_tag:
+                entities.append(
+                    _entity(
+                        EntityType.TAG,
+                        "tag",
+                        removed_tag.group(1),
+                        removed_tag.group(1),
+                    )
+                )
+            reference = re.sub(
+                r"^(?:show|open|view|pin|unpin|archive|restore|delete|mark|"
+                r"complete|reopen|cancel|set|remove|move|tag)\s+(?:the )?",
+                "",
+                text,
+                flags=re.IGNORECASE,
+            )
+            reference = re.sub(
+                r"\s+(?:note|task|task list)(?:\s+.*)?$",
+                "",
+                reference,
+                flags=re.IGNORECASE,
+            )
+            if quoted:
+                reference = quoted[-1]
+            entity_type = (
+                EntityType.NOTE
+                if intent in _NOTE_INTENTS
+                else (
+                    EntityType.TASK_LIST
+                    if intent in _TASK_LIST_INTENTS
+                    else EntityType.TASK
+                )
+            )
+            entities.append(_entity(entity_type, "reference", reference, reference))
 
     @staticmethod
     def _scheduling(
@@ -245,6 +509,21 @@ class RuleBasedEntityExtractor:
                         raw_value=values[0],
                         name="percentage",
                         confidence=1.0,
+                    )
+                )
+            destination = re.search(
+                r"\btask\s+to\s+(.+?)(?:\s+list)?$",
+                text,
+                re.IGNORECASE,
+            )
+            if intent is IntentType.MOVE_TASK and destination:
+                raw_destination = destination.group(1)
+                entities.append(
+                    _entity(
+                        EntityType.TASK_LIST,
+                        "task_list_name",
+                        raw_destination,
+                        raw_destination,
                     )
                 )
             return

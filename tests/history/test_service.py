@@ -93,7 +93,7 @@ def test_cleanup_preserves_migrations_settings_and_files(tmp_path: Path) -> None
     try:
         assert (
             connection.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0]
-            == 6
+            == 7
         )
     finally:
         connection.close()

@@ -16,6 +16,7 @@ from omega.execution.dispatcher import ApplicationActionDispatcher
 from omega.execution.file_dispatcher import FileActionDispatcher
 from omega.execution.folder_dispatcher import FolderActionDispatcher
 from omega.execution.history_dispatcher import HistoryActionDispatcher
+from omega.execution.productivity_dispatcher import ProductivityActionDispatcher
 from omega.execution.scheduling_dispatcher import SchedulingActionDispatcher
 from omega.execution.system_dispatcher import SystemActionDispatcher
 from omega.models import CommandSource, UserCommand
@@ -56,6 +57,7 @@ class OmegaSession:
         browser_dispatcher: BrowserActionDispatcher | None = None,
         system_dispatcher: SystemActionDispatcher | None = None,
         scheduling_dispatcher: SchedulingActionDispatcher | None = None,
+        productivity_dispatcher: ProductivityActionDispatcher | None = None,
         safety_gateway: SafeExecutionGateway | None = None,
     ) -> None:
         self.display_name = self._required_text(user_settings, "display_name")
@@ -77,6 +79,7 @@ class OmegaSession:
         self._browser_dispatcher = browser_dispatcher
         self._system_dispatcher = system_dispatcher
         self._scheduling_dispatcher = scheduling_dispatcher
+        self._productivity_dispatcher = productivity_dispatcher
         self._safety_gateway = (
             safety_gateway
             or getattr(application_dispatcher, "gateway", None)
@@ -232,7 +235,8 @@ class OmegaSession:
                 "medium-risk actions run only after validation. High-risk actions "
                 "require an exact scoped confirmation; generic yes is not accepted, "
                 "and confirmations expire. Critical or unsupported actions are "
-                "denied. File and folder deletion remain unavailable until Phase 8."
+                "denied. Local notes and tasks are stored as inert data; their "
+                "contents are never executed."
             )
         if self.matches_phrase(text, "status"):
             return f"Omega is {self.state.value}."
@@ -279,6 +283,10 @@ class OmegaSession:
                 scheduling_result = self._scheduling_dispatcher.dispatch(result)
                 if scheduling_result is not None:
                     return scheduling_result.user_message
+            if self._productivity_dispatcher is not None:
+                productivity_result = self._productivity_dispatcher.dispatch(result)
+                if productivity_result is not None:
+                    return productivity_result.user_message
             if self._application_dispatcher is not None:
                 dispatched = self._application_dispatcher.dispatch(result)
                 if dispatched is not None:

@@ -185,3 +185,25 @@ scheduling:
   restore_pending_items_on_startup: true
   allow_scheduled_commands: false
   allow_recurring_scheduled_commands: false
+
+productivity:
+  enabled: true
+  maximum_notes: 5000
+  maximum_task_lists: 200
+  maximum_tasks: 10000
+  maximum_note_title_characters: 200
+  maximum_note_body_characters: 50000
+  maximum_task_title_characters: 300
+  maximum_task_description_characters: 5000
+  maximum_tags_per_item: 20
+  maximum_tag_characters: 50
+  maximum_search_query_characters: 500
+  maximum_search_results: 200
+  maximum_export_bytes: 10485760
+  allow_markdown_export: true
+  allow_json_export: true
+  allow_json_import: true
+  allow_markdown_import: false
+  preserve_archived_items: true
+  reminder_linking_enabled: true
+  automatically_create_deadline_reminders: false
