@@ -37,7 +37,7 @@ def test_main_returns_zero_when_application_runs(monkeypatch) -> None:
 
     monkeypatch.setattr("omega.__main__.OmegaApplication", SuccessfulApplication)
 
-    assert main() == 0
+    assert main([]) == 0
 
 
 def test_main_returns_nonzero_for_initialization_failure(monkeypatch, capsys) -> None:
@@ -49,5 +49,5 @@ def test_main_returns_nonzero_for_initialization_failure(monkeypatch, capsys) ->
 
     monkeypatch.setattr("omega.__main__.OmegaApplication", FailingApplication)
 
-    assert main() == 1
+    assert main([]) == 1
     assert "Omega initialization failed: test failure" in capsys.readouterr().err

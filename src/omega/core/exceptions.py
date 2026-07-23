@@ -199,3 +199,15 @@ class HistoryCleanupError(HistoryError):
 
 class HistoryExportError(HistoryError):
     """Raised when safe JSON history export cannot be produced."""
+
+
+class GuiError(OmegaError):
+    """Base exception for safe desktop-interface failures."""
+
+
+class GuiInitializationError(GuiError):
+    """Raised when the optional desktop interface cannot start."""
+
+
+class GuiTaskError(GuiError):
+    """Raised when a background GUI task cannot be scheduled safely."""

@@ -199,6 +199,30 @@ For every operational proposal, the gateway persists the command and action befo
 
 History export serializes a versioned, timestamped, redacted UTF-8 JSON document. It is size bounded, uses a single safe `.json` filename beneath Omega's runtime export directory, and refuses overwrite. Runtime settings accept JSON-compatible values only and reject all safety, database-integrity, and destructive-policy names.
 
+## Phase 11 desktop presentation
+
+Phase 11 adds `omega.gui` as an optional presentation layer. Terminal mode remains the default and continues to use the same `OmegaApplication` composition. `omega --gui` explicitly creates one Tk root and one `OmegaMainWindow`; importing GUI modules creates no root, worker, database, directory, or main loop.
+
+```text
+Tk widgets
+  -> GuiController
+  -> OmegaSession.handle_input (exact original text)
+  -> parser / dispatchers / SafeExecutionGateway
+  -> domain services and persistent lifecycle
+  -> safe user response
+  -> Tk scheduler callback
+```
+
+`OmegaMainWindow` owns only layout, text rendering, dialogs, and widget state. Immutable display models contain no widget references. `GuiController` validates the UI input bound, prevents a second submission while busy, sends each command once through `OmegaSession`, and refreshes bounded activity through `HistoryService`. Toolbar activation, shutdown, history, undo, export, and cleanup are ordinary existing session commands rather than direct service execution.
+
+`GuiTaskRunner` uses a two-worker `ThreadPoolExecutor`. Workers never touch widgets; terminal callbacks are scheduled onto Tk with `after`. Closing the window interrupts the existing session, clears pending confirmations through its normal lifecycle, cancels queued work, and closes the executor without retrying an operation.
+
+Confirmation dialogs display the existing prompt, target, exact confirmation phrase, and cancellation path. Confirm and Cancel submit those exact phrases through the session. Escape, window close, and dismissal never approve. Undo availability comes from active `HistoryService` recovery records; the widget never calls a restore backend. History cleanup and export continue through the Phase 10 dispatcher and gateway.
+
+`GuiPreferencesService` persists only validated `ui.*` JSON values through `RuntimeSettingsRepository`: theme, font size, history limit, auto-scroll, notification preference, and bounded window geometry. Malformed UI preferences fall back independently. Safety, database, path, deletion, administrator, replacement, merge, and confirmation policies remain immutable and are not exposed as mutable controls.
+
+The desktop uses standard-library tkinter/ttk with system, light, and dark styles, keyboard navigation, visible text labels, resizable panes, selectable conversation text, and no external assets. Headless tests cover controller, task runner, formatting, preferences, import safety, and explicit bootstrap without opening a visible window.
+
 ## Planned layers
 
 The following components are planned, not implemented:

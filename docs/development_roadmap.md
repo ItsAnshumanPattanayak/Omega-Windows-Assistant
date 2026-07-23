@@ -13,7 +13,7 @@ The approved roadmap is intentionally incremental. Each phase should be designed
 9. **Phase 8 — Recycle Bin and Undo — Completed:** recoverable file/folder recycling, bounded recovery records, restore orchestration, and undo services.
 10. **Phase 9 — SQLite History — Completed:** database foundation plus typed command, action, and result repositories.
 11. **Phase 10 — Persistent History Integration — Completed:** persistent recovery and settings, history service, transactional cleanup, JSON export, startup composition, gateway lifecycle persistence, and history commands.
-12. **Phase 11 — Desktop GUI — Next:** provide a transparent local desktop interface.
-13. **Phase 12 — Voice Input and Response:** add wake-word handling and spoken interaction.
+12. **Phase 11 — Desktop GUI — Completed:** optional tkinter/ttk interface, headless controller, bounded workers, exact confirmations, persistent activity, undo visibility, history operations, and safe mutable preferences.
+13. **Phase 12 — Voice Input and Response — Next:** add wake-word handling and spoken interaction.
 
 Later phases may cover local AI-assisted intent suggestions, additional Windows integrations, accessibility, packaging, installer support, and release hardening.

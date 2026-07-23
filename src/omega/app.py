@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
 
 from omega.applications import (
@@ -86,6 +87,7 @@ class OmegaApplication:
         *,
         database_path: Path | None = None,
     ) -> None:
+        self.started_at = datetime.now(UTC)
         self.settings: Settings = load_settings(config_path)
         logging_settings = self.settings.logging
         self.logger = configure_logging(
@@ -225,6 +227,7 @@ class OmegaApplication:
         self.command_repository = command_repository
         self.action_repository = action_repository
         self.runtime_settings_repository = runtime_settings_repository
+        self.safety_gateway = safety_gateway
         self.history_service = HistoryService(
             database_factory,
             command_repository,
@@ -312,3 +315,11 @@ class OmegaApplication:
             raise InitializationError(
                 "Omega could not complete startup logging."
             ) from error
+
+    def run_gui(self) -> int:
+        """Run the optional desktop presentation over this composition root."""
+
+        from omega.gui.application import OmegaGuiApplication
+
+        self.logger.info("Starting Omega's optional desktop interface.")
+        return OmegaGuiApplication(self).run()

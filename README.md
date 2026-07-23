@@ -1,14 +1,34 @@
 # Omega
 
-Omega is a safety-first Windows desktop assistant project. **Current phase: Phase 10 — Persistent History, Recovery, Settings, and Application Integration.**
+Omega is a safety-first Windows desktop assistant project. **Current phase: Phase 11 — Desktop Graphical User Interface.**
 
 ## Current status
 
 Omega is a locally controlled assistant that understands narrowly approved Windows tasks while enforcing clear safety boundaries. It starts inactive, accepts `Hello Omega` as a standalone activation phrase, greets Anshuman based on the current time, accepts commands without repeating its name, and uses `Shut down Omega` for safe termination.
 
-Phases 8–10 add recoverable Recycle Bin operations, SQLite command/action/result history, persistent recovery records, JSON-only mutable settings, transactional cleanup, bounded JSON export, explicit startup migrations, and lifecycle persistence around the central safety gateway.
+Phases 8–10 add recoverable Recycle Bin operations, SQLite command/action/result history, persistent recovery records, JSON-only mutable settings, transactional cleanup, bounded JSON export, explicit startup migrations, and lifecycle persistence around the central safety gateway. Phase 11 adds an optional native tkinter/ttk desktop presentation over the same production session and services.
 
-Omega still cannot permanently delete files or folders, run arbitrary shell commands, modify protected Windows paths, elevate to administrator, modify the Registry, merge or replace folders, process voice input, provide a GUI, automate browser pages, or execute AI-generated actions. Recovery records are persistent when configured, but user-facing restoration remains fail-closed until a native restore backend is configured.
+Omega still cannot permanently delete files or folders, run arbitrary shell commands, modify protected Windows paths, elevate to administrator, modify the Registry, merge or replace folders, process voice input, automate browser pages, or execute AI-generated actions. Recovery records are persistent when configured, but user-facing restoration remains fail-closed until a native restore backend is configured.
+
+## Desktop interface
+
+The desktop interface is optional. Terminal mode remains the default:
+
+```powershell
+omega
+python -m omega
+```
+
+Start the GUI explicitly:
+
+```powershell
+omega --gui
+python -m omega --gui
+```
+
+Use `omega --gui-check` to verify that tkinter is available without creating a window or initializing Omega. The resizable ttk window provides conversation history, multiline command input, assistant state, bounded persistent activity, exact confirmation dialogs, safe Undo/Export/Clear History controls, mutable appearance preferences, and in-application notifications.
+
+All commands—including toolbar operations—go through the existing `OmegaSession`, parser, dispatchers, and `SafeExecutionGateway`. Closing a confirmation dialog cancels rather than approves. Background operations use a bounded two-worker executor and marshal every widget update back to Tk's main thread. See [gui.md](docs/gui.md).
 
 ## Persistent history
 

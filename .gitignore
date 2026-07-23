@@ -38,6 +38,7 @@ data/*.sqlite3
 data/database/*.db
 data/database/*.sqlite
 data/database/*.sqlite3
+data/history_exports/*.json
 data/pytest-temp/
 
 # Temporary and platform files
