@@ -5,10 +5,38 @@ from __future__ import annotations
 from collections import OrderedDict
 from collections.abc import Iterable
 from threading import RLock
+from typing import Protocol
 from uuid import UUID
 
 from omega.core.exceptions import RecoveryRecordError
 from omega.recovery.models import RecoveryRecord
+
+
+class RecoveryRecordStore(Protocol):
+    """Storage contract shared by in-memory and SQLite recovery stores."""
+
+    @property
+    def maximum_records(self) -> int: ...
+
+    def add(self, record: RecoveryRecord) -> RecoveryRecord: ...
+
+    def get(self, record_id: UUID) -> RecoveryRecord | None: ...
+
+    def require(self, record_id: UUID) -> RecoveryRecord: ...
+
+    def update(self, record: RecoveryRecord) -> RecoveryRecord: ...
+
+    def remove(self, record_id: UUID) -> RecoveryRecord | None: ...
+
+    def list_records(self) -> tuple[RecoveryRecord, ...]: ...
+
+    def list_newest_first(self) -> tuple[RecoveryRecord, ...]: ...
+
+    def replace_all(
+        self, records: Iterable[RecoveryRecord]
+    ) -> tuple[RecoveryRecord, ...]: ...
+
+    def clear(self) -> None: ...
 
 
 class InMemoryRecoveryRecordStore:

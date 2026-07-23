@@ -35,12 +35,14 @@ def test_schema_initialization_creates_all_version_records(
         ).fetchall()
 
         assert version == LATEST_SCHEMA_VERSION
-        assert [int(row["version"]) for row in rows] == [1, 2, 3]
+        assert [int(row["version"]) for row in rows] == [1, 2, 3, 4, 5]
 
         assert [str(row["name"]) for row in rows] == [
             "phase_9a_database_foundation",
             "phase_9b_command_repository",
             "phase_9c_action_repository",
+            "phase_10_recovery_repository",
+            "phase_10_runtime_settings",
         ]
 
         assert all(row["applied_at"] for row in rows)
@@ -72,6 +74,8 @@ def test_schema_initialization_creates_history_tables(
             "commands",
             "actions",
             "action_results",
+            "recovery_records",
+            "runtime_settings",
         }.issubset(tables)
     finally:
         connection.close()
@@ -113,6 +117,30 @@ def test_schema_initialization_creates_history_indexes(
         connection.close()
 
 
+def test_phase10_indexes_and_recovery_foreign_keys(tmp_path: Path) -> None:
+    connection = _factory(tmp_path).connect()
+    try:
+        initialize_schema(connection)
+        indexes = {
+            str(row[0])
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='index'"
+            )
+        }
+        foreign_keys = {
+            str(row["table"])
+            for row in connection.execute("PRAGMA foreign_key_list(recovery_records)")
+        }
+        assert {
+            "idx_recovery_status_expires",
+            "idx_recovery_created_at",
+            "idx_runtime_settings_updated_at",
+        }.issubset(indexes)
+        assert foreign_keys == {"commands", "actions"}
+    finally:
+        connection.close()
+
+
 def test_action_foreign_keys_are_enabled(
     tmp_path: Path,
 ) -> None:
@@ -145,10 +173,10 @@ def test_schema_initialization_is_idempotent(
             """
         ).fetchone()
 
-        assert first == 3
-        assert second == 3
+        assert first == 5
+        assert second == 5
         assert count is not None
-        assert int(count[0]) == 3
+        assert int(count[0]) == 5
     finally:
         connection.close()
 

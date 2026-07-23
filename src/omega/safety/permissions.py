@@ -107,6 +107,8 @@ class PermissionConfiguration:
             IntentType.MOVE_FOLDER,
             IntentType.DELETE_FILE,
             IntentType.DELETE_FOLDER,
+            IntentType.UNDO_LAST_ACTION,
+            IntentType.CLEAR_HISTORY,
         }
 
         supported = {
@@ -126,8 +128,6 @@ class PermissionConfiguration:
                 IntentType.HELP,
                 IntentType.ACTIVATE_ASSISTANT,
                 IntentType.SHUTDOWN_ASSISTANT,
-                IntentType.UNDO_LAST_ACTION,
-                IntentType.SHOW_HISTORY,
             }
         }
 

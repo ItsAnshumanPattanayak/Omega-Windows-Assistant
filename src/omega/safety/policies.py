@@ -546,6 +546,36 @@ class FolderMovePolicy(_IntentPolicy):
     )
 
 
+class HistoryReadPolicy(_IntentPolicy):
+    policy_id, priority = "SAFETY-HISTORY-READ-001", 80
+    intents = frozenset({IntentType.SHOW_HISTORY})
+    disposition, reason_code, message = (
+        PolicyDisposition.ALLOW,
+        "HISTORY_READ_ALLOWED",
+        "Bounded local history inspection is allowed.",
+    )
+
+
+class HistoryExportPolicy(_IntentPolicy):
+    policy_id, priority = "SAFETY-HISTORY-EXPORT-001", 80
+    intents = frozenset({IntentType.EXPORT_HISTORY})
+    disposition, reason_code, message = (
+        PolicyDisposition.ALLOW,
+        "HISTORY_EXPORT_ALLOWED",
+        "Bounded JSON history export is allowed.",
+    )
+
+
+class HistoryMutationPolicy(_IntentPolicy):
+    policy_id, priority = "SAFETY-HISTORY-MUTATION-001", 70
+    intents = frozenset({IntentType.CLEAR_HISTORY, IntentType.UNDO_LAST_ACTION})
+    disposition, reason_code, message = (
+        PolicyDisposition.REQUIRE_CONFIRMATION,
+        "HISTORY_MUTATION_CONFIRMATION",
+        "History cleanup and undo require exact confirmation.",
+    )
+
+
 DEFAULT_POLICIES = cast(
     tuple[SafetyPolicy, ...],
     (
@@ -562,6 +592,7 @@ DEFAULT_POLICIES = cast(
         FileWritePolicy(),
         FileMovePolicy(),
         FolderMovePolicy(),
+        HistoryMutationPolicy(),
         ApplicationOpenPolicy(),
         ApplicationStatusPolicy(),
         FileReadPolicy(),
@@ -573,6 +604,8 @@ DEFAULT_POLICIES = cast(
         FolderCreatePolicy(),
         FolderRenamePolicy(),
         FolderCopyPolicy(),
+        HistoryReadPolicy(),
+        HistoryExportPolicy(),
     ),
 )
 

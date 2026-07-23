@@ -32,6 +32,7 @@ REQUIRED_SECTIONS = frozenset(
         "files",
         "folders",
         "recovery",
+        "history",
     }
 )
 
@@ -63,6 +64,7 @@ class Settings:
     files: Mapping[str, Any]
     folders: Mapping[str, Any]
     recovery: Mapping[str, Any]
+    history: Mapping[str, Any]
 
     @property
     def application_name(self) -> str:
@@ -178,6 +180,14 @@ def _defaults() -> dict[str, dict[str, Any]]:
             "maximum_undo_records": 20,
             "maximum_recycle_size_bytes": 5_368_709_120,
             "persist_undo_records": False,
+        },
+        "history": {
+            "enabled": True,
+            "persistence_enabled": True,
+            "default_limit": 20,
+            "maximum_limit": 100,
+            "maximum_export_bytes": 1_048_576,
+            "preserve_active_undo_records": True,
         },
     }
 
@@ -336,25 +346,58 @@ def _validate_safety(
         raise ConfigurationError("safety.default_decision must be deny.")
 
     timeout = values.get("confirmation_timeout_seconds")
-
     if (
         isinstance(timeout, bool)
         or not isinstance(timeout, (int, float))
         or not 0 < timeout <= 300
     ):
         raise ConfigurationError(
-            "safety.confirmation_timeout_seconds " "must be between 0 and 300."
+            "safety.confirmation_timeout_seconds must be between 0 and 300."
         )
 
     attempts = values.get("maximum_confirmation_attempts")
-
     if (
         isinstance(attempts, bool)
         or not isinstance(attempts, int)
         or not 1 <= attempts <= 10
     ):
         raise ConfigurationError(
-            "safety.maximum_confirmation_attempts " "must be between 1 and 10."
+            "safety.maximum_confirmation_attempts must be between 1 and 10."
+        )
+
+
+def _validate_history(values: Mapping[str, Any]) -> None:
+    allowed = {
+        "enabled",
+        "persistence_enabled",
+        "default_limit",
+        "maximum_limit",
+        "maximum_export_bytes",
+        "preserve_active_undo_records",
+    }
+    unknown = set(values).difference(allowed)
+    if unknown:
+        raise ConfigurationError(
+            "Unknown history setting(s): " + ", ".join(sorted(unknown))
+        )
+    for key in ("enabled", "persistence_enabled", "preserve_active_undo_records"):
+        if not isinstance(values.get(key), bool):
+            raise ConfigurationError(f"history.{key} must be a boolean.")
+    for key, maximum in (
+        ("default_limit", 1000),
+        ("maximum_limit", 1000),
+        ("maximum_export_bytes", 50_000_000),
+    ):
+        value = values.get(key)
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, int)
+            or not 1 <= value <= maximum
+        ):
+            raise ConfigurationError(f"history.{key} is outside its safe range.")
+    if values["default_limit"] > values["maximum_limit"]:
+        raise ConfigurationError(
+            "history.default_limit must not exceed history.maximum_limit."
         )
 
 
@@ -421,5 +464,6 @@ def load_settings(
     _validate_files(values["files"])
     _validate_folders(values["folders"])
     _validate_recovery(values["recovery"])
+    _validate_history(values["history"])
 
     return Settings(**values)

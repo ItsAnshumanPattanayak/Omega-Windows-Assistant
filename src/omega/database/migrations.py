@@ -15,9 +15,15 @@ from omega.database.schema import (
     BASELINE_SCHEMA_VERSION,
     COMMAND_MIGRATION_NAME,
     COMMAND_SCHEMA_VERSION,
+    RECOVERY_MIGRATION_NAME,
+    RECOVERY_SCHEMA_VERSION,
+    SETTINGS_MIGRATION_NAME,
+    SETTINGS_SCHEMA_VERSION,
     apply_action_schema,
     apply_baseline_schema,
     apply_command_schema,
+    apply_recovery_schema,
+    apply_settings_schema,
     ensure_migrations_table,
     get_schema_version,
     utc_timestamp,
@@ -60,10 +66,24 @@ ACTION_MIGRATION = Migration(
     apply=apply_action_schema,
 )
 
+RECOVERY_MIGRATION = Migration(
+    version=RECOVERY_SCHEMA_VERSION,
+    name=RECOVERY_MIGRATION_NAME,
+    apply=apply_recovery_schema,
+)
+
+SETTINGS_MIGRATION = Migration(
+    version=SETTINGS_SCHEMA_VERSION,
+    name=SETTINGS_MIGRATION_NAME,
+    apply=apply_settings_schema,
+)
+
 DEFAULT_MIGRATIONS = (
     BASELINE_MIGRATION,
     COMMAND_MIGRATION,
     ACTION_MIGRATION,
+    RECOVERY_MIGRATION,
+    SETTINGS_MIGRATION,
 )
 
 

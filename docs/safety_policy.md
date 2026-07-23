@@ -1,5 +1,11 @@
 # Omega safety policy
 
+## Persistent history boundaries
+
+History persistence does not broaden execution authority. Command, action, and result writes occur around `SafeExecutionGateway`; a pre-execution persistence failure blocks dispatch, and a post-execution result failure never retries the operating-system action. Runtime SQLite settings cannot override YAML safety boundaries.
+
+History cleanup deletes database history rows transactionally and preserves active undo records by default. It never deletes user files or folders, empties the Recycle Bin, removes the database, or alters migration records. JSON exports are bounded, redacted, UTF-8 only, confined to Omega's runtime export directory, and refuse overwrite.
+
 Omega is founded on least-privilege behavior and explicit user control.
 
 - User-provided shell commands must never be executed without strict, purpose-built authorization; unrestricted shell execution is prohibited.

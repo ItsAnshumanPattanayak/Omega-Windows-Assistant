@@ -39,6 +39,8 @@ class IntentType(StrEnum):
     SEARCH_FOLDER = "search_folder"
     UNDO_LAST_ACTION = "undo_last_action"
     SHOW_HISTORY = "show_history"
+    CLEAR_HISTORY = "clear_history"
+    EXPORT_HISTORY = "export_history"
 
 
 class ActionStatus(StrEnum):

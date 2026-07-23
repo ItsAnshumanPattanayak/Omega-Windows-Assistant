@@ -52,10 +52,6 @@ def test_configuration_loads_from_mapping() -> None:
             "does not permit permanent deletion",
         ),
         (
-            {"persist_undo_records": True},
-            "process-local",
-        ),
-        (
             {"undo_timeout_seconds": 0},
             "undo_timeout_seconds",
         ),
@@ -86,6 +82,13 @@ def test_unknown_configuration_field_is_rejected() -> None:
 
     with pytest.raises(ConfigurationError, match="Unknown recovery"):
         RecoveryConfiguration.from_mapping(values)
+
+
+def test_persistent_recovery_can_be_enabled_strictly() -> None:
+    values = valid_configuration_values()
+    values["persist_undo_records"] = True
+
+    assert RecoveryConfiguration.from_mapping(values).persist_undo_records is True
 
 
 def test_non_mapping_configuration_is_rejected() -> None:

@@ -21,6 +21,7 @@ applications: {}
 files: {}
 folders: {}
 recovery: {}
+history: {}
 """
 
 
@@ -62,6 +63,7 @@ def test_load_settings_applies_sensible_defaults() -> None:
         assert settings.recovery["undo_timeout_seconds"] == 300
         assert settings.recovery["maximum_undo_records"] == 20
         assert settings.recovery["persist_undo_records"] is False
+        assert settings.history["default_limit"] == 20
 
 
 def test_missing_required_section_raises_configuration_error() -> None:
@@ -239,7 +241,6 @@ def test_unsafe_central_safety_settings_are_rejected(
     "recovery",
     [
         "allow_permanent_deletion: true",
-        "persist_undo_records: true",
         "undo_timeout_seconds: 0",
         "undo_timeout_seconds: 3601",
         "maximum_undo_records: 0",
@@ -302,6 +303,7 @@ def test_unknown_recovery_setting_is_rejected() -> None:
         "files",
         "folders",
         "recovery",
+        "history",
     ],
 )
 def test_configuration_sections_must_be_mappings(

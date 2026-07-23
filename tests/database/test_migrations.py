@@ -30,8 +30,8 @@ def test_default_migrations_apply_once(
     first = runner.migrate()
     second = runner.migrate()
 
-    assert first == 3
-    assert second == 3
+    assert first == 5
+    assert second == 5
 
     connection = factory.connect()
 
@@ -47,7 +47,7 @@ def test_default_migrations_apply_once(
             )
         ]
 
-        assert versions == [1, 2, 3]
+        assert versions == [1, 2, 3, 4, 5]
     finally:
         connection.close()
 
@@ -75,6 +75,27 @@ def test_default_migrations_apply_once(
                 "commands",
                 "actions",
                 "action_results",
+            },
+        ),
+        (
+            4,
+            {
+                "schema_migrations",
+                "commands",
+                "actions",
+                "action_results",
+                "recovery_records",
+            },
+        ),
+        (
+            5,
+            {
+                "schema_migrations",
+                "commands",
+                "actions",
+                "action_results",
+                "recovery_records",
+                "runtime_settings",
             },
         ),
     ],
@@ -105,6 +126,36 @@ def test_runner_can_stop_at_requested_target(
         }
 
         assert tables == expected_tables
+    finally:
+        connection.close()
+
+
+@pytest.mark.parametrize("starting_version", [1, 2, 3, 5])
+def test_phase10_upgrade_preserves_existing_schema(
+    tmp_path: Path, starting_version: int
+) -> None:
+    factory = _factory(tmp_path)
+    runner = MigrationRunner(factory)
+    runner.migrate(target_version=starting_version)
+
+    assert runner.migrate() == 5
+
+    connection = factory.connect()
+    try:
+        versions = [
+            int(row[0])
+            for row in connection.execute(
+                "SELECT version FROM schema_migrations ORDER BY version"
+            )
+        ]
+        tables = {
+            str(row[0])
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            )
+        }
+        assert versions == [1, 2, 3, 4, 5]
+        assert {"recovery_records", "runtime_settings"}.issubset(tables)
     finally:
         connection.close()
 

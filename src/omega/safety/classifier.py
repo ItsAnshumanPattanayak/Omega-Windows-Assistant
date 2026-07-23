@@ -25,6 +25,7 @@ _LOW = frozenset(
         IntentType.SEARCH_FOLDER,
         IntentType.CHECK_FOLDER_EXISTENCE,
         IntentType.GET_FOLDER_INFORMATION,
+        IntentType.SHOW_HISTORY,
     }
 )
 _MEDIUM = frozenset(
@@ -37,6 +38,7 @@ _MEDIUM = frozenset(
         IntentType.CREATE_FOLDER,
         IntentType.RENAME_FOLDER,
         IntentType.COPY_FOLDER,
+        IntentType.EXPORT_HISTORY,
     }
 )
 _HIGH = frozenset(
@@ -45,6 +47,8 @@ _HIGH = frozenset(
         IntentType.WRITE_FILE,
         IntentType.MOVE_FILE,
         IntentType.MOVE_FOLDER,
+        IntentType.UNDO_LAST_ACTION,
+        IntentType.CLEAR_HISTORY,
     }
 )
 _CRITICAL = frozenset({IntentType.DELETE_FILE, IntentType.DELETE_FOLDER})

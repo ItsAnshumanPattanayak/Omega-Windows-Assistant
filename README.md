@@ -1,14 +1,25 @@
 # Omega
 
-Omega is a safety-first Windows desktop assistant project. **Current phase: Phase 7 — Safety, Permissions, and Confirmation Engine.**
+Omega is a safety-first Windows desktop assistant project. **Current phase: Phase 10 — Persistent History, Recovery, Settings, and Application Integration.**
 
 ## Current status
 
 Omega is a locally controlled assistant that understands narrowly approved Windows tasks while enforcing clear safety boundaries. It starts inactive, accepts `Hello Omega` as a standalone activation phrase, greets Anshuman based on the current time, accepts commands without repeating its name, and uses `Shut down Omega` for safe termination.
 
-Phase 7 adds one centralized safety pipeline for every application, file, and folder operation. Omega now classifies risk, evaluates resolved protected resources, applies ordered default-deny permission policies, creates exact action-scoped confirmations, expires and cancels pending requests, blocks confirmation replay, revalidates resources, and only then dispatches an approved action. Security audit records remain in memory and contain logical descriptions rather than private paths or content.
+Phases 8–10 add recoverable Recycle Bin operations, SQLite command/action/result history, persistent recovery records, JSON-only mutable settings, transactional cleanup, bounded JSON export, explicit startup migrations, and lifecycle persistence around the central safety gateway.
 
-Omega still cannot permanently delete files or folders, use the Recycle Bin or undo, run arbitrary shell commands, modify protected Windows paths, elevate to administrator, modify the Registry, merge or replace folders, process voice input, provide a GUI, automate browser pages, or execute AI-generated actions.
+Omega still cannot permanently delete files or folders, run arbitrary shell commands, modify protected Windows paths, elevate to administrator, modify the Registry, merge or replace folders, process voice input, provide a GUI, automate browser pages, or execute AI-generated actions. Recovery records are persistent when configured, but user-facing restoration remains fail-closed until a native restore backend is configured.
+
+## Persistent history
+
+- Migrations 1–3 retain the Phase 9 database, command, and action meanings.
+- Migration 4 adds recovery records with command/action foreign keys.
+- Migration 5 adds JSON-only mutable runtime settings.
+- Commands, action proposals, lifecycle changes, and terminal results are saved once.
+- A persistence failure before execution blocks the operation; a result-write failure after execution is surfaced and never causes automatic retry.
+- `show history`, recent command/action views, failed actions, confirmed cleanup, export, and undo inspection all pass through the safety gateway.
+- Cleanup never deletes user resources, the database, migration records, or runtime settings.
+- Exports are bounded UTF-8 JSON under Omega's runtime export directory and never overwrite an existing file.
 
 ## Safety decisions
 

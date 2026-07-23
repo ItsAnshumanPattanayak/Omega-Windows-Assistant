@@ -21,7 +21,7 @@ from omega.recovery.restore import (
     UnavailableRestoreBackend,
 )
 from omega.recovery.results import RecoveryResult
-from omega.recovery.store import InMemoryRecoveryRecordStore
+from omega.recovery.store import InMemoryRecoveryRecordStore, RecoveryRecordStore
 from omega.recovery.undo import RecoveryUndoService
 from omega.recovery.windows_recycle_bin import (
     WindowsRecycleBinService,
@@ -30,6 +30,7 @@ from omega.recovery.windows_recycle_bin import (
 
 __all__ = [
     "InMemoryRecoveryRecordStore",
+    "RecoveryRecordStore",
     "ProtectedPathChecker",
     "RecoverableActionType",
     "RecoveryConfiguration",

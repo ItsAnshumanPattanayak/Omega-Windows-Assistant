@@ -10,6 +10,7 @@ from pathlib import Path
 from threading import RLock
 from uuid import UUID
 
+from omega.database.lifecycle import ExecutionPersistence
 from omega.models import (
     Action,
     ActionResult,
@@ -69,11 +70,13 @@ class SafeExecutionGateway:
         policy_engine: PermissionPolicyEngine | None = None,
         confirmations: ConfirmationManager | None = None,
         audit: InMemorySafetyAudit | None = None,
+        persistence: ExecutionPersistence | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
         self.policy_engine = policy_engine or PermissionPolicyEngine()
         self.confirmations = confirmations or ConfirmationManager()
         self.audit = audit or InMemorySafetyAudit()
+        self.persistence = persistence
         self._logger = logger or logging.getLogger("omega.safety.gateway")
         self._executed_actions: set[UUID] = set()
         self._execution_lock = RLock()
@@ -88,6 +91,24 @@ class SafeExecutionGateway:
         fingerprint: ResourceFingerprint | None = None,
     ) -> GatewayDispatchResult:
         """Evaluate one typed proposal and never dispatch a denied action."""
+        if self.persistence is not None:
+            try:
+                self.persistence.record_proposal(context.command, context.action)
+            except Exception:
+                self._logger.exception("Execution proposal persistence failed closed.")
+                return GatewayDispatchResult(
+                    context.command,
+                    context.action,
+                    self._failure(
+                        context.action,
+                        context.command,
+                        "PERSISTENCE_FAILED_CLOSED",
+                        "The execution proposal could not be persisted.",
+                        "Omega could not record that operation safely, so nothing "
+                        "was changed.",
+                        ErrorCategory.INTERNAL,
+                    ),
+                )
         prompt = confirmation.prompt if confirmation else None
         try:
             evaluation = self.policy_engine.evaluate(
@@ -95,32 +116,37 @@ class SafeExecutionGateway:
             )
         except Exception:
             self._logger.exception("Safety evaluation failed closed.")
+            self._set_denied(context.action)
+            result = self._failure(
+                context.action,
+                context.command,
+                "SAFETY_EVALUATION_FAILED",
+                "Safety evaluation failed closed.",
+                "Omega could not verify that operation safely, so nothing "
+                "was changed.",
+            )
+            self._persist_terminal(context.action, result)
             return GatewayDispatchResult(
                 context.command,
                 context.action,
-                self._failure(
-                    context.action,
-                    context.command,
-                    "SAFETY_EVALUATION_FAILED",
-                    "Safety evaluation failed closed.",
-                    "Omega could not verify that operation safely, so nothing "
-                    "was changed.",
-                ),
+                result,
             )
         self._audit(SafetyAuditEvent.EVALUATED, context, evaluation)
         if evaluation.decision is PermissionDecision.DENY:
             self._set_denied(context.action)
             self._audit(SafetyAuditEvent.DENIED, context, evaluation)
+            result = self._failure(
+                context.action,
+                context.command,
+                evaluation.reason_code,
+                evaluation.reason,
+                evaluation.user_message,
+            )
+            self._persist_terminal(context.action, result)
             return GatewayDispatchResult(
                 context.command,
                 context.action,
-                self._failure(
-                    context.action,
-                    context.command,
-                    evaluation.reason_code,
-                    evaluation.reason,
-                    evaluation.user_message,
-                ),
+                result,
                 evaluation,
             )
         if evaluation.decision is PermissionDecision.REQUIRE_CONFIRMATION:
@@ -139,6 +165,27 @@ class SafeExecutionGateway:
                     evaluation,
                 )
             self._set_awaiting(context.action)
+            if self.persistence is not None:
+                try:
+                    self.persistence.update_action(context.action)
+                except Exception:
+                    self._logger.exception(
+                        "Pending confirmation persistence failed closed."
+                    )
+                    self._set_denied(context.action)
+                    return GatewayDispatchResult(
+                        context.command,
+                        context.action,
+                        self._failure(
+                            context.action,
+                            context.command,
+                            "PERSISTENCE_FAILED_CLOSED",
+                            "Pending action state could not be persisted.",
+                            "Omega could not record that confirmation safely.",
+                            ErrorCategory.INTERNAL,
+                        ),
+                        evaluation,
+                    )
             pending, replaced = self.confirmations.create(
                 session_id=context.session_id,
                 command=context.command,
@@ -178,6 +225,25 @@ class SafeExecutionGateway:
                 evaluation,
             )
         self._set_allowed(context.action)
+        if self.persistence is not None:
+            try:
+                self.persistence.update_action(context.action)
+            except Exception:
+                self._logger.exception("Approved action persistence failed closed.")
+                return GatewayDispatchResult(
+                    context.command,
+                    context.action,
+                    self._failure(
+                        context.action,
+                        context.command,
+                        "PERSISTENCE_FAILED_CLOSED",
+                        "Approved action state could not be persisted.",
+                        "Omega could not record that operation safely, so nothing "
+                        "was changed.",
+                        ErrorCategory.INTERNAL,
+                    ),
+                    evaluation,
+                )
         self._audit(SafetyAuditEvent.ALLOWED, context, evaluation)
         result = self._execute_once(
             context.command,
@@ -206,6 +272,12 @@ class SafeExecutionGateway:
             source=CommandSource.TEXT,
             session_id=session_id,
         )
+        if self.persistence is not None:
+            try:
+                self.persistence.record_command(command)
+            except Exception:
+                self._logger.exception("Confirmation command persistence failed.")
+                return None
         if match.action is None:
             action = Action(
                 command_id=command.command_id,
@@ -394,6 +466,22 @@ class SafeExecutionGateway:
                 )
             action.status = ActionStatus.RUNNING
             action.started_at = utc_now()
+            if self.persistence is not None:
+                try:
+                    self.persistence.update_action(action)
+                except Exception:
+                    self._logger.exception("Pre-execution persistence failed closed.")
+                    action.status = ActionStatus.FAILED
+                    action.completed_at = utc_now()
+                    return self._failure(
+                        action,
+                        command,
+                        "PERSISTENCE_FAILED_CLOSED",
+                        "Running action state could not be persisted.",
+                        "Omega could not record that operation safely, so nothing "
+                        "was changed.",
+                        ErrorCategory.INTERNAL,
+                    )
             self._audit(SafetyAuditEvent.EXECUTION_STARTED, context, evaluation)
             result = executor()
             action.status = (
@@ -401,12 +489,26 @@ class SafeExecutionGateway:
             )
             action.completed_at = utc_now()
             self._audit(SafetyAuditEvent.EXECUTION_FINISHED, context, evaluation)
+            if self.persistence is not None:
+                try:
+                    self.persistence.record_terminal(action, result)
+                except Exception:
+                    self._logger.exception("Post-execution result persistence failed.")
+                    return self._failure(
+                        action,
+                        command,
+                        "RESULT_PERSISTENCE_FAILED",
+                        "The completed operation result could not be persisted.",
+                        "The operation completed, but Omega could not save its "
+                        "result. It will not be repeated automatically.",
+                        ErrorCategory.INTERNAL,
+                    )
             return result
         except Exception:
             action.status = ActionStatus.FAILED
             action.completed_at = utc_now()
             self._logger.exception("Approved domain execution failed safely.")
-            return self._failure(
+            failure = self._failure(
                 action,
                 command,
                 "EXECUTION_FAILED_SAFE",
@@ -414,6 +516,16 @@ class SafeExecutionGateway:
                 "Omega could not complete that operation safely.",
                 ErrorCategory.INTERNAL,
             )
+            self._persist_terminal(action, failure)
+            return failure
+
+    def _persist_terminal(self, action: Action, result: ActionResult) -> None:
+        if self.persistence is None:
+            return
+        try:
+            self.persistence.record_terminal(action, result)
+        except Exception:
+            self._logger.exception("Terminal safety result persistence failed.")
 
     @staticmethod
     def fingerprint_path(

@@ -38,9 +38,6 @@ class RecoveryConfiguration:
         if self.allow_permanent_deletion:
             raise ConfigurationError("Phase 8 does not permit permanent deletion.")
 
-        if self.persist_undo_records:
-            raise ConfigurationError("Phase 8 undo records must remain process-local.")
-
         if (
             isinstance(self.undo_timeout_seconds, bool)
             or not isinstance(self.undo_timeout_seconds, int)

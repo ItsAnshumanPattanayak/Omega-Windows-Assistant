@@ -183,3 +183,19 @@ class DatabaseSchemaError(DatabaseError):
 
 class DatabaseMigrationError(DatabaseError):
     """Raised when a database migration cannot complete safely."""
+
+
+class SettingsRepositoryError(DatabaseError):
+    """Raised when mutable runtime settings cannot be stored safely."""
+
+
+class HistoryError(DatabaseError):
+    """Base exception for persistent history operations."""
+
+
+class HistoryCleanupError(HistoryError):
+    """Raised when history cleanup cannot preserve required records."""
+
+
+class HistoryExportError(HistoryError):
+    """Raised when safe JSON history export cannot be produced."""

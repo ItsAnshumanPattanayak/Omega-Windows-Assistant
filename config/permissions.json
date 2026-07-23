@@ -105,6 +105,24 @@
     "search_folder": {
       "enabled": true,
       "maximum_risk": "low"
+    },
+    "show_history": {
+      "enabled": true,
+      "maximum_risk": "low"
+    },
+    "export_history": {
+      "enabled": true,
+      "maximum_risk": "medium"
+    },
+    "clear_history": {
+      "enabled": true,
+      "maximum_risk": "high",
+      "requires_confirmation": true
+    },
+    "undo_last_action": {
+      "enabled": true,
+      "maximum_risk": "high",
+      "requires_confirmation": true
     }
   }
 }

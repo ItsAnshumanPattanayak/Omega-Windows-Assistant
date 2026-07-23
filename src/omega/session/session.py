@@ -13,6 +13,7 @@ from omega.core.exceptions import InvalidSessionTransitionError, ModelValidation
 from omega.execution.dispatcher import ApplicationActionDispatcher
 from omega.execution.file_dispatcher import FileActionDispatcher
 from omega.execution.folder_dispatcher import FolderActionDispatcher
+from omega.execution.history_dispatcher import HistoryActionDispatcher
 from omega.models import UserCommand
 from omega.safety import SafeExecutionGateway
 from omega.session.greeting import greeting_for
@@ -47,6 +48,7 @@ class OmegaSession:
         application_dispatcher: ApplicationActionDispatcher | None = None,
         file_dispatcher: FileActionDispatcher | None = None,
         folder_dispatcher: FolderActionDispatcher | None = None,
+        history_dispatcher: HistoryActionDispatcher | None = None,
         safety_gateway: SafeExecutionGateway | None = None,
     ) -> None:
         self.display_name = self._required_text(user_settings, "display_name")
@@ -64,6 +66,7 @@ class OmegaSession:
         self._application_dispatcher = application_dispatcher
         self._file_dispatcher = file_dispatcher
         self._folder_dispatcher = folder_dispatcher
+        self._history_dispatcher = history_dispatcher
         self._safety_gateway = (
             safety_gateway
             or getattr(application_dispatcher, "gateway", None)
@@ -206,7 +209,9 @@ class OmegaSession:
         if self.state is SessionState.ACTIVE:
             if self.matches_phrase(text, self.activation_phrase):
                 return self.activate()
-            if self.matches_phrase(text, "show history"):
+            if self._history_dispatcher is None and self.matches_phrase(
+                text, "show history"
+            ):
                 return (
                     "\n".join(command.original_text for command in self._history)
                     or "No commands received yet."
@@ -222,6 +227,10 @@ class OmegaSession:
             result = self._parser.parse(text, self.session_id)
             self._history.append(result.command)
             self.last_activity_at = self._clock()
+            if self._history_dispatcher is not None:
+                history_result = self._history_dispatcher.dispatch(result)
+                if history_result is not None:
+                    return history_result
             if self._application_dispatcher is not None:
                 dispatched = self._application_dispatcher.dispatch(result)
                 if dispatched is not None:

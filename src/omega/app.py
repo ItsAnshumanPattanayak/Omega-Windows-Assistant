@@ -15,11 +15,25 @@ from omega.applications import (
     WindowsApplicationLauncher,
 )
 from omega.config.settings import Settings, load_settings
-from omega.core.exceptions import InitializationError, UnsupportedPlatformError
+from omega.core.exceptions import (
+    DatabaseError,
+    InitializationError,
+    UnsupportedPlatformError,
+)
+from omega.database import (
+    ActionRepository,
+    CommandRepository,
+    DatabaseConnectionFactory,
+    ExecutionPersistence,
+    MigrationRunner,
+    RuntimeSettingsRepository,
+    SqliteRecoveryRecordStore,
+)
 from omega.execution import (
     ApplicationActionDispatcher,
     FileActionDispatcher,
     FolderActionDispatcher,
+    HistoryActionDispatcher,
 )
 from omega.files import (
     FileLocationResolver,
@@ -43,6 +57,7 @@ from omega.folders import (
     FolderSearch,
     WindowsFolderOpener,
 )
+from omega.history import HistoryService
 from omega.interfaces.terminal import TerminalInterface
 from omega.recovery import (
     RecoveryConfiguration,
@@ -65,7 +80,12 @@ from omega.utils.paths import log_dir
 class OmegaApplication:
     """Initialize configuration, logging, and controlled application services."""
 
-    def __init__(self, config_path: Path | None = None) -> None:
+    def __init__(
+        self,
+        config_path: Path | None = None,
+        *,
+        database_path: Path | None = None,
+    ) -> None:
         self.settings: Settings = load_settings(config_path)
         logging_settings = self.settings.logging
         self.logger = configure_logging(
@@ -81,6 +101,20 @@ class OmegaApplication:
 
         protected_resources = ProtectedResourceEvaluator.from_file()
 
+        try:
+            database_factory = DatabaseConnectionFactory(
+                self.settings.database_configuration,
+                database_path=database_path,
+            )
+            MigrationRunner(database_factory).migrate()
+            command_repository = CommandRepository(database_factory)
+            action_repository = ActionRepository(database_factory)
+            runtime_settings_repository = RuntimeSettingsRepository(database_factory)
+        except DatabaseError as error:
+            raise InitializationError(
+                "Omega could not initialize required local persistence."
+            ) from error
+
         safety_gateway = SafeExecutionGateway(
             policy_engine=PermissionPolicyEngine(
                 configuration=PermissionConfiguration.from_file(),
@@ -95,12 +129,27 @@ class OmegaApplication:
                 ),
             ),
             logger=get_logger("safety.gateway"),
+            persistence=ExecutionPersistence(
+                command_repository,
+                action_repository,
+            ),
         )
 
         recovery_configuration = RecoveryConfiguration.from_mapping(
             self.settings.recovery
         )
-        recovery_registry = RecoveryRegistry(recovery_configuration)
+        recovery_store = (
+            SqliteRecoveryRecordStore(
+                database_factory,
+                recovery_configuration.maximum_undo_records,
+            )
+            if recovery_configuration.persist_undo_records
+            else None
+        )
+        recovery_registry = RecoveryRegistry(
+            recovery_configuration,
+            store=recovery_store,
+        )
         recycle_bin_service = WindowsRecycleBinService(
             recovery_configuration,
             protected_path_checker=lambda path: self._is_protected_path(
@@ -172,6 +221,24 @@ class OmegaApplication:
         self.recovery_configuration = recovery_configuration
         self.recovery_registry = recovery_registry
         self.recycle_bin_service = recycle_bin_service
+        self.database_factory = database_factory
+        self.command_repository = command_repository
+        self.action_repository = action_repository
+        self.runtime_settings_repository = runtime_settings_repository
+        self.history_service = HistoryService(
+            database_factory,
+            command_repository,
+            action_repository,
+            recovery_registry.store,
+            default_limit=int(self.settings.history["default_limit"]),
+            maximum_limit=int(self.settings.history["maximum_limit"]),
+            maximum_export_bytes=int(self.settings.history["maximum_export_bytes"]),
+            export_root=(
+                database_path.parent / "history_exports"
+                if database_path is not None
+                else None
+            ),
+        )
 
         self.session = OmegaSession(
             self.settings.user,
@@ -189,6 +256,10 @@ class OmegaApplication:
             folder_dispatcher=FolderActionDispatcher(
                 folder_manager,
                 gateway=safety_gateway,
+            ),
+            history_dispatcher=HistoryActionDispatcher(
+                self.history_service,
+                safety_gateway,
             ),
             safety_gateway=safety_gateway,
         )

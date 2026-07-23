@@ -14,6 +14,7 @@ from omega.execution.folder_dispatcher import (
     FolderActionDispatcher,
     FolderDispatchResult,
 )
+from omega.execution.history_dispatcher import HistoryActionDispatcher
 
 __all__ = [
     "ApplicationActionDispatcher",
@@ -24,4 +25,5 @@ __all__ = [
     "FileDispatchResult",
     "FolderActionDispatcher",
     "FolderDispatchResult",
+    "HistoryActionDispatcher",
 ]

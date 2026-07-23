@@ -175,6 +175,30 @@ Before an approved or confirmed action reaches a manager, the gateway reevaluate
 
 `SafetyAuditRecord` captures only stable IDs, intent, risk, decision, policy IDs, confirmation state, time, and a redacted logical target. It excludes file contents, replacement text, confirmation secrets, private paths, environment values, process command lines, and stack traces. Phase 7 keeps this audit in memory; durable history remains Phase 9.
 
+## Phase 10 persistence composition
+
+Repository reconciliation verified Phases 0–9 in source and tests. Phase 9C was already committed and migrations 1–3 remain contiguous and unchanged: foundation, command persistence, then action/result persistence. Migration 4 adds `recovery_records`; migration 5 adds `runtime_settings`.
+
+```text
+Explicit OmegaApplication initialization
+  -> validated YAML and immutable safety settings
+  -> one DatabaseConnectionFactory
+  -> MigrationRunner (versions 1–5)
+  -> CommandRepository / ActionRepository
+  -> SQLite recovery store / runtime settings repository
+  -> HistoryService
+  -> ExecutionPersistence injected into SafeExecutionGateway
+  -> session and domain dispatchers
+```
+
+Imports and configuration construction create no database. Only explicit application initialization connects and migrates. Failure to initialize required persistence raises `InitializationError`; Omega does not silently continue without its audit boundary.
+
+For every operational proposal, the gateway persists the command and action before execution. It stores the running state immediately before calling a domain executor and stores the final action/result afterward. Pre-execution persistence failure blocks execution. Post-execution persistence failure is reported without retrying the operating-system action.
+
+`HistoryService` composes the existing repositories rather than duplicating their serialization. Reads and combined activity use bounded deterministic limits. Cleanup is one database transaction, preserves active undo records by default, leaves settings and migration records intact, and relies only on foreign-key cascades inside history tables. It never touches user files, folders, the Recycle Bin, or the database file.
+
+History export serializes a versioned, timestamped, redacted UTF-8 JSON document. It is size bounded, uses a single safe `.json` filename beneath Omega's runtime export directory, and refuses overwrite. Runtime settings accept JSON-compatible values only and reject all safety, database-integrity, and destructive-policy names.
+
 ## Planned layers
 
 The following components are planned, not implemented:

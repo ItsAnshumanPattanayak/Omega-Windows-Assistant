@@ -13,7 +13,7 @@ from omega.recovery.models import (
     RecoveryRecord,
     RecoveryRecordStatus,
 )
-from omega.recovery.store import InMemoryRecoveryRecordStore
+from omega.recovery.store import InMemoryRecoveryRecordStore, RecoveryRecordStore
 
 
 class RecoveryRegistry:
@@ -22,22 +22,21 @@ class RecoveryRegistry:
     def __init__(
         self,
         configuration: RecoveryConfiguration,
-        store: InMemoryRecoveryRecordStore | None = None,
+        store: RecoveryRecordStore | None = None,
     ) -> None:
         if not isinstance(configuration, RecoveryConfiguration):
             raise TypeError("configuration must be a RecoveryConfiguration.")
 
         self._configuration = configuration
 
+        selected_store: RecoveryRecordStore
         if store is None:
-            self._store = InMemoryRecoveryRecordStore(
+            selected_store = InMemoryRecoveryRecordStore(
                 maximum_records=configuration.maximum_undo_records
             )
         else:
-            if not isinstance(store, InMemoryRecoveryRecordStore):
-                raise TypeError("store must be an InMemoryRecoveryRecordStore or None.")
-
-            self._store = store
+            selected_store = store
+        self._store = selected_store
 
         if self._store.maximum_records != configuration.maximum_undo_records:
             raise RecoveryRecordError(
@@ -45,8 +44,8 @@ class RecoveryRegistry:
             )
 
     @property
-    def store(self) -> InMemoryRecoveryRecordStore:
-        """Return the process-local record store."""
+    def store(self) -> RecoveryRecordStore:
+        """Return the configured record store."""
 
         return self._store
 

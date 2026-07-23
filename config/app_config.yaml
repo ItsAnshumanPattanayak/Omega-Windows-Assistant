@@ -82,4 +82,12 @@ recovery:
   undo_timeout_seconds: 300
   maximum_undo_records: 20
   maximum_recycle_size_bytes: 5368709120
-  persist_undo_records: false
+  persist_undo_records: true
+
+history:
+  enabled: true
+  persistence_enabled: true
+  default_limit: 20
+  maximum_limit: 100
+  maximum_export_bytes: 1048576
+  preserve_active_undo_records: true

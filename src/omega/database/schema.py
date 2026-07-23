@@ -10,11 +10,15 @@ from omega.core.exceptions import DatabaseSchemaError
 BASELINE_SCHEMA_VERSION = 1
 COMMAND_SCHEMA_VERSION = 2
 ACTION_SCHEMA_VERSION = 3
-LATEST_SCHEMA_VERSION = ACTION_SCHEMA_VERSION
+RECOVERY_SCHEMA_VERSION = 4
+SETTINGS_SCHEMA_VERSION = 5
+LATEST_SCHEMA_VERSION = SETTINGS_SCHEMA_VERSION
 
 BASELINE_MIGRATION_NAME = "phase_9a_database_foundation"
 COMMAND_MIGRATION_NAME = "phase_9b_command_repository"
 ACTION_MIGRATION_NAME = "phase_9c_action_repository"
+RECOVERY_MIGRATION_NAME = "phase_10_recovery_repository"
+SETTINGS_MIGRATION_NAME = "phase_10_runtime_settings"
 
 CREATE_MIGRATIONS_TABLE = """
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -131,6 +135,58 @@ CREATE INDEX IF NOT EXISTS idx_actions_intent
 ON actions(intent)
 """
 
+CREATE_RECOVERY_RECORDS_TABLE = """
+CREATE TABLE IF NOT EXISTS recovery_records (
+    record_id TEXT PRIMARY KEY,
+    action_type TEXT NOT NULL,
+    resource_type TEXT NOT NULL,
+    command_id TEXT NOT NULL,
+    action_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    logical_location TEXT NOT NULL,
+    relative_path TEXT NOT NULL,
+    original_path_fingerprint TEXT NOT NULL,
+    recycle_bin_reference TEXT,
+    size_bytes INTEGER,
+    recycled_at TEXT NOT NULL,
+    item_metadata_json TEXT NOT NULL,
+    status TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    expires_at TEXT,
+    restored_at TEXT,
+    failure_code TEXT,
+    metadata_json TEXT NOT NULL,
+    FOREIGN KEY (command_id) REFERENCES commands(command_id) ON DELETE CASCADE,
+    FOREIGN KEY (action_id) REFERENCES actions(action_id) ON DELETE CASCADE,
+    CHECK (size_bytes IS NULL OR size_bytes >= 0)
+)
+"""
+
+CREATE_RECOVERY_STATUS_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_recovery_status_expires
+ON recovery_records(status, expires_at)
+"""
+
+CREATE_RECOVERY_CREATED_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_recovery_created_at
+ON recovery_records(created_at DESC, record_id DESC)
+"""
+
+CREATE_RUNTIME_SETTINGS_TABLE = """
+CREATE TABLE IF NOT EXISTS runtime_settings (
+    name TEXT PRIMARY KEY,
+    value_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+)
+"""
+
+CREATE_RUNTIME_SETTINGS_UPDATED_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_runtime_settings_updated_at
+ON runtime_settings(updated_at DESC)
+"""
+
 
 def utc_timestamp() -> str:
     """Return an ISO-8601 UTC timestamp."""
@@ -218,6 +274,31 @@ def apply_action_schema(
         ) from error
 
 
+def apply_recovery_schema(connection: sqlite3.Connection) -> None:
+    """Create persistent recovery-record storage."""
+
+    try:
+        connection.execute(CREATE_RECOVERY_RECORDS_TABLE)
+        connection.execute(CREATE_RECOVERY_STATUS_INDEX)
+        connection.execute(CREATE_RECOVERY_CREATED_INDEX)
+    except sqlite3.Error as error:
+        raise DatabaseSchemaError(
+            "Omega could not create the recovery-history schema."
+        ) from error
+
+
+def apply_settings_schema(connection: sqlite3.Connection) -> None:
+    """Create mutable runtime-settings storage."""
+
+    try:
+        connection.execute(CREATE_RUNTIME_SETTINGS_TABLE)
+        connection.execute(CREATE_RUNTIME_SETTINGS_UPDATED_INDEX)
+    except sqlite3.Error as error:
+        raise DatabaseSchemaError(
+            "Omega could not create the runtime-settings schema."
+        ) from error
+
+
 def _record_migration(
     connection: sqlite3.Connection,
     *,
@@ -268,6 +349,20 @@ def initialize_schema(
             connection,
             version=ACTION_SCHEMA_VERSION,
             name=ACTION_MIGRATION_NAME,
+        )
+
+        apply_recovery_schema(connection)
+        _record_migration(
+            connection,
+            version=RECOVERY_SCHEMA_VERSION,
+            name=RECOVERY_MIGRATION_NAME,
+        )
+
+        apply_settings_schema(connection)
+        _record_migration(
+            connection,
+            version=SETTINGS_SCHEMA_VERSION,
+            name=SETTINGS_MIGRATION_NAME,
         )
 
         connection.commit()

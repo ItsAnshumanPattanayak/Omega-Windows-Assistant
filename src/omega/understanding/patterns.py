@@ -20,7 +20,14 @@ def _rule(name: str, intent: IntentType, expression: str) -> IntentPattern:
 
 
 INTENT_PATTERNS = (
-    _rule("show_history", IntentType.SHOW_HISTORY, r"^show history$"),
+    _rule(
+        "show_history",
+        IntentType.SHOW_HISTORY,
+        r"^show (?:history|recent commands|recent actions|failed actions|"
+        r"actions for the last command)$",
+    ),
+    _rule("clear_history", IntentType.CLEAR_HISTORY, r"^clear history$"),
+    _rule("export_history", IntentType.EXPORT_HISTORY, r"^export history$"),
     _rule("undo", IntentType.UNDO_LAST_ACTION, r"^undo(?: last action)?$"),
     _rule("help", IntentType.HELP, r"^(?:show )?help$"),
     _rule("shutdown", IntentType.SHUTDOWN_ASSISTANT, r"^shut down omega$"),
