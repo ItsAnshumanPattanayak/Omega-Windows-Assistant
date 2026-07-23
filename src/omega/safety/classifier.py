@@ -46,6 +46,16 @@ _LOW = frozenset(
         IntentType.GET_BRIGHTNESS,
         IntentType.OPEN_WINDOWS_SETTINGS,
         IntentType.CANCEL_POWER_ACTION,
+        IntentType.CREATE_REMINDER,
+        IntentType.CREATE_ALARM,
+        IntentType.START_TIMER,
+        IntentType.LIST_REMINDERS,
+        IntentType.LIST_ALARMS,
+        IntentType.LIST_TIMERS,
+        IntentType.LIST_SCHEDULED_ITEMS,
+        IntentType.SHOW_REMINDER,
+        IntentType.SHOW_ALARM,
+        IntentType.SHOW_TIMER,
     }
 )
 _MEDIUM = frozenset(
@@ -73,6 +83,19 @@ _MEDIUM = frozenset(
         IntentType.SET_BRIGHTNESS,
         IntentType.INCREASE_BRIGHTNESS,
         IntentType.DECREASE_BRIGHTNESS,
+        IntentType.CREATE_RECURRING_REMINDER,
+        IntentType.CREATE_RECURRING_ALARM,
+        IntentType.PAUSE_TIMER,
+        IntentType.RESUME_TIMER,
+        IntentType.CANCEL_TIMER,
+        IntentType.SNOOZE_REMINDER,
+        IntentType.SNOOZE_ALARM,
+        IntentType.UPDATE_REMINDER,
+        IntentType.CANCEL_REMINDER,
+        IntentType.COMPLETE_REMINDER,
+        IntentType.UPDATE_ALARM,
+        IntentType.CANCEL_ALARM,
+        IntentType.DISMISS_ALARM,
     }
 )
 _HIGH = frozenset(

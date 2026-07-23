@@ -1,6 +1,7 @@
 # Omega
 
-Omega is a safety-first Windows desktop assistant project. **Current phase: Phase 14 — Safe Windows System Controls and Device Information.**
+Omega is a safety-first Windows desktop assistant project. **Current phase:
+Phase 15 — Reminders, Timers, Alarms, and Scheduled Tasks (completed).**
 
 ## Current status
 
@@ -17,6 +18,21 @@ After activation, commands such as `Show system information`, `What is my CPU us
 Audio and brightness adapters fail safely when compatible local hardware support is unavailable. Brightness never falls below the configured safe minimum. Settings launching accepts only fixed `ms-settings:` entries.
 
 `Lock the computer`, `Put the computer to sleep`, `Sign out`, `Restart the computer`, and `Shut down the computer` require exact, expiring, session-scoped confirmation. `Shut down Omega` only ends the assistant session and never powers off Windows. Generic “yes” is not accepted. Automated tests use fakes and never execute real power actions. See [system.md](docs/system.md).
+
+## Local scheduling
+
+Omega stores local reminders, alarms, and countdown timers in SQLite. Schedules
+survive restarts, exact due occurrences are claimed and finalized atomically,
+stale claims fail safely without replay, and timers support pause, resume,
+cancellation, and one completion notification. Reminders and alarms support
+rescheduling, snooze, cancellation, completion/dismissal, and bounded daily,
+weekly, monthly, weekday, and interval recurrence. Times are stored in UTC and
+interpreted/displayed using the configured local timezone.
+
+Scheduled Omega command execution is disabled: reminder text remains inert data
+and cannot become code, deletion, browser input, or a delayed power action.
+Omega is not an always-on service, so notification delivery requires Omega to
+be running. See [scheduling.md](docs/scheduling.md).
 
 ## Optional safe browser automation
 
@@ -111,6 +127,8 @@ All commands—including toolbar operations—go through the existing `OmegaSess
 - Python 3.11+
 - PyYAML for safe YAML configuration
 - psutil for controlled process inspection and termination
+- tzdata for deterministic IANA timezone and DST handling on Windows
+- tzlocal for resolving the Windows system timezone without hardcoding it
 - optional Vosk, sounddevice, and comtypes for offline Windows voice interaction
 - optional Playwright for isolated, controlled browser sessions
 - pytest, Ruff, Black, and mypy for quality checks

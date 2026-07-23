@@ -42,6 +42,7 @@ from omega.execution import (
     FileActionDispatcher,
     FolderActionDispatcher,
     HistoryActionDispatcher,
+    SchedulingActionDispatcher,
     SystemActionDispatcher,
 )
 from omega.files import (
@@ -79,6 +80,12 @@ from omega.safety import (
     PermissionPolicyEngine,
     ProtectedResourceEvaluator,
     SafeExecutionGateway,
+)
+from omega.scheduling import (
+    NotificationCenter,
+    SchedulerEngine,
+    ScheduleRepository,
+    SchedulingService,
 )
 from omega.session.session import OmegaSession
 from omega.system import (
@@ -278,6 +285,19 @@ class OmegaApplication:
             WindowsSettingsPageLauncher(),
             WindowsPowerController(),
         )
+        scheduling_repository = ScheduleRepository(database_factory)
+        scheduling_service = SchedulingService(
+            self.settings.scheduling_configuration, scheduling_repository
+        )
+        self.notifications = NotificationCenter(
+            get_logger("scheduling"),
+            speech_enabled=self.settings.scheduling_configuration.speak_notifications,
+        )
+        self.scheduler = SchedulerEngine(
+            self.settings.scheduling_configuration,
+            scheduling_repository,
+            self.notifications,
+        )
 
         self.session = OmegaSession(
             self.settings.user,
@@ -309,10 +329,12 @@ class OmegaApplication:
                 system_manager,
                 safety_gateway,
             ),
+            scheduling_dispatcher=SchedulingActionDispatcher(
+                scheduling_service, safety_gateway
+            ),
             safety_gateway=safety_gateway,
         )
         self.voice_configuration = self.settings.voice_configuration
-
         self.logger.info(
             "%s %s initialized in %s mode.",
             self.settings.application_name,
@@ -351,9 +373,11 @@ class OmegaApplication:
         """Run the terminal session and return its process exit code."""
 
         try:
+            self._start_background_services()
             self.logger.info("Omega project foundation initialized successfully.")
             return TerminalInterface(
                 self.session,
+                notifications=self.notifications,
                 input_func=input_func,
                 output_func=output_func,
             ).run()
@@ -363,6 +387,7 @@ class OmegaApplication:
             ) from error
         finally:
             self.browser_manager.shutdown()
+            self.scheduler.stop()
 
     def run_gui(self) -> int:
         """Run the optional desktop presentation over this composition root."""
@@ -370,12 +395,22 @@ class OmegaApplication:
         from omega.gui.application import OmegaGuiApplication
 
         self.logger.info("Starting Omega's optional desktop interface.")
-        return OmegaGuiApplication(self).run()
+        self._start_background_services()
+        try:
+            return OmegaGuiApplication(self).run()
+        finally:
+            self.shutdown()
+
+    def _start_background_services(self) -> None:
+        """Start explicitly owned workers only when an application mode runs."""
+
+        self.scheduler.start()
 
     def shutdown(self) -> None:
         """Release only resources explicitly owned by this Omega instance."""
 
         self.browser_manager.shutdown()
+        self.scheduler.stop()
 
     def create_voice_service(
         self,
@@ -419,7 +454,7 @@ class OmegaApplication:
             if configuration.speak_responses
             else None
         )
-        return VoiceService(
+        service = VoiceService(
             configuration,
             self.session,
             self.safety_gateway,
@@ -429,6 +464,8 @@ class OmegaApplication:
             event_sink=event_sink,
             logger=get_logger("voice"),
         )
+        self.notifications.set_speaker(service.speaker)
+        return service
 
     def run_voice(
         self,
@@ -440,12 +477,14 @@ class OmegaApplication:
         from omega.voice.terminal import VoiceTerminalInterface
 
         try:
+            self._start_background_services()
             return VoiceTerminalInterface(
                 lambda sink: self.create_voice_service(event_sink=sink),
                 output_func=output_func,
             ).run()
         finally:
             self.browser_manager.shutdown()
+            self.scheduler.stop()
 
     def list_audio_devices(self) -> tuple[AudioDevice, ...]:
         """Enumerate bounded safe microphone metadata on explicit request."""

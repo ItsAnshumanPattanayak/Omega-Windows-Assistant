@@ -694,6 +694,42 @@ class PowerActionPolicy(_IntentPolicy):
     )
 
 
+class SchedulingPolicy(_IntentPolicy):
+    policy_id, priority = "SAFETY-SCHEDULING-001", 80
+    intents = frozenset(
+        {
+            IntentType.CREATE_REMINDER,
+            IntentType.CREATE_RECURRING_REMINDER,
+            IntentType.LIST_REMINDERS,
+            IntentType.SHOW_REMINDER,
+            IntentType.UPDATE_REMINDER,
+            IntentType.CANCEL_REMINDER,
+            IntentType.COMPLETE_REMINDER,
+            IntentType.SNOOZE_REMINDER,
+            IntentType.CREATE_ALARM,
+            IntentType.CREATE_RECURRING_ALARM,
+            IntentType.LIST_ALARMS,
+            IntentType.SHOW_ALARM,
+            IntentType.UPDATE_ALARM,
+            IntentType.CANCEL_ALARM,
+            IntentType.DISMISS_ALARM,
+            IntentType.SNOOZE_ALARM,
+            IntentType.START_TIMER,
+            IntentType.PAUSE_TIMER,
+            IntentType.RESUME_TIMER,
+            IntentType.CANCEL_TIMER,
+            IntentType.SHOW_TIMER,
+            IntentType.LIST_TIMERS,
+            IntentType.LIST_SCHEDULED_ITEMS,
+        }
+    )
+    disposition, reason_code, message = (
+        PolicyDisposition.ALLOW,
+        "LOCAL_SCHEDULING_ALLOWED",
+        "Validated local scheduling is allowed.",
+    )
+
+
 DEFAULT_POLICIES = cast(
     tuple[SafetyPolicy, ...],
     (
@@ -730,6 +766,7 @@ DEFAULT_POLICIES = cast(
         BrowserNavigationPolicy(),
         SystemReadPolicy(),
         SystemControlPolicy(),
+        SchedulingPolicy(),
     ),
 )
 

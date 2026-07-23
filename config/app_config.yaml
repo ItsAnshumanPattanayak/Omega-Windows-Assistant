@@ -164,3 +164,24 @@ system:
   power_confirmation_timeout_seconds: 30
   power_countdown_seconds: 10
   allow_cancel_power_countdown: true
+
+scheduling:
+  enabled: true
+  timezone: system
+  scheduler_poll_interval_seconds: 1
+  claim_timeout_seconds: 300
+  maximum_delivery_batch: 50
+  maximum_active_items: 500
+  maximum_title_characters: 120
+  maximum_message_characters: 1000
+  maximum_timer_duration_seconds: 604800
+  maximum_alarm_horizon_days: 3650
+  maximum_recurring_occurrences: 1000
+  maximum_snooze_minutes: 1440
+  default_snooze_minutes: 10
+  deliver_overdue_items: true
+  maximum_overdue_age_seconds: 86400
+  speak_notifications: false
+  restore_pending_items_on_startup: true
+  allow_scheduled_commands: false
+  allow_recurring_scheduled_commands: false

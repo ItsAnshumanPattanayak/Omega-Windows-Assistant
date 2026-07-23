@@ -35,7 +35,7 @@ def test_schema_initialization_creates_all_version_records(
         ).fetchall()
 
         assert version == LATEST_SCHEMA_VERSION
-        assert [int(row["version"]) for row in rows] == [1, 2, 3, 4, 5]
+        assert [int(row["version"]) for row in rows] == [1, 2, 3, 4, 5, 6]
 
         assert [str(row["name"]) for row in rows] == [
             "phase_9a_database_foundation",
@@ -43,6 +43,7 @@ def test_schema_initialization_creates_all_version_records(
             "phase_9c_action_repository",
             "phase_10_recovery_repository",
             "phase_10_runtime_settings",
+            "phase_15_scheduling",
         ]
 
         assert all(row["applied_at"] for row in rows)
@@ -173,10 +174,38 @@ def test_schema_initialization_is_idempotent(
             """
         ).fetchone()
 
-        assert first == 5
-        assert second == 5
+        assert first == 6
+        assert second == 6
         assert count is not None
-        assert int(count[0]) == 5
+        assert int(count[0]) == 6
+    finally:
+        connection.close()
+
+
+def test_scheduling_schema_has_due_claim_indexes_and_foreign_key(
+    tmp_path: Path,
+) -> None:
+    connection = _factory(tmp_path).connect()
+    try:
+        initialize_schema(connection)
+        indexes = {
+            str(row[0])
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE type='index' AND name LIKE 'idx_%schedule%' "
+                "OR type='index' AND name LIKE 'idx_deliveries_%'"
+            )
+        }
+        assert {
+            "idx_schedules_status_due",
+            "idx_schedules_type",
+            "idx_deliveries_schedule",
+            "idx_deliveries_claim_status",
+        }.issubset(indexes)
+        foreign_keys = connection.execute(
+            "PRAGMA foreign_key_list(schedule_deliveries)"
+        ).fetchall()
+        assert {str(row["table"]) for row in foreign_keys} == {"scheduled_items"}
     finally:
         connection.close()
 

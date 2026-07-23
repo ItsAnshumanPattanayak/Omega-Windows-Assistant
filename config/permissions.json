@@ -239,6 +239,29 @@
     "cancel_power_action": {
       "enabled": true,
       "maximum_risk": "low"
-    }
+    },
+    "create_reminder": {"enabled": true, "maximum_risk": "low"},
+    "create_recurring_reminder": {"enabled": true, "maximum_risk": "medium"},
+    "list_reminders": {"enabled": true, "maximum_risk": "low"},
+    "show_reminder": {"enabled": true, "maximum_risk": "low"},
+    "update_reminder": {"enabled": true, "maximum_risk": "medium"},
+    "cancel_reminder": {"enabled": true, "maximum_risk": "medium"},
+    "complete_reminder": {"enabled": true, "maximum_risk": "medium"},
+    "snooze_reminder": {"enabled": true, "maximum_risk": "medium"},
+    "create_alarm": {"enabled": true, "maximum_risk": "low"},
+    "create_recurring_alarm": {"enabled": true, "maximum_risk": "medium"},
+    "list_alarms": {"enabled": true, "maximum_risk": "low"},
+    "show_alarm": {"enabled": true, "maximum_risk": "low"},
+    "update_alarm": {"enabled": true, "maximum_risk": "medium"},
+    "cancel_alarm": {"enabled": true, "maximum_risk": "medium"},
+    "dismiss_alarm": {"enabled": true, "maximum_risk": "medium"},
+    "snooze_alarm": {"enabled": true, "maximum_risk": "medium"},
+    "start_timer": {"enabled": true, "maximum_risk": "low"},
+    "pause_timer": {"enabled": true, "maximum_risk": "medium"},
+    "resume_timer": {"enabled": true, "maximum_risk": "medium"},
+    "cancel_timer": {"enabled": true, "maximum_risk": "medium"},
+    "show_timer": {"enabled": true, "maximum_risk": "low"},
+    "list_timers": {"enabled": true, "maximum_risk": "low"},
+    "list_scheduled_items": {"enabled": true, "maximum_risk": "low"}
   }
 }

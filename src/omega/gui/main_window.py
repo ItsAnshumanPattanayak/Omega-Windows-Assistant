@@ -114,6 +114,9 @@ class OmegaMainWindow(GuiView):
             ("Back", self._browser_back),
             ("Forward", self._browser_forward),
             ("Refresh page", self._browser_refresh),
+            ("List reminders", self._list_reminders),
+            ("List alarms", self._list_alarms),
+            ("List timers", self._list_timers),
         )
         self.operation_buttons: list[ttk.Button] = []
         for toolbar_index, (label, command) in enumerate(actions):
@@ -409,6 +412,22 @@ class OmegaMainWindow(GuiView):
 
     def _poll_tasks(self) -> None:
         self._runner.drain_callbacks()
+        for item in self.application.notifications.drain():
+            self.notify(
+                Notification(
+                    item.title,
+                    item.message,
+                    MessageKind.SYSTEM,
+                )
+            )
+            self.add_message(
+                ConversationMessage(
+                    "Omega",
+                    f"{item.schedule_type.value.title()}: {item.message}",
+                    MessageKind.SYSTEM,
+                    item.occurred_at,
+                )
+            )
         if not self._closing:
             self.root.after(25, self._poll_tasks)
 
@@ -432,3 +451,12 @@ class OmegaMainWindow(GuiView):
 
     def _browser_refresh(self) -> None:
         self.controller.submit_command("refresh page")
+
+    def _list_reminders(self) -> None:
+        self.controller.submit_command("list reminders")
+
+    def _list_alarms(self) -> None:
+        self.controller.submit_command("list alarms")
+
+    def _list_timers(self) -> None:
+        self.controller.submit_command("list timers")

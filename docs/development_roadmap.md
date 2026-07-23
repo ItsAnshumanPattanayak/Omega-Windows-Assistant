@@ -20,6 +20,8 @@ The approved roadmap is intentionally incremental. Each phase should be designed
 
 15. **Phase 14 — Safe Windows System Controls and Device Information — Completed:** bounded system/process information, allowlisted Settings pages, optional audio and brightness adapters, exact-confirmed power actions, shared parser/voice/GUI/CLI routing, and gateway lifecycle persistence.
 
-16. **Phase 15 — Next:** to be defined after Phase 14 review.
+16. **Phase 15 — Reminders, Timers, Alarms, and Scheduled Tasks — Completed:** persistent SQLite schedules, atomic occurrence claims and finalization, bounded recurrence, stale-claim/restart recovery, timer lifecycle controls, local GUI/terminal/optional speech notifications, shared text/GUI/voice routing, and explicit scheduler startup/shutdown.
+
+17. **Phase 16 — Next:** Notes, to-do lists, and personal productivity.
 
 Later phases may cover local AI-assisted intent suggestions, additional Windows integrations, accessibility, packaging, installer support, and release hardening.

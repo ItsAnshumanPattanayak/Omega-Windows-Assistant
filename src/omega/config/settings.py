@@ -12,6 +12,7 @@ import yaml
 from omega.browser.configuration import BrowserConfiguration
 from omega.core.exceptions import ConfigurationError
 from omega.database.configuration import DatabaseConfiguration
+from omega.scheduling.configuration import SchedulingConfiguration
 from omega.system.configuration import SystemConfiguration
 from omega.utils.constants import (
     APP_CONFIG_FILENAME,
@@ -71,6 +72,7 @@ class Settings:
     voice: Mapping[str, Any]
     browser: Mapping[str, Any]
     system: Mapping[str, Any]
+    scheduling: Mapping[str, Any]
 
     @property
     def application_name(self) -> str:
@@ -122,6 +124,10 @@ class Settings:
         """Return strict system policy without querying the host."""
 
         return SystemConfiguration.from_mapping(self.system)
+
+    @property
+    def scheduling_configuration(self) -> SchedulingConfiguration:
+        return SchedulingConfiguration.from_mapping(self.scheduling)
 
 
 def _defaults() -> dict[str, dict[str, Any]]:
@@ -264,6 +270,7 @@ def _defaults() -> dict[str, dict[str, Any]]:
             "default_search_engine": "duckduckgo",
         },
         "system": {},
+        "scheduling": {},
     }
 
 
@@ -484,7 +491,7 @@ def _merge_defaults(
     for section, values in _defaults().items():
         supplied = (
             raw.get(section, {})
-            if section in {"voice", "browser", "system"}
+            if section in {"voice", "browser", "system", "scheduling"}
             else raw[section]
         )
 
@@ -552,5 +559,6 @@ def load_settings(
     )
     BrowserConfiguration.from_mapping(values["browser"])
     SystemConfiguration.from_mapping(values["system"])
+    SchedulingConfiguration.from_mapping(values["scheduling"])
 
     return Settings(**values)

@@ -16,6 +16,7 @@ from omega.execution.dispatcher import ApplicationActionDispatcher
 from omega.execution.file_dispatcher import FileActionDispatcher
 from omega.execution.folder_dispatcher import FolderActionDispatcher
 from omega.execution.history_dispatcher import HistoryActionDispatcher
+from omega.execution.scheduling_dispatcher import SchedulingActionDispatcher
 from omega.execution.system_dispatcher import SystemActionDispatcher
 from omega.models import CommandSource, UserCommand
 from omega.safety import SafeExecutionGateway
@@ -54,6 +55,7 @@ class OmegaSession:
         history_dispatcher: HistoryActionDispatcher | None = None,
         browser_dispatcher: BrowserActionDispatcher | None = None,
         system_dispatcher: SystemActionDispatcher | None = None,
+        scheduling_dispatcher: SchedulingActionDispatcher | None = None,
         safety_gateway: SafeExecutionGateway | None = None,
     ) -> None:
         self.display_name = self._required_text(user_settings, "display_name")
@@ -74,6 +76,7 @@ class OmegaSession:
         self._history_dispatcher = history_dispatcher
         self._browser_dispatcher = browser_dispatcher
         self._system_dispatcher = system_dispatcher
+        self._scheduling_dispatcher = scheduling_dispatcher
         self._safety_gateway = (
             safety_gateway
             or getattr(application_dispatcher, "gateway", None)
@@ -272,6 +275,10 @@ class OmegaSession:
                 system_result = self._system_dispatcher.dispatch(result)
                 if system_result is not None:
                     return system_result.user_message
+            if self._scheduling_dispatcher is not None:
+                scheduling_result = self._scheduling_dispatcher.dispatch(result)
+                if scheduling_result is not None:
+                    return scheduling_result.user_message
             if self._application_dispatcher is not None:
                 dispatched = self._application_dispatcher.dispatch(result)
                 if dispatched is not None:

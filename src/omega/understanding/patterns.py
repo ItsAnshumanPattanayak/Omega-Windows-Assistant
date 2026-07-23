@@ -20,6 +20,91 @@ def _rule(name: str, intent: IntentType, expression: str) -> IntentPattern:
 
 
 INTENT_PATTERNS = (
+    _rule(
+        "update_reminder",
+        IntentType.UPDATE_REMINDER,
+        r"^(?:update|reschedule) (?:the )?(?:.+ )?reminder(?: .+)?$",
+    ),
+    _rule(
+        "show_reminder",
+        IntentType.SHOW_REMINDER,
+        r"^(?:show|view) (?:the )?(?:.+ )?reminder(?: .+)?$",
+    ),
+    _rule(
+        "cancel_reminder",
+        IntentType.CANCEL_REMINDER,
+        r"^cancel (?:the )?(?:.+ )?reminder(?: .+)?$",
+    ),
+    _rule(
+        "complete_reminder",
+        IntentType.COMPLETE_REMINDER,
+        r"^(?:complete|mark) (?:the )?(?:.+ )?reminder(?: complete)?$",
+    ),
+    _rule(
+        "update_alarm",
+        IntentType.UPDATE_ALARM,
+        r"^(?:update|reschedule) (?:the )?(?:.+ )?alarm(?: .+)?$",
+    ),
+    _rule(
+        "show_alarm",
+        IntentType.SHOW_ALARM,
+        r"^(?:show|view) (?:the )?(?:.+ )?alarm(?: .+)?$",
+    ),
+    _rule(
+        "cancel_alarm",
+        IntentType.CANCEL_ALARM,
+        r"^cancel (?:the )?(?:.+ )?alarm(?: .+)?$",
+    ),
+    _rule(
+        "dismiss_alarm",
+        IntentType.DISMISS_ALARM,
+        r"^dismiss (?:the )?(?:.+ )?alarm$",
+    ),
+    _rule(
+        "create_recurring_reminder",
+        IntentType.CREATE_RECURRING_REMINDER,
+        r"^remind me every .+$",
+    ),
+    _rule(
+        "create_reminder",
+        IntentType.CREATE_REMINDER,
+        r"^remind me (?:at|in|tomorrow|on) .+$",
+    ),
+    _rule(
+        "create_recurring_alarm",
+        IntentType.CREATE_RECURRING_ALARM,
+        r"^set (?:an )?alarm every .+$",
+    ),
+    _rule(
+        "create_alarm", IntentType.CREATE_ALARM, r"^set (?:an )?alarm (?:for|at) .+$"
+    ),
+    _rule(
+        "start_timer",
+        IntentType.START_TIMER,
+        r"^start (?:a |the )?(?:.+ )?timer for .+$",
+    ),
+    _rule("pause_timer", IntentType.PAUSE_TIMER, r"^pause (?:the )?.+ timer$"),
+    _rule("resume_timer", IntentType.RESUME_TIMER, r"^resume (?:the )?.+ timer$"),
+    _rule("cancel_timer", IntentType.CANCEL_TIMER, r"^cancel (?:the )?.+ timer$"),
+    _rule("show_timer", IntentType.SHOW_TIMER, r"^show (?:the )?.+ timer$"),
+    _rule("list_timers", IntentType.LIST_TIMERS, r"^list (?:active )?timers$"),
+    _rule("list_reminders", IntentType.LIST_REMINDERS, r"^list reminders$"),
+    _rule("list_alarms", IntentType.LIST_ALARMS, r"^list alarms$"),
+    _rule(
+        "list_schedules",
+        IntentType.LIST_SCHEDULED_ITEMS,
+        r"^list (?:scheduled items|schedules)$",
+    ),
+    _rule(
+        "snooze_reminder",
+        IntentType.SNOOZE_REMINDER,
+        r"^snooze (?:this |the )?(?:.+ )?reminder(?: for .+)?$",
+    ),
+    _rule(
+        "snooze_alarm",
+        IntentType.SNOOZE_ALARM,
+        r"^snooze (?:this |the )?(?:.+ )?alarm(?: for .+)?$",
+    ),
     _rule("open_browser", IntentType.OPEN_BROWSER, r"^open (?:the )?browser$"),
     _rule("close_browser", IntentType.CLOSE_BROWSER, r"^close (?:the )?browser$"),
     _rule(

@@ -12,13 +12,42 @@ COMMAND_SCHEMA_VERSION = 2
 ACTION_SCHEMA_VERSION = 3
 RECOVERY_SCHEMA_VERSION = 4
 SETTINGS_SCHEMA_VERSION = 5
-LATEST_SCHEMA_VERSION = SETTINGS_SCHEMA_VERSION
+SCHEDULING_SCHEMA_VERSION = 6
+LATEST_SCHEMA_VERSION = SCHEDULING_SCHEMA_VERSION
 
 BASELINE_MIGRATION_NAME = "phase_9a_database_foundation"
 COMMAND_MIGRATION_NAME = "phase_9b_command_repository"
 ACTION_MIGRATION_NAME = "phase_9c_action_repository"
 RECOVERY_MIGRATION_NAME = "phase_10_recovery_repository"
 SETTINGS_MIGRATION_NAME = "phase_10_runtime_settings"
+SCHEDULING_MIGRATION_NAME = "phase_15_scheduling"
+
+CREATE_SCHEDULED_ITEMS_TABLE = """
+CREATE TABLE IF NOT EXISTS scheduled_items (
+ schedule_id TEXT PRIMARY KEY, schedule_type TEXT NOT NULL, title TEXT NOT NULL,
+ message TEXT NOT NULL, status TEXT NOT NULL, due_at_utc TEXT NOT NULL,
+ timezone_name TEXT NOT NULL, recurrence_json TEXT, created_at TEXT NOT NULL,
+ updated_at TEXT NOT NULL, completed_at TEXT, cancelled_at TEXT,
+ snoozed_until_utc TEXT, remaining_seconds INTEGER, occurrence_count INTEGER NOT NULL,
+ revision INTEGER NOT NULL, metadata_json TEXT NOT NULL,
+ CHECK(schedule_type IN ('reminder','alarm','timer')),
+ CHECK(status IN ('pending','paused','snoozed','completed','cancelled','missed')),
+ CHECK(revision >= 1), CHECK(occurrence_count >= 0),
+ CHECK(remaining_seconds IS NULL OR remaining_seconds > 0)
+)
+"""
+CREATE_SCHEDULE_DELIVERIES_TABLE = """
+CREATE TABLE IF NOT EXISTS schedule_deliveries (
+ delivery_id TEXT PRIMARY KEY, schedule_id TEXT NOT NULL,
+ occurrence_at_utc TEXT NOT NULL, claimed_at TEXT NOT NULL,
+ delivered_at TEXT, delivery_status TEXT NOT NULL, attempt_count INTEGER NOT NULL,
+ error_code TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+ FOREIGN KEY(schedule_id) REFERENCES scheduled_items(schedule_id) ON DELETE CASCADE,
+ UNIQUE(schedule_id, occurrence_at_utc),
+ CHECK(delivery_status IN ('claimed','delivered','failed','missed')),
+ CHECK(attempt_count >= 1)
+)
+"""
 
 CREATE_MIGRATIONS_TABLE = """
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -299,6 +328,33 @@ def apply_settings_schema(connection: sqlite3.Connection) -> None:
         ) from error
 
 
+def apply_scheduling_schema(connection: sqlite3.Connection) -> None:
+    """Create persistent schedules and atomic delivery claims."""
+    try:
+        connection.execute(CREATE_SCHEDULED_ITEMS_TABLE)
+        connection.execute(CREATE_SCHEDULE_DELIVERIES_TABLE)
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_schedules_status_due "
+            "ON scheduled_items(status,due_at_utc)"
+        )
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_schedules_type "
+            "ON scheduled_items(schedule_type)"
+        )
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_deliveries_schedule "
+            "ON schedule_deliveries(schedule_id,occurrence_at_utc)"
+        )
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_deliveries_claim_status "
+            "ON schedule_deliveries(delivery_status,claimed_at)"
+        )
+    except sqlite3.Error as error:
+        raise DatabaseSchemaError(
+            "Omega could not create the scheduling schema."
+        ) from error
+
+
 def _record_migration(
     connection: sqlite3.Connection,
     *,
@@ -363,6 +419,12 @@ def initialize_schema(
             connection,
             version=SETTINGS_SCHEMA_VERSION,
             name=SETTINGS_MIGRATION_NAME,
+        )
+        apply_scheduling_schema(connection)
+        _record_migration(
+            connection,
+            version=SCHEDULING_SCHEMA_VERSION,
+            name=SCHEDULING_MIGRATION_NAME,
         )
 
         connection.commit()

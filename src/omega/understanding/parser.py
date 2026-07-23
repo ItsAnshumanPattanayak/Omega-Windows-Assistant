@@ -66,6 +66,14 @@ _SYSTEM_NO_PARAMETER = frozenset(
         IntentType.CANCEL_POWER_ACTION,
     }
 )
+_SCHEDULING_NO_PARAMETER = frozenset(
+    {
+        IntentType.LIST_REMINDERS,
+        IntentType.LIST_ALARMS,
+        IntentType.LIST_TIMERS,
+        IntentType.LIST_SCHEDULED_ITEMS,
+    }
+)
 
 
 class CommandParser:
@@ -190,6 +198,25 @@ class CommandParser:
         if (
             intent
             in {
+                IntentType.CREATE_REMINDER,
+                IntentType.CREATE_ALARM,
+                IntentType.CREATE_RECURRING_REMINDER,
+                IntentType.CREATE_RECURRING_ALARM,
+                IntentType.UPDATE_REMINDER,
+                IntentType.UPDATE_ALARM,
+            }
+            and len(
+                re.findall(
+                    r"\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b",
+                    normalized,
+                )
+            )
+            > 1
+        ):
+            return ["date_time"], "Use one unambiguous clock time."
+        if (
+            intent
+            in {
                 IntentType.OPEN_APPLICATION,
                 IntentType.CLOSE_APPLICATION,
                 IntentType.CHECK_APPLICATION_STATUS,
@@ -205,6 +232,28 @@ class CommandParser:
             return [], None
         if intent in _SYSTEM_NO_PARAMETER:
             return [], None
+        if intent in _SCHEDULING_NO_PARAMETER:
+            return [], None
+        if intent is IntentType.START_TIMER and "duration_seconds" not in names:
+            return ["duration"], "How long should the timer run?"
+        if intent in {
+            IntentType.CREATE_REMINDER,
+            IntentType.CREATE_ALARM,
+            IntentType.CREATE_RECURRING_REMINDER,
+            IntentType.CREATE_RECURRING_ALARM,
+            IntentType.UPDATE_REMINDER,
+            IntentType.UPDATE_ALARM,
+        } and {"duration_seconds", "clock_time"}.issubset(names):
+            return ["date_time"], "Use either a relative duration or a clock time."
+        if intent in {
+            IntentType.CREATE_REMINDER,
+            IntentType.CREATE_ALARM,
+            IntentType.CREATE_RECURRING_REMINDER,
+            IntentType.CREATE_RECURRING_ALARM,
+            IntentType.UPDATE_REMINDER,
+            IntentType.UPDATE_ALARM,
+        } and not names.intersection({"duration_seconds", "clock_time"}):
+            return ["date_time"], "When should I schedule it?"
         if (
             intent
             in {

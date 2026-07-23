@@ -83,6 +83,29 @@ class IntentType(StrEnum):
     RESTART_COMPUTER = "restart_computer"
     SHUT_DOWN_COMPUTER = "shut_down_computer"
     CANCEL_POWER_ACTION = "cancel_power_action"
+    CREATE_REMINDER = "create_reminder"
+    CREATE_RECURRING_REMINDER = "create_recurring_reminder"
+    LIST_REMINDERS = "list_reminders"
+    SHOW_REMINDER = "show_reminder"
+    UPDATE_REMINDER = "update_reminder"
+    CANCEL_REMINDER = "cancel_reminder"
+    COMPLETE_REMINDER = "complete_reminder"
+    SNOOZE_REMINDER = "snooze_reminder"
+    CREATE_ALARM = "create_alarm"
+    CREATE_RECURRING_ALARM = "create_recurring_alarm"
+    LIST_ALARMS = "list_alarms"
+    SHOW_ALARM = "show_alarm"
+    UPDATE_ALARM = "update_alarm"
+    CANCEL_ALARM = "cancel_alarm"
+    DISMISS_ALARM = "dismiss_alarm"
+    SNOOZE_ALARM = "snooze_alarm"
+    START_TIMER = "start_timer"
+    PAUSE_TIMER = "pause_timer"
+    RESUME_TIMER = "resume_timer"
+    CANCEL_TIMER = "cancel_timer"
+    SHOW_TIMER = "show_timer"
+    LIST_TIMERS = "list_timers"
+    LIST_SCHEDULED_ITEMS = "list_scheduled_items"
 
 
 class ActionStatus(StrEnum):
@@ -152,6 +175,8 @@ class EntityType(StrEnum):
     PROCESS = "process"
     SETTINGS_PAGE = "settings_page"
     POWER_ACTION = "power_action"
+    SCHEDULE = "schedule"
+    DATE_TIME = "date_time"
     UNKNOWN = "unknown"
 
 

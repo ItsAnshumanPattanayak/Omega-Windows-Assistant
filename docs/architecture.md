@@ -424,3 +424,35 @@ typed `PowerActionRequest`, uses fixed arguments with `shell=False`, never
 forces applications closed, and does not retry. “Shut down Omega” remains the
 assistant lifecycle intent; “Shut down the computer” is a separate critical
 action.
+
+## Phase 15 scheduler
+
+Scheduling input uses the existing parser and session.
+`SchedulingActionDispatcher` submits typed actions through
+`SafeExecutionGateway`; `SchedulingService` validates lifecycle changes and
+uses `ScheduleRepository`. Migration 6 stores schedules and unique delivery
+claims. `SchedulerEngine` starts only when an application mode runs, recovers
+abandoned claims as missed, claims a bounded batch, notifies at most once,
+advances recurring schedules directly to a future occurrence, and stops with
+the application.
+Models contain no threads, locks, connections, widgets, callbacks, or executable
+objects.
+
+The repository finalizes a delivery row and its exact schedule revision in one
+SQLite transaction. A unique `(schedule_id, occurrence_at_utc)` constraint
+prevents two workers or restarts from claiming the same occurrence. A crash
+after claiming cannot replay a notification: the stale claim is marked missed.
+Notification failure is terminal for that occurrence and never triggers an
+automatic retry.
+
+Local wall times are interpreted with the configured system/IANA zone and
+persisted as aware UTC timestamps. Ambiguous and nonexistent direct inputs are
+rejected. Calendar recurrences preserve local wall time and skip DST
+gaps/folds; interval recurrence represents elapsed time.
+
+The scheduler publishes inert `ScheduleNotification` records to a bounded
+thread-safe `NotificationCenter`. Terminal mode drains them around input, and
+the GUI drains them on Tk's main-thread polling loop. Voice command creation and
+mutations use the same session and parser. Optional spoken notifications use
+only an already initialized local speech adapter and do not affect delivery
+success.

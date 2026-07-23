@@ -63,6 +63,28 @@ class RuleBasedEntityExtractor:
     def extract(self, original: str, intent: IntentType) -> list[CommandEntity]:
         entities: list[CommandEntity] = []
         if intent in {
+            IntentType.CREATE_REMINDER,
+            IntentType.CREATE_RECURRING_REMINDER,
+            IntentType.CREATE_ALARM,
+            IntentType.CREATE_RECURRING_ALARM,
+            IntentType.START_TIMER,
+            IntentType.PAUSE_TIMER,
+            IntentType.RESUME_TIMER,
+            IntentType.CANCEL_TIMER,
+            IntentType.SHOW_TIMER,
+            IntentType.SNOOZE_REMINDER,
+            IntentType.SNOOZE_ALARM,
+            IntentType.SHOW_REMINDER,
+            IntentType.UPDATE_REMINDER,
+            IntentType.CANCEL_REMINDER,
+            IntentType.COMPLETE_REMINDER,
+            IntentType.SHOW_ALARM,
+            IntentType.UPDATE_ALARM,
+            IntentType.CANCEL_ALARM,
+            IntentType.DISMISS_ALARM,
+        }:
+            self._scheduling(original, intent, entities)
+        elif intent in {
             IntentType.SET_VOLUME,
             IntentType.INCREASE_VOLUME,
             IntentType.DECREASE_VOLUME,
@@ -117,6 +139,86 @@ class RuleBasedEntityExtractor:
         }:
             self._folder_command(original, intent, entities)
         return entities
+
+    @staticmethod
+    def _scheduling(
+        original: str, intent: IntentType, entities: list[CommandEntity]
+    ) -> None:
+        text = original.strip().rstrip("?!")
+        duration = re.search(
+            r"\b(\d+)\s*(seconds?|minutes?|hours?|days?)\b", text, re.IGNORECASE
+        )
+        if duration:
+            amount = int(duration.group(1))
+            unit = duration.group(2).casefold()
+            multiplier = (
+                1
+                if unit.startswith("second")
+                else (
+                    60
+                    if unit.startswith("minute")
+                    else 3600 if unit.startswith("hour") else 86400
+                )
+            )
+            entities.append(
+                CommandEntity(
+                    EntityType.DURATION,
+                    amount * multiplier,
+                    raw_value=duration.group(0),
+                    name="duration_seconds",
+                    confidence=1.0,
+                )
+            )
+        clock = re.search(r"\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b", text, re.IGNORECASE)
+        if clock:
+            entities.append(
+                _entity(
+                    EntityType.DATE_TIME,
+                    "clock_time",
+                    clock.group(0).casefold(),
+                    clock.group(0),
+                )
+            )
+        if intent in {IntentType.CREATE_REMINDER, IntentType.CREATE_RECURRING_REMINDER}:
+            message = re.sub(r"^remind me\s+", "", text, flags=re.IGNORECASE)
+            entities.append(
+                _entity(EntityType.TEXT_CONTENT, "message", message, message)
+            )
+        label = re.search(
+            r"^(?:pause|resume|cancel|show)\s+(?:the\s+)?(.+?)\s+timer$",
+            text,
+            re.IGNORECASE,
+        )
+        if label:
+            entities.append(
+                _entity(EntityType.SCHEDULE, "title", label.group(1), label.group(1))
+            )
+        schedule_reference = re.search(
+            r"^(?:show|view|cancel|complete|mark|dismiss|snooze|update|reschedule)"
+            r"\s+(?:the\s+)?(.+?)\s+(?:reminder|alarm)\b",
+            text,
+            re.IGNORECASE,
+        )
+        if schedule_reference:
+            raw = schedule_reference.group(1).strip()
+            if raw.casefold() not in {"this", "the"}:
+                entities.append(_entity(EntityType.SCHEDULE, "title", raw, raw))
+        trailing_reference = re.search(
+            r"^(?:show|view|cancel|complete|mark|dismiss|snooze|update|reschedule)"
+            r"\s+(?:the\s+)?(?:reminder|alarm)\s+"
+            r"(?!for\b|at\b|to\b|complete\b)(.+?)"
+            r"(?:\s+(?:for|at|to)\s+.+)?$",
+            text,
+            re.IGNORECASE,
+        )
+        if trailing_reference and not any(item.name == "title" for item in entities):
+            raw = re.sub(
+                r"^(?:called|named)\s+",
+                "",
+                trailing_reference.group(1).strip(),
+                flags=re.IGNORECASE,
+            )
+            entities.append(_entity(EntityType.SCHEDULE, "title", raw, raw))
 
     @staticmethod
     def _system(
