@@ -48,6 +48,14 @@ data/browser_sessions/
 data/browser_downloads/
 data/browser_screenshots/
 data/browser_storage/
+data/system_reports/
+data/process_snapshots/
+data/hardware_diagnostics/
+data/audio_debug/
+data/brightness_debug/
+*.dmp
+*.reg
+*.evtx
 playwright-report/
 test-results/
 blob-report/

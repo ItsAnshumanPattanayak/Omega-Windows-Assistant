@@ -185,6 +185,60 @@
       "enabled": true,
       "maximum_risk": "high",
       "requires_confirmation": true
+    },
+    "get_system_information": {"enabled": true, "maximum_risk": "low"},
+    "get_cpu_usage": {"enabled": true, "maximum_risk": "low"},
+    "get_memory_usage": {"enabled": true, "maximum_risk": "low"},
+    "get_disk_usage": {"enabled": true, "maximum_risk": "low"},
+    "get_battery_status": {"enabled": true, "maximum_risk": "low"},
+    "get_network_status": {"enabled": true, "maximum_risk": "low"},
+    "list_processes": {"enabled": true, "maximum_risk": "low"},
+    "search_process": {"enabled": true, "maximum_risk": "low"},
+    "get_process_information": {"enabled": true, "maximum_risk": "low"},
+    "get_volume": {"enabled": true, "maximum_risk": "low"},
+    "set_volume": {"enabled": true, "maximum_risk": "medium"},
+    "increase_volume": {"enabled": true, "maximum_risk": "medium"},
+    "decrease_volume": {"enabled": true, "maximum_risk": "medium"},
+    "mute_volume": {"enabled": true, "maximum_risk": "medium"},
+    "unmute_volume": {"enabled": true, "maximum_risk": "medium"},
+    "get_brightness": {"enabled": true, "maximum_risk": "low"},
+    "set_brightness": {"enabled": true, "maximum_risk": "medium"},
+    "increase_brightness": {"enabled": true, "maximum_risk": "medium"},
+    "decrease_brightness": {"enabled": true, "maximum_risk": "medium"},
+    "open_windows_settings": {"enabled": true, "maximum_risk": "low"},
+    "lock_computer": {
+      "enabled": true,
+      "maximum_risk": "high",
+      "requires_confirmation": true
+    },
+    "sleep_computer": {
+      "enabled": true,
+      "maximum_risk": "high",
+      "requires_confirmation": true
+    },
+    "hibernate_computer": {
+      "enabled": true,
+      "maximum_risk": "high",
+      "requires_confirmation": true
+    },
+    "sign_out_user": {
+      "enabled": true,
+      "maximum_risk": "critical",
+      "requires_confirmation": true
+    },
+    "restart_computer": {
+      "enabled": true,
+      "maximum_risk": "critical",
+      "requires_confirmation": true
+    },
+    "shut_down_computer": {
+      "enabled": true,
+      "maximum_risk": "critical",
+      "requires_confirmation": true
+    },
+    "cancel_power_action": {
+      "enabled": true,
+      "maximum_risk": "low"
     }
   }
 }

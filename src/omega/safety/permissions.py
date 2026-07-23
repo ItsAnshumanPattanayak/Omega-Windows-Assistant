@@ -111,6 +111,12 @@ class PermissionConfiguration:
             IntentType.CLEAR_HISTORY,
             IntentType.CLOSE_BROWSER,
             IntentType.SAVE_BOOKMARK,
+            IntentType.LOCK_COMPUTER,
+            IntentType.SLEEP_COMPUTER,
+            IntentType.HIBERNATE_COMPUTER,
+            IntentType.SIGN_OUT_USER,
+            IntentType.RESTART_COMPUTER,
+            IntentType.SHUT_DOWN_COMPUTER,
         }
 
         supported = {
@@ -118,7 +124,13 @@ class PermissionConfiguration:
                 enabled=True,
                 maximum_risk=(
                     RiskLevel.CRITICAL
-                    if intent in _RECOVERABLE_DELETION_INTENTS
+                    if intent
+                    in _RECOVERABLE_DELETION_INTENTS
+                    | {
+                        IntentType.SIGN_OUT_USER,
+                        IntentType.RESTART_COMPUTER,
+                        IntentType.SHUT_DOWN_COMPUTER,
+                    }
                     else RiskLevel.HIGH
                 ),
                 requires_confirmation=intent in confirmation_intents,

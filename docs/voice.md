@@ -100,6 +100,13 @@ without suppressing legitimate later repetitions.
 voice listening alone does not close the GUI. Closing the GUI stops voice and
 then closes the application.
 
+Phase 14 system phrases use this same parser and preserve
+`CommandSource.VOICE`. `Shut down Omega` still ends only the assistant, while
+`Shut down the computer` creates a critical Windows action. Power confirmation
+requires the exact operation-specific phrase at the stricter confidence
+threshold; silence, partial recognition, low confidence, and generic “yes”
+never approve.
+
 ## Confirmation security
 
 Speech never changes confirmation semantics. If the central gateway has a

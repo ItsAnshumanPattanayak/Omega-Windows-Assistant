@@ -44,6 +44,29 @@ _BROWSER_NO_PARAMETER = frozenset(
     }
 )
 
+_SYSTEM_NO_PARAMETER = frozenset(
+    {
+        IntentType.GET_SYSTEM_INFORMATION,
+        IntentType.GET_CPU_USAGE,
+        IntentType.GET_MEMORY_USAGE,
+        IntentType.GET_DISK_USAGE,
+        IntentType.GET_BATTERY_STATUS,
+        IntentType.GET_NETWORK_STATUS,
+        IntentType.LIST_PROCESSES,
+        IntentType.GET_VOLUME,
+        IntentType.MUTE_VOLUME,
+        IntentType.UNMUTE_VOLUME,
+        IntentType.GET_BRIGHTNESS,
+        IntentType.LOCK_COMPUTER,
+        IntentType.SLEEP_COMPUTER,
+        IntentType.HIBERNATE_COMPUTER,
+        IntentType.SIGN_OUT_USER,
+        IntentType.RESTART_COMPUTER,
+        IntentType.SHUT_DOWN_COMPUTER,
+        IntentType.CANCEL_POWER_ACTION,
+    }
+)
+
 
 class CommandParser:
     """Create structured command data and clarifications without side effects."""
@@ -180,6 +203,53 @@ class CommandParser:
             )
         if intent in _BROWSER_NO_PARAMETER:
             return [], None
+        if intent in _SYSTEM_NO_PARAMETER:
+            return [], None
+        if (
+            intent
+            in {
+                IntentType.SET_VOLUME,
+                IntentType.SET_BRIGHTNESS,
+            }
+            and "percentage" not in names
+        ):
+            return ["percentage"], "Which percentage should I use?"
+        if intent in {
+            IntentType.INCREASE_VOLUME,
+            IntentType.DECREASE_VOLUME,
+            IntentType.INCREASE_BRIGHTNESS,
+            IntentType.DECREASE_BRIGHTNESS,
+        }:
+            values = [item.value for item in entities if item.name == "percentage"]
+            if values and (
+                len(values) != 1
+                or not isinstance(values[0], int)
+                or not 1 <= values[0] <= 50
+            ):
+                return ["percentage"], "Use one increment between 1 and 50 percent."
+            return [], None
+        if intent in {
+            IntentType.SET_VOLUME,
+            IntentType.SET_BRIGHTNESS,
+        }:
+            values = [item.value for item in entities if item.name == "percentage"]
+            if (
+                len(values) != 1
+                or not isinstance(values[0], int)
+                or not 0 <= values[0] <= 100
+            ):
+                return ["percentage"], "Use one percentage between 0 and 100."
+        if intent is IntentType.OPEN_WINDOWS_SETTINGS and "settings_page" not in names:
+            return ["settings_page"], "Which allowlisted Windows Settings page?"
+        if (
+            intent
+            in {
+                IntentType.SEARCH_PROCESS,
+                IntentType.GET_PROCESS_INFORMATION,
+            }
+            and "process_name" not in names
+        ):
+            return ["process_name"], "Which process name should I inspect?"
         if intent is IntentType.OPEN_WEBSITE and "url" not in names:
             return ["url"], "Which HTTPS website should I open?"
         if intent is IntentType.SEARCH_WEB and "search_query" not in names:

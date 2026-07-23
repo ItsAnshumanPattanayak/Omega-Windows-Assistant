@@ -75,6 +75,123 @@ INTENT_PATTERNS = (
     _rule("help", IntentType.HELP, r"^(?:show )?help$"),
     _rule("shutdown", IntentType.SHUTDOWN_ASSISTANT, r"^shut down omega$"),
     _rule(
+        "system_information",
+        IntentType.GET_SYSTEM_INFORMATION,
+        r"^(?:show|get) system information$",
+    ),
+    _rule(
+        "cpu_usage",
+        IntentType.GET_CPU_USAGE,
+        r"^(?:(?:show|what is) (?:my )?cpu usage|how busy is (?:my )?cpu)$",
+    ),
+    _rule(
+        "memory_usage",
+        IntentType.GET_MEMORY_USAGE,
+        r"^(?:show memory usage|how much memory is available)$",
+    ),
+    _rule("disk_usage", IntentType.GET_DISK_USAGE, r"^(?:show|get) disk space$"),
+    _rule(
+        "battery_status",
+        IntentType.GET_BATTERY_STATUS,
+        r"^(?:show battery status|what is the battery percentage)$",
+    ),
+    _rule(
+        "network_status",
+        IntentType.GET_NETWORK_STATUS,
+        r"^(?:show|get) network status$",
+    ),
+    _rule(
+        "list_processes",
+        IntentType.LIST_PROCESSES,
+        r"^(?:list|show) running processes$",
+    ),
+    _rule(
+        "search_process",
+        IntentType.SEARCH_PROCESS,
+        r"^(?:find|search for) (?:a )?process(?: named)? .+$",
+    ),
+    _rule(
+        "process_information",
+        IntentType.GET_PROCESS_INFORMATION,
+        r"^show process information for .+$",
+    ),
+    _rule("get_volume", IntentType.GET_VOLUME, r"^(?:show|get) volume$"),
+    _rule(
+        "set_volume",
+        IntentType.SET_VOLUME,
+        r"^set (?:the )?volume to .+$",
+    ),
+    _rule(
+        "increase_volume",
+        IntentType.INCREASE_VOLUME,
+        r"^(?:increase|raise|turn up) (?:the )?volume(?: by .+)?$",
+    ),
+    _rule(
+        "decrease_volume",
+        IntentType.DECREASE_VOLUME,
+        r"^(?:decrease|lower|turn down) (?:the )?volume(?: by .+)?$",
+    ),
+    _rule("mute_volume", IntentType.MUTE_VOLUME, r"^mute (?:the )?(?:sound|volume)$"),
+    _rule(
+        "unmute_volume",
+        IntentType.UNMUTE_VOLUME,
+        r"^unmute (?:the )?(?:sound|volume)$",
+    ),
+    _rule(
+        "get_brightness",
+        IntentType.GET_BRIGHTNESS,
+        r"^(?:show|get) brightness$",
+    ),
+    _rule(
+        "set_brightness",
+        IntentType.SET_BRIGHTNESS,
+        r"^set (?:the )?brightness to .+$",
+    ),
+    _rule(
+        "increase_brightness",
+        IntentType.INCREASE_BRIGHTNESS,
+        r"^(?:increase|raise) (?:the )?brightness(?: by .+)?$",
+    ),
+    _rule(
+        "decrease_brightness",
+        IntentType.DECREASE_BRIGHTNESS,
+        r"^(?:decrease|lower) (?:the )?brightness(?: by .+)?$",
+    ),
+    _rule(
+        "open_windows_settings",
+        IntentType.OPEN_WINDOWS_SETTINGS,
+        r"^open (?:system|display|sound|notifications|power(?: and battery)?|"
+        r"storage|bluetooth(?: and devices)?|network(?: and internet)?|"
+        r"windows update|apps|privacy) settings$",
+    ),
+    _rule("lock_computer", IntentType.LOCK_COMPUTER, r"^lock (?:the )?computer$"),
+    _rule(
+        "sleep_computer",
+        IntentType.SLEEP_COMPUTER,
+        r"^(?:put (?:the )?computer to sleep|sleep (?:the )?computer)$",
+    ),
+    _rule(
+        "hibernate_computer",
+        IntentType.HIBERNATE_COMPUTER,
+        r"^hibernate (?:the )?computer$",
+    ),
+    _rule("sign_out_user", IntentType.SIGN_OUT_USER, r"^sign out$"),
+    _rule(
+        "restart_computer",
+        IntentType.RESTART_COMPUTER,
+        r"^restart (?:the )?computer$",
+    ),
+    _rule(
+        "shutdown_computer",
+        IntentType.SHUT_DOWN_COMPUTER,
+        r"^shut down (?:the )?computer$",
+    ),
+    _rule(
+        "cancel_power_action",
+        IntentType.CANCEL_POWER_ACTION,
+        r"^cancel (?:the )?(?:shutdown|restart|power action)$",
+    ),
+    _rule(
         "app_status",
         IntentType.CHECK_APPLICATION_STATUS,
         r"^(?:is .+ running|check (?:whether )?.+(?: is running| status))$",

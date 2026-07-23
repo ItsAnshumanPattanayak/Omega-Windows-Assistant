@@ -18,6 +18,8 @@ The approved roadmap is intentionally incremental. Each phase should be designed
 
 14. **Phase 13 — Safe Web Browser Automation — Completed:** optional lazy Playwright adapter, isolated Omega-controlled sessions, centralized HTTPS and network-boundary validation, bounded tabs/page information, allowlisted search, process-local bookmarks, gateway-only dispatch, GUI controls, shared voice/text parsing, privacy-safe results, and fake-backend tests.
 
-15. **Phase 14 — Next:** to be defined after Phase 13 review.
+15. **Phase 14 — Safe Windows System Controls and Device Information — Completed:** bounded system/process information, allowlisted Settings pages, optional audio and brightness adapters, exact-confirmed power actions, shared parser/voice/GUI/CLI routing, and gateway lifecycle persistence.
+
+16. **Phase 15 — Next:** to be defined after Phase 14 review.
 
 Later phases may cover local AI-assisted intent suggestions, additional Windows integrations, accessibility, packaging, installer support, and release hardening.

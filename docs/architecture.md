@@ -387,3 +387,40 @@ and high-volume crawling are unsupported or denied.
 
 See [browser.md](browser.md) for setup, commands, privacy, testing, and known
 limitations.
+
+## Phase 14 system domain
+
+System commands remain ordinary `UserCommand` records:
+
+```text
+terminal / GUI / voice
+        ↓
+existing CommandParser
+        ↓ typed system intent and bounded entities
+SystemActionDispatcher
+        ↓ Action + SafetyContext
+SafeExecutionGateway
+        ↓ policy, persistence, exact confirmation, execute-once
+SystemManager
+        ↓ injected information/control protocol
+ActionResult → existing lifecycle persistence
+```
+
+`SystemConfiguration` is created without hardware access and rejects unknown
+keys, loose booleans, unsafe ranges, and generic process termination. The
+manager contains bounds and adapter orchestration but no parser, UI, or
+permission logic. Domain records contain primitive values only, never native
+handles, COM objects, processes, or credentials.
+
+The psutil provider queries CPU, memory, fixed-volume usage, battery, bounded
+interface counters, and bounded process summaries only when requested. Process
+command lines, environments, files, modules, and memory are excluded. Settings
+pages use a constant URI allowlist. Audio and brightness are optional adapters
+and return safe unavailable results when unsupported.
+
+Power operations use operation-specific, single-use confirmation phrases scoped
+to session, command, action, expiry, and target. The Windows adapter accepts a
+typed `PowerActionRequest`, uses fixed arguments with `shell=False`, never
+forces applications closed, and does not retry. “Shut down Omega” remains the
+assistant lifecycle intent; “Shut down the computer” is a separate critical
+action.

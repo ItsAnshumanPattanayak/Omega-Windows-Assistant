@@ -1,14 +1,22 @@
 # Omega
 
-Omega is a safety-first Windows desktop assistant project. **Current phase: Phase 13 — Safe Web Browser Automation.**
+Omega is a safety-first Windows desktop assistant project. **Current phase: Phase 14 — Safe Windows System Controls and Device Information.**
 
 ## Current status
 
 Omega is a locally controlled assistant that understands narrowly approved Windows tasks while enforcing clear safety boundaries. It starts inactive, accepts `Hello Omega` as a standalone activation phrase, greets Anshuman based on the current time, accepts commands without repeating its name, and uses `Shut down Omega` for safe termination.
 
-Phases 8–10 add recoverable Recycle Bin operations, SQLite command/action/result history, persistent recovery records, JSON-only mutable settings, transactional cleanup, bounded JSON export, explicit startup migrations, and lifecycle persistence around the central safety gateway. Phase 11 adds an optional native tkinter/ttk desktop presentation. Phase 12 adds explicitly started, offline-first voice interaction. Phase 13 adds optional, controlled Playwright browser sessions, centralized HTTPS validation, bounded tab and page operations, allowlisted web search, and process-local Omega bookmarks over the same command, safety, confirmation, and persistence lifecycle.
+Phases 8–13 add recovery, persistence, desktop, voice, and controlled browser support. Phase 14 adds bounded read-only CPU, memory, disk, battery, network, and process information; allowlisted Windows Settings pages; bounded audio/brightness control adapters; and exactly confirmed Windows power actions over the same command, safety, confirmation, and persistence lifecycle.
 
-Omega still cannot permanently delete files or folders, run arbitrary shell commands, modify protected Windows paths, elevate to administrator, modify the Registry, merge or replace folders, log in to websites, submit forms or payments, enter sensitive data, download files, bypass browser security, execute arbitrary JavaScript, or execute AI-generated actions. Browser and voice support are optional and do not change these boundaries. Recovery records are persistent when configured, but user-facing restoration remains fail-closed until a native restore backend is configured.
+Omega still cannot permanently delete files or folders, run arbitrary shell commands, modify protected Windows paths, elevate to administrator, modify the Registry or security controls, kill arbitrary processes, retrieve credentials, install software or drivers, or execute AI-generated actions. Browser, voice, audio, and brightness support are optional and do not change these boundaries.
+
+## Safe system controls
+
+After activation, commands such as `Show system information`, `What is my CPU usage?`, `Show disk space`, `Show network status`, `List running processes`, `Set volume to 40 percent`, `Set brightness to 60 percent`, and `Open display settings` use the normal parser and central gateway. Process output is bounded and excludes command lines, environments, open files, and memory content.
+
+Audio and brightness adapters fail safely when compatible local hardware support is unavailable. Brightness never falls below the configured safe minimum. Settings launching accepts only fixed `ms-settings:` entries.
+
+`Lock the computer`, `Put the computer to sleep`, `Sign out`, `Restart the computer`, and `Shut down the computer` require exact, expiring, session-scoped confirmation. `Shut down Omega` only ends the assistant session and never powers off Windows. Generic “yes” is not accepted. Automated tests use fakes and never execute real power actions. See [system.md](docs/system.md).
 
 ## Optional safe browser automation
 
@@ -95,6 +103,8 @@ All commands—including toolbar operations—go through the existing `OmegaSess
 | Registered application open, create, append, rename, copy | Medium | Allow after validation | No | No arbitrary targets, arguments, merge, or replacement |
 | Application close, content overwrite, file/folder move | High | Require confirmation | Exact scoped command | Expires, is session-bound, and revalidates the target |
 | Permanent deletion, protected paths, shell/script execution | Critical | Deny | Not available | Configuration cannot enable these boundaries |
+| Lock, sleep, hibernate | High | Require confirmation | Exact operation phrase | No automatic retry or elevation |
+| Sign out, restart, computer shutdown | Critical | Require confirmation | Exact operation phrase | Fixed Windows invocation; no force-close flag |
 
 ## Technology
 

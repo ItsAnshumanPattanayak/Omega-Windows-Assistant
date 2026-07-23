@@ -63,6 +63,18 @@ class RuleBasedEntityExtractor:
     def extract(self, original: str, intent: IntentType) -> list[CommandEntity]:
         entities: list[CommandEntity] = []
         if intent in {
+            IntentType.SET_VOLUME,
+            IntentType.INCREASE_VOLUME,
+            IntentType.DECREASE_VOLUME,
+            IntentType.SET_BRIGHTNESS,
+            IntentType.INCREASE_BRIGHTNESS,
+            IntentType.DECREASE_BRIGHTNESS,
+            IntentType.OPEN_WINDOWS_SETTINGS,
+            IntentType.SEARCH_PROCESS,
+            IntentType.GET_PROCESS_INFORMATION,
+        }:
+            self._system(original, intent, entities)
+        elif intent in {
             IntentType.OPEN_WEBSITE,
             IntentType.SEARCH_WEB,
             IntentType.CLOSE_TAB,
@@ -105,6 +117,61 @@ class RuleBasedEntityExtractor:
         }:
             self._folder_command(original, intent, entities)
         return entities
+
+    @staticmethod
+    def _system(
+        original: str,
+        intent: IntentType,
+        entities: list[CommandEntity],
+    ) -> None:
+        text = original.strip().rstrip("?!")
+        if intent in {
+            IntentType.SET_VOLUME,
+            IntentType.INCREASE_VOLUME,
+            IntentType.DECREASE_VOLUME,
+            IntentType.SET_BRIGHTNESS,
+            IntentType.INCREASE_BRIGHTNESS,
+            IntentType.DECREASE_BRIGHTNESS,
+        }:
+            values = re.findall(r"(?<![-\d])(\d{1,3})(?:\s*percent|\s*%)?", text)
+            if len(values) == 1:
+                value = int(values[0])
+                entities.append(
+                    CommandEntity(
+                        EntityType.PERCENTAGE,
+                        value,
+                        raw_value=values[0],
+                        name="percentage",
+                        confidence=1.0,
+                    )
+                )
+            return
+        if intent is IntentType.OPEN_WINDOWS_SETTINGS:
+            match = re.match(r"^open\s+(.+?)\s+settings$", text, re.IGNORECASE)
+            aliases = {
+                "power and battery": "power",
+                "bluetooth and devices": "bluetooth",
+                "network and internet": "network",
+                "windows update": "windows_update",
+            }
+            if match:
+                raw = " ".join(match.group(1).casefold().split())
+                page = aliases.get(raw, raw)
+                entities.append(
+                    _entity(EntityType.SETTINGS_PAGE, "settings_page", page, raw)
+                )
+            return
+        process = re.sub(
+            r"^(?:find|search for)\s+(?:a\s+)?process(?:\s+named)?\s+|"
+            r"^show\s+process\s+information\s+for\s+|^is\s+|\s+running$",
+            "",
+            text,
+            flags=re.IGNORECASE,
+        ).strip()
+        if process:
+            entities.append(
+                _entity(EntityType.PROCESS, "process_name", process, process)
+            )
 
     @staticmethod
     def _browser(

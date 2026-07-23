@@ -42,6 +42,7 @@ from omega.execution import (
     FileActionDispatcher,
     FolderActionDispatcher,
     HistoryActionDispatcher,
+    SystemActionDispatcher,
 )
 from omega.files import (
     FileLocationResolver,
@@ -80,6 +81,14 @@ from omega.safety import (
     SafeExecutionGateway,
 )
 from omega.session.session import OmegaSession
+from omega.system import (
+    PsutilSystemInformationProvider,
+    SystemManager,
+    UnavailableAudioController,
+    UnavailableBrightnessController,
+    WindowsPowerController,
+    WindowsSettingsPageLauncher,
+)
 from omega.utils.constants import MINIMUM_PYTHON_VERSION
 from omega.utils.logger import configure_logging, get_logger
 from omega.utils.paths import log_dir
@@ -261,6 +270,14 @@ class OmegaApplication:
             PlaywrightBrowserBackend(browser_validator),
             validator=browser_validator,
         )
+        system_manager = SystemManager(
+            self.settings.system_configuration,
+            PsutilSystemInformationProvider(),
+            UnavailableAudioController(),
+            UnavailableBrightnessController(),
+            WindowsSettingsPageLauncher(),
+            WindowsPowerController(),
+        )
 
         self.session = OmegaSession(
             self.settings.user,
@@ -287,6 +304,10 @@ class OmegaApplication:
                 self.browser_manager,
                 safety_gateway,
                 browser_validator,
+            ),
+            system_dispatcher=SystemActionDispatcher(
+                system_manager,
+                safety_gateway,
             ),
             safety_gateway=safety_gateway,
         )

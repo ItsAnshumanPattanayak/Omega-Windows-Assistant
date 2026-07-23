@@ -33,6 +33,19 @@ _LOW = frozenset(
         IntentType.GO_FORWARD,
         IntentType.GET_PAGE_INFORMATION,
         IntentType.FIND_TEXT_ON_PAGE,
+        IntentType.GET_SYSTEM_INFORMATION,
+        IntentType.GET_CPU_USAGE,
+        IntentType.GET_MEMORY_USAGE,
+        IntentType.GET_DISK_USAGE,
+        IntentType.GET_BATTERY_STATUS,
+        IntentType.GET_NETWORK_STATUS,
+        IntentType.LIST_PROCESSES,
+        IntentType.SEARCH_PROCESS,
+        IntentType.GET_PROCESS_INFORMATION,
+        IntentType.GET_VOLUME,
+        IntentType.GET_BRIGHTNESS,
+        IntentType.OPEN_WINDOWS_SETTINGS,
+        IntentType.CANCEL_POWER_ACTION,
     }
 )
 _MEDIUM = frozenset(
@@ -52,6 +65,14 @@ _MEDIUM = frozenset(
         IntentType.OPEN_NEW_TAB,
         IntentType.SWITCH_TAB,
         IntentType.OPEN_BOOKMARK,
+        IntentType.SET_VOLUME,
+        IntentType.INCREASE_VOLUME,
+        IntentType.DECREASE_VOLUME,
+        IntentType.MUTE_VOLUME,
+        IntentType.UNMUTE_VOLUME,
+        IntentType.SET_BRIGHTNESS,
+        IntentType.INCREASE_BRIGHTNESS,
+        IntentType.DECREASE_BRIGHTNESS,
     }
 )
 _HIGH = frozenset(
@@ -64,9 +85,20 @@ _HIGH = frozenset(
         IntentType.CLEAR_HISTORY,
         IntentType.CLOSE_BROWSER,
         IntentType.SAVE_BOOKMARK,
+        IntentType.LOCK_COMPUTER,
+        IntentType.SLEEP_COMPUTER,
+        IntentType.HIBERNATE_COMPUTER,
     }
 )
-_CRITICAL = frozenset({IntentType.DELETE_FILE, IntentType.DELETE_FOLDER})
+_CRITICAL = frozenset(
+    {
+        IntentType.DELETE_FILE,
+        IntentType.DELETE_FOLDER,
+        IntentType.SIGN_OUT_USER,
+        IntentType.RESTART_COMPUTER,
+        IntentType.SHUT_DOWN_COMPUTER,
+    }
+)
 
 
 class RiskClassifier:

@@ -99,6 +99,9 @@ class CriticalRiskDenyPolicy(_BasePolicy):
         {
             IntentType.DELETE_FILE,
             IntentType.DELETE_FOLDER,
+            IntentType.SIGN_OUT_USER,
+            IntentType.RESTART_COMPUTER,
+            IntentType.SHUT_DOWN_COMPUTER,
         }
     )
 
@@ -625,6 +628,72 @@ class BrowserMutationPolicy(_IntentPolicy):
     )
 
 
+class SystemReadPolicy(_IntentPolicy):
+    policy_id, priority = "SAFETY-SYSTEM-READ-001", 80
+    intents = frozenset(
+        {
+            IntentType.GET_SYSTEM_INFORMATION,
+            IntentType.GET_CPU_USAGE,
+            IntentType.GET_MEMORY_USAGE,
+            IntentType.GET_DISK_USAGE,
+            IntentType.GET_BATTERY_STATUS,
+            IntentType.GET_NETWORK_STATUS,
+            IntentType.LIST_PROCESSES,
+            IntentType.SEARCH_PROCESS,
+            IntentType.GET_PROCESS_INFORMATION,
+            IntentType.GET_VOLUME,
+            IntentType.GET_BRIGHTNESS,
+            IntentType.OPEN_WINDOWS_SETTINGS,
+            IntentType.CANCEL_POWER_ACTION,
+        }
+    )
+    disposition, reason_code, message = (
+        PolicyDisposition.ALLOW,
+        "BOUNDED_SYSTEM_OPERATION_ALLOWED",
+        "The bounded system operation is allowed.",
+    )
+
+
+class SystemControlPolicy(_IntentPolicy):
+    policy_id, priority = "SAFETY-SYSTEM-CONTROL-001", 80
+    intents = frozenset(
+        {
+            IntentType.SET_VOLUME,
+            IntentType.INCREASE_VOLUME,
+            IntentType.DECREASE_VOLUME,
+            IntentType.MUTE_VOLUME,
+            IntentType.UNMUTE_VOLUME,
+            IntentType.SET_BRIGHTNESS,
+            IntentType.INCREASE_BRIGHTNESS,
+            IntentType.DECREASE_BRIGHTNESS,
+        }
+    )
+    disposition, reason_code, message = (
+        PolicyDisposition.ALLOW,
+        "BOUNDED_DEVICE_CONTROL_ALLOWED",
+        "The bounded device control is allowed.",
+    )
+
+
+class PowerActionPolicy(_IntentPolicy):
+    policy_id, priority = "SAFETY-POWER-CONFIRM-001", 70
+    intents = frozenset(
+        {
+            IntentType.LOCK_COMPUTER,
+            IntentType.SLEEP_COMPUTER,
+            IntentType.HIBERNATE_COMPUTER,
+            IntentType.SIGN_OUT_USER,
+            IntentType.RESTART_COMPUTER,
+            IntentType.SHUT_DOWN_COMPUTER,
+        }
+    )
+    disposition, reason_code, message = (
+        PolicyDisposition.REQUIRE_CONFIRMATION,
+        "POWER_ACTION_CONFIRMATION",
+        "Windows power actions require exact scoped confirmation.",
+    )
+
+
 DEFAULT_POLICIES = cast(
     tuple[SafetyPolicy, ...],
     (
@@ -643,6 +712,7 @@ DEFAULT_POLICIES = cast(
         FolderMovePolicy(),
         HistoryMutationPolicy(),
         BrowserMutationPolicy(),
+        PowerActionPolicy(),
         ApplicationOpenPolicy(),
         ApplicationStatusPolicy(),
         FileReadPolicy(),
@@ -658,6 +728,8 @@ DEFAULT_POLICIES = cast(
         HistoryExportPolicy(),
         BrowserInspectPolicy(),
         BrowserNavigationPolicy(),
+        SystemReadPolicy(),
+        SystemControlPolicy(),
     ),
 )
 

@@ -12,6 +12,7 @@ import yaml
 from omega.browser.configuration import BrowserConfiguration
 from omega.core.exceptions import ConfigurationError
 from omega.database.configuration import DatabaseConfiguration
+from omega.system.configuration import SystemConfiguration
 from omega.utils.constants import (
     APP_CONFIG_FILENAME,
     APP_NAME,
@@ -69,6 +70,7 @@ class Settings:
     history: Mapping[str, Any]
     voice: Mapping[str, Any]
     browser: Mapping[str, Any]
+    system: Mapping[str, Any]
 
     @property
     def application_name(self) -> str:
@@ -114,6 +116,12 @@ class Settings:
         """Return strict browser policy without initializing a backend."""
 
         return BrowserConfiguration.from_mapping(self.browser)
+
+    @property
+    def system_configuration(self) -> SystemConfiguration:
+        """Return strict system policy without querying the host."""
+
+        return SystemConfiguration.from_mapping(self.system)
 
 
 def _defaults() -> dict[str, dict[str, Any]]:
@@ -255,6 +263,7 @@ def _defaults() -> dict[str, dict[str, Any]]:
             "maximum_bookmark_name_characters": 100,
             "default_search_engine": "duckduckgo",
         },
+        "system": {},
     }
 
 
@@ -474,7 +483,9 @@ def _merge_defaults(
 
     for section, values in _defaults().items():
         supplied = (
-            raw.get(section, {}) if section in {"voice", "browser"} else raw[section]
+            raw.get(section, {})
+            if section in {"voice", "browser", "system"}
+            else raw[section]
         )
 
         if not isinstance(
@@ -540,5 +551,6 @@ def load_settings(
         model_root=data_dir() / "voice_models",
     )
     BrowserConfiguration.from_mapping(values["browser"])
+    SystemConfiguration.from_mapping(values["system"])
 
     return Settings(**values)

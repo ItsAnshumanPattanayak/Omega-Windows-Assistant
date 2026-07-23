@@ -69,3 +69,9 @@ Headless tests exercise imports, bootstrap, controller behavior, duplicate preve
 Phase 13 adds toolbar commands for opening the controlled browser, listing tabs, navigating backward/forward, and refreshing. These buttons submit ordinary text commands through `GuiController`; they never call the browser backend directly. The existing busy state prevents duplicate clicks, browser work runs on the bounded GUI task runner, and Tk updates remain on the Tk thread. The GUI remains usable when the optional Playwright package or browser channel is unavailable.
 
 Automatic login, form submission, downloads, embedded browsing, browser-native bookmarks, unrestricted clicking, and native restoration are not available. The current undo interface remains fail-closed when the Phase 8 native restore backend is unavailable.
+
+Phase 14 system commands use the same command box and bounded worker as every
+other domain. Read-only status, allowlisted Settings pages, and optional device
+controls therefore never call an OS adapter from a widget. Power commands use
+the existing exact-confirmation dialog; closing it cancels. Unsupported audio
+or brightness hardware appears as a safe unavailable response.

@@ -137,3 +137,30 @@ browser:
   maximum_search_query_characters: 500
   maximum_bookmark_name_characters: 100
   default_search_engine: duckduckgo
+
+system:
+  enabled: true
+  information_enabled: true
+  audio_control_enabled: true
+  brightness_control_enabled: true
+  process_listing_enabled: true
+  process_termination_enabled: false
+  settings_pages_enabled: true
+  power_actions_enabled: true
+  lock_enabled: true
+  shutdown_enabled: true
+  restart_enabled: true
+  sign_out_enabled: true
+  sleep_enabled: true
+  hibernate_enabled: false
+  maximum_process_results: 50
+  maximum_disk_results: 20
+  maximum_network_results: 20
+  minimum_volume_percent: 0
+  maximum_volume_percent: 100
+  minimum_brightness_percent: 10
+  maximum_brightness_percent: 100
+  maximum_control_increment_percent: 25
+  power_confirmation_timeout_seconds: 30
+  power_countdown_seconds: 10
+  allow_cancel_power_countdown: true
