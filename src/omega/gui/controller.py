@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Protocol
@@ -25,6 +25,8 @@ from omega.gui.task_runner import GuiTaskRunner
 from omega.history import HistoryService
 from omega.safety import SafeExecutionGateway
 from omega.session import OmegaSession
+from omega.voice.models import VoiceEvent, VoiceState
+from omega.voice.service import VoiceService
 
 MAX_COMMAND_CHARACTERS = 10_000
 
@@ -51,6 +53,10 @@ class GuiView(Protocol):
     def apply_preferences(self, preferences: GuiPreferences) -> None: ...
 
     def update_session_state(self, state: str) -> None: ...
+
+    def update_voice_state(self, state: VoiceState, detail: str) -> None: ...
+
+    def show_voice_transcription(self, transcript: str) -> None: ...
 
 
 @dataclass(frozen=True)
@@ -80,6 +86,9 @@ class GuiController:
         runner: GuiTaskRunner,
         view: GuiView,
         *,
+        voice_factory: (
+            Callable[[Callable[[VoiceEvent], None]], VoiceService] | None
+        ) = None,
         logger: logging.Logger | None = None,
     ) -> None:
         self.session = session
@@ -92,6 +101,9 @@ class GuiController:
         self._busy = False
         self._pending: ConfirmationRequest | None = None
         self._preferences = GuiPreferences()
+        self._voice_factory = voice_factory
+        self._voice_service: VoiceService | None = None
+        self._voice_starting = False
 
     @property
     def busy(self) -> bool:
@@ -220,10 +232,63 @@ class GuiController:
             return False
         return True
 
+    def start_voice(self) -> bool:
+        """Explicitly initialize one listener away from the Tk thread."""
+
+        if self._voice_factory is None:
+            self._notify(
+                "Voice unavailable",
+                "This Omega instance has no voice service factory.",
+                MessageKind.WARNING,
+            )
+            return False
+        if self._voice_starting or (
+            self._voice_service is not None and self._voice_service.running
+        ):
+            self._notify(
+                "Voice already running",
+                "Omega already has one voice listener.",
+                MessageKind.WARNING,
+            )
+            return False
+        self._voice_starting = True
+        self.view.update_voice_state(VoiceState.IDLE, "Starting voice")
+        try:
+            self.runner.submit(
+                self._start_voice,
+                self._voice_started,
+                self._voice_failed,
+            )
+        except GuiTaskError as error:
+            self._voice_failed(error)
+            return False
+        return True
+
+    def stop_voice(self) -> bool:
+        """Stop the active listener without closing the GUI or session."""
+
+        service = self._voice_service
+        if service is None:
+            self.view.update_voice_state(VoiceState.IDLE, "Voice is stopped")
+            return False
+        try:
+            self.runner.submit(
+                lambda: self._stop_voice(service),
+                self._voice_stopped,
+                self._voice_failed,
+            )
+        except GuiTaskError as error:
+            self._voice_failed(error)
+            return False
+        return True
+
     def close(self) -> None:
         """Cancel confirmation safely and close worker resources."""
 
         self._pending = None
+        if self._voice_service is not None:
+            self._voice_service.stop()
+            self._voice_service = None
         self.runner.shutdown(wait=True)
         self.session.interrupt()
         self.view.set_status(GuiStatus.CLOSED, "Closed")
@@ -326,10 +391,14 @@ class GuiController:
 
     def _preferences_loaded(self, preferences: GuiPreferences) -> None:
         self._preferences = preferences
+        if self._voice_service is not None:
+            self._voice_service.set_speech_enabled(preferences.speak_responses)
         self.view.apply_preferences(preferences)
 
     def _preferences_saved(self, preferences: GuiPreferences) -> None:
         self._preferences = preferences
+        if self._voice_service is not None:
+            self._voice_service.set_speech_enabled(preferences.speak_responses)
         self._set_busy(False)
         self.view.apply_preferences(preferences)
         self._notify(
@@ -382,3 +451,102 @@ class GuiController:
     def _notify(self, title: str, message: str, kind: MessageKind) -> None:
         if self._preferences.notifications_enabled:
             self.view.notify(Notification(title, message, kind))
+
+    def _start_voice(self) -> VoiceService:
+        if self._voice_factory is None:
+            raise GuiTaskError("Voice service factory is unavailable.")
+        service = self._voice_factory(self._voice_event_from_worker)
+        service.set_speech_enabled(self._preferences.speak_responses)
+        service.start()
+        return service
+
+    @staticmethod
+    def _stop_voice(service: VoiceService) -> VoiceState:
+        service.stop()
+        return service.state
+
+    def _voice_started(self, service: VoiceService) -> None:
+        self._voice_starting = False
+        self._voice_service = service
+        self.view.update_voice_state(service.state, "Microphone active")
+        self._notify(
+            "Voice started",
+            "Omega is listening for the configured wake phrase.",
+            MessageKind.SUCCESS,
+        )
+
+    def _voice_stopped(self, state: VoiceState) -> None:
+        self._voice_service = None
+        self.view.update_voice_state(state, "Microphone released")
+        self._notify(
+            "Voice stopped",
+            "Voice listening stopped; typed commands remain available.",
+            MessageKind.SUCCESS,
+        )
+
+    def _voice_failed(self, error: BaseException) -> None:
+        self._voice_starting = False
+        service = self._voice_service
+        self._voice_service = None
+        if service is not None:
+            service.stop()
+        self.logger.warning("Optional voice operation failed safely: %s", error)
+        self.view.update_voice_state(VoiceState.UNAVAILABLE, "Voice unavailable")
+        self._notify(
+            "Voice unavailable",
+            "Voice could not start safely. Check the local model, optional "
+            "dependencies, and selected microphone.",
+            MessageKind.WARNING,
+        )
+
+    def _voice_event_from_worker(self, event: VoiceEvent) -> None:
+        try:
+            self.runner.post(lambda: self._voice_event(event))
+        except GuiTaskError:
+            return
+
+    def _voice_event(self, event: VoiceEvent) -> None:
+        self.view.update_voice_state(event.state, event.message)
+        if event.transcript:
+            self.view.show_voice_transcription(event.transcript)
+            self.view.add_message(
+                ConversationMessage(
+                    "You (voice)",
+                    event.transcript,
+                    MessageKind.USER,
+                    event.occurred_at,
+                )
+            )
+        if event.response:
+            self.view.add_message(
+                ConversationMessage(
+                    "Omega",
+                    event.response,
+                    MessageKind.ASSISTANT,
+                    event.occurred_at,
+                )
+            )
+            self.view.update_session_state(self.session.state.value)
+            self._sync_confirmation()
+            if not self._busy:
+                self.refresh_activity()
+
+    def _sync_confirmation(self) -> None:
+        session_id = self.session.session_id
+        pending = (
+            self.gateway.confirmations.get(session_id)
+            if session_id is not None
+            else None
+        )
+        if pending is None:
+            self._pending = None
+            self.view.dismiss_confirmation()
+            return
+        request = ConfirmationRequest(
+            pending.prompt,
+            pending.display_target,
+            pending.expected_confirmation,
+            pending.expected_cancellation,
+        )
+        self._pending = request
+        self.view.show_confirmation(request)

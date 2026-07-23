@@ -108,6 +108,7 @@ class SettingsDialog:
         self.history_limit = tk.StringVar(value=str(preferences.history_limit))
         self.auto_scroll = tk.BooleanVar(value=preferences.auto_scroll)
         self.notifications = tk.BooleanVar(value=preferences.notifications_enabled)
+        self.speak_responses = tk.BooleanVar(value=preferences.speak_responses)
 
         body = ttk.Frame(self.window, padding=18)
         body.grid(sticky="nsew")
@@ -141,6 +142,11 @@ class SettingsDialog:
             text="Show in-application notifications",
             variable=self.notifications,
         ).grid(row=4, column=0, columnspan=2, sticky="w", pady=4)
+        ttk.Checkbutton(
+            body,
+            text="Speak safe assistant responses when voice mode is running",
+            variable=self.speak_responses,
+        ).grid(row=5, column=0, columnspan=2, sticky="w", pady=4)
         ttk.Label(
             body,
             text=(
@@ -149,12 +155,12 @@ class SettingsDialog:
             ),
             style="Muted.TLabel",
             wraplength=420,
-        ).grid(row=5, column=0, columnspan=2, sticky="w", pady=(10, 16))
+        ).grid(row=6, column=0, columnspan=2, sticky="w", pady=(10, 16))
         ttk.Button(body, text="Cancel", command=self.window.destroy).grid(
-            row=6, column=0, sticky="e", padx=(0, 8)
+            row=7, column=0, sticky="e", padx=(0, 8)
         )
         ttk.Button(body, text="Save", command=self.save).grid(
-            row=6, column=1, sticky="w"
+            row=7, column=1, sticky="w"
         )
 
     def save(self) -> None:
@@ -181,6 +187,7 @@ class SettingsDialog:
             history_limit=history_limit,
             auto_scroll=self.auto_scroll.get(),
             notifications_enabled=self.notifications.get(),
+            speak_responses=self.speak_responses.get(),
             window_width=self._preferences.window_width,
             window_height=self._preferences.window_height,
             maximized=self._preferences.maximized,

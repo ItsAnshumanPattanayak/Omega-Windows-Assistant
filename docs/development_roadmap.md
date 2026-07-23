@@ -14,6 +14,8 @@ The approved roadmap is intentionally incremental. Each phase should be designed
 10. **Phase 9 — SQLite History — Completed:** database foundation plus typed command, action, and result repositories.
 11. **Phase 10 — Persistent History Integration — Completed:** persistent recovery and settings, history service, transactional cleanup, JSON export, startup composition, gateway lifecycle persistence, and history commands.
 12. **Phase 11 — Desktop GUI — Completed:** optional tkinter/ttk interface, headless controller, bounded workers, exact confirmations, persistent activity, undo visibility, history operations, and safe mutable preferences.
-13. **Phase 12 — Voice Input and Response — Next:** add wake-word handling and spoken interaction.
+13. **Phase 12 — Voice Interaction and Wake-Word Support — Completed:** optional offline microphone capture, Vosk transcription, exact wake activation, active voice sessions, strict confirmation handling, local SAPI responses, GUI controls, explicit CLI startup, privacy boundaries, and fake-based tests.
+
+14. **Phase 13 — Next:** to be defined after Phase 12 review.
 
 Later phases may cover local AI-assisted intent suggestions, additional Windows integrations, accessibility, packaging, installer support, and release hardening.

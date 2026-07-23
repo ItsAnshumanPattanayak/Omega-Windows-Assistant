@@ -18,7 +18,8 @@ from omega.utils.constants import (
     DEFAULT_ACTIVATION_PHRASE,
     DEFAULT_SHUTDOWN_PHRASE,
 )
-from omega.utils.paths import config_dir
+from omega.utils.paths import config_dir, data_dir
+from omega.voice.configuration import VoiceConfiguration
 
 REQUIRED_SECTIONS = frozenset(
     {
@@ -65,6 +66,7 @@ class Settings:
     folders: Mapping[str, Any]
     recovery: Mapping[str, Any]
     history: Mapping[str, Any]
+    voice: Mapping[str, Any]
 
     @property
     def application_name(self) -> str:
@@ -93,6 +95,17 @@ class Settings:
         """Return the validated database configuration."""
 
         return DatabaseConfiguration.from_mapping(self.database)
+
+    @property
+    def voice_configuration(self) -> VoiceConfiguration:
+        """Return strict optional voice settings without initializing audio."""
+
+        return VoiceConfiguration.from_mapping(
+            self.voice,
+            wake_phrase=str(self.assistant["activation_phrase"]),
+            shutdown_phrase=str(self.assistant["shutdown_phrase"]),
+            model_root=data_dir() / "voice_models",
+        )
 
 
 def _defaults() -> dict[str, dict[str, Any]]:
@@ -188,6 +201,25 @@ def _defaults() -> dict[str, dict[str, Any]]:
             "maximum_limit": 100,
             "maximum_export_bytes": 1_048_576,
             "preserve_active_undo_records": True,
+        },
+        "voice": {
+            "enabled": False,
+            "offline_recognition_enabled": True,
+            "model_path": None,
+            "microphone_device": None,
+            "sample_rate_hz": 16_000,
+            "audio_block_size": 4_000,
+            "passive_listening_timeout_seconds": 1,
+            "active_listening_timeout_seconds": 10,
+            "active_session_timeout_seconds": 300,
+            "maximum_transcript_characters": 1_000,
+            "minimum_confidence": 0.5,
+            "speak_responses": True,
+            "speech_rate": 180,
+            "speech_volume": 1.0,
+            "voice_name": None,
+            "confirmation_confidence_threshold": 0.85,
+            "return_to_passive_after_session": True,
         },
     }
 
@@ -407,7 +439,7 @@ def _merge_defaults(
     merged: dict[str, Mapping[str, Any]] = {}
 
     for section, values in _defaults().items():
-        supplied = raw[section]
+        supplied = raw.get(section, {}) if section == "voice" else raw[section]
 
         if not isinstance(
             supplied,
@@ -465,5 +497,11 @@ def load_settings(
     _validate_folders(values["folders"])
     _validate_recovery(values["recovery"])
     _validate_history(values["history"])
+    VoiceConfiguration.from_mapping(
+        values["voice"],
+        wake_phrase=str(values["assistant"]["activation_phrase"]),
+        shutdown_phrase=str(values["assistant"]["shutdown_phrase"]),
+        model_root=data_dir() / "voice_models",
+    )
 
     return Settings(**values)

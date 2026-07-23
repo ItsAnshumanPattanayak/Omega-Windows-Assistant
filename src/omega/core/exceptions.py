@@ -211,3 +211,35 @@ class GuiInitializationError(GuiError):
 
 class GuiTaskError(GuiError):
     """Raised when a background GUI task cannot be scheduled safely."""
+
+
+class VoiceError(OmegaError):
+    """Base exception for optional voice-interaction failures."""
+
+
+class VoiceConfigurationError(ConfigurationError, VoiceError):
+    """Raised when voice settings violate a safe configuration boundary."""
+
+
+class VoiceInitializationError(VoiceError):
+    """Raised when explicitly requested voice services cannot initialize."""
+
+
+class MicrophoneUnavailableError(VoiceInitializationError):
+    """Raised when a requested local microphone cannot be opened."""
+
+
+class RecognitionError(VoiceError):
+    """Raised when offline speech recognition fails safely."""
+
+
+class RecognitionTimeoutError(RecognitionError):
+    """Raised when no final transcription arrives before the configured limit."""
+
+
+class SpeechSynthesisError(VoiceError):
+    """Raised when the optional local speech engine cannot speak safely."""
+
+
+class VoiceStateError(VoiceError):
+    """Raised for an invalid voice lifecycle transition."""

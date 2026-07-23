@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable, Mapping
 from datetime import datetime
+from threading import RLock
 from time import monotonic
 from typing import Any
 from uuid import UUID, uuid4
@@ -14,7 +15,7 @@ from omega.execution.dispatcher import ApplicationActionDispatcher
 from omega.execution.file_dispatcher import FileActionDispatcher
 from omega.execution.folder_dispatcher import FolderActionDispatcher
 from omega.execution.history_dispatcher import HistoryActionDispatcher
-from omega.models import UserCommand
+from omega.models import CommandSource, UserCommand
 from omega.safety import SafeExecutionGateway
 from omega.session.greeting import greeting_for
 from omega.session.state import SessionState
@@ -78,6 +79,7 @@ class OmegaSession:
         self.activated_at: float | None = None
         self.last_activity_at: float | None = None
         self._history: list[UserCommand] = []
+        self._input_lock = RLock()
 
     @staticmethod
     def _required_text(values: Mapping[str, Any], key: str) -> str:
@@ -172,6 +174,13 @@ class OmegaSession:
             return None
         if self._clock() - self.last_activity_at <= self.timeout_seconds:
             return None
+        return self.deactivate_for_timeout()
+
+    def deactivate_for_timeout(self) -> str:
+        """Deactivate an active adapter session without terminating the process."""
+
+        if self.state is not SessionState.ACTIVE:
+            raise InvalidSessionTransitionError("Only an active session can time out.")
         self.transition_to(SessionState.INACTIVE)
         self._clear_confirmations()
         self.session_id = None
@@ -183,8 +192,20 @@ class OmegaSession:
             'Say "Hello Omega" to activate me again.'
         )
 
-    def handle_input(self, text: str) -> str:
+    def handle_input(
+        self,
+        text: str,
+        *,
+        source: CommandSource = CommandSource.TEXT,
+    ) -> str:
         """Handle terminal text, creating command records only while active."""
+
+        with self._input_lock:
+            return self._handle_input(text, source=source)
+
+    def _handle_input(self, text: str, *, source: CommandSource) -> str:
+        """Serialize typed and voice input through the same command lifecycle."""
+
         if self.state is SessionState.TERMINATED:
             return "Omega is terminated."
         if not isinstance(text, str) or not text.strip():
@@ -224,7 +245,7 @@ class OmegaSession:
                     self._history.append(controlled.command)
                     self.last_activity_at = self._clock()
                     return controlled.user_message
-            result = self._parser.parse(text, self.session_id)
+            result = self._parser.parse(text, self.session_id, source=source)
             self._history.append(result.command)
             self.last_activity_at = self._clock()
             if self._history_dispatcher is not None:

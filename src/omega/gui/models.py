@@ -85,6 +85,7 @@ class GuiPreferences:
     history_limit: int = 20
     auto_scroll: bool = True
     notifications_enabled: bool = True
+    speak_responses: bool = True
     window_width: int = 1100
     window_height: int = 720
     maximized: bool = False
@@ -115,6 +116,10 @@ class GuiPreferences:
             notifications_enabled=cls._boolean(
                 values.get("notifications_enabled"),
                 defaults.notifications_enabled,
+            ),
+            speak_responses=cls._boolean(
+                values.get("speak_responses"),
+                defaults.speak_responses,
             ),
             window_width=width,
             window_height=height,

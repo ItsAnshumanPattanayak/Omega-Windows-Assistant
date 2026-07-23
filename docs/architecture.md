@@ -254,4 +254,54 @@ Normal commands without repeating “Omega”
 Safe session termination
 ```
 
-This lifecycle is implemented for text input. Voice activation remains deferred.
+This lifecycle is implemented for text and optional voice input.
+
+## Phase 12 voice adapter
+
+Voice is an optional input/output adapter, not a command engine. Importing
+`omega.voice` creates no device, model, speech engine, database, file, or thread.
+Only explicit CLI or GUI actions build the adapters.
+
+```text
+sounddevice microphone
+        ↓ bounded PCM queue
+local Vosk recognizer
+        ↓ final typed TranscriptionResult
+strict wake/confirmation validation
+        ↓ CommandSource.VOICE
+OmegaSession.handle_input
+        ↓
+existing parser → persistence → dispatchers → SafeExecutionGateway
+        ↓
+safe text response
+        ├─ terminal/GUI display
+        └─ optional bounded Windows SAPI queue
+```
+
+`VoiceService` owns one listener thread, a stop event, a bounded set of recently
+processed transcription identifiers, and a typed `VoiceStateMachine`. It accepts
+each final recognizer callback at most once. `OmegaSession` serializes all typed
+and voice input with one re-entrant lock, so adapters cannot overlap command
+processing. Voice components never call a dispatcher, manager, executor, or
+confirmation callback directly.
+
+Passive listening recognizes only the configured activation phrase with strict
+case/spacing/boundary-punctuation normalization and a minimum confidence. An
+optional command remainder is accepted only after an exact wake prefix. Active
+transcripts use the normal session lifecycle. The configured voice timeout
+deactivates the session and either returns to passive listening or stops,
+according to validated configuration.
+
+When the central gateway has a pending confirmation, the voice adapter fails
+closed: only a final, exact expected confirmation or cancellation phrase at the
+higher confirmation threshold is forwarded. The central manager still owns
+session/action/target/fingerprint/expiry validation and single-use consumption.
+
+Microphone buffers are memory-only and bounded. Raw audio is never logged,
+written to a file, inserted into SQLite, or uploaded. Vosk model loading,
+sounddevice discovery, and SAPI initialization occur only after explicit voice
+startup. GUI worker events enter `GuiTaskRunner`’s callback queue before any Tk
+widget update. Speaker output uses a single bounded sequential queue and cannot
+cause command retry if synthesis fails.
+
+See [voice.md](voice.md) for configuration, dependencies, privacy, and operations.

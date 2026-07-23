@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from uuid import UUID
 
-from omega.models import CommandEntity, IntentType, UserCommand
+from omega.models import CommandEntity, CommandSource, IntentType, UserCommand
 from omega.understanding.aliases import ApplicationAliasRegistry
 from omega.understanding.entities import RuleBasedEntityExtractor
 from omega.understanding.intents import RuleBasedIntentDetector
@@ -32,7 +32,11 @@ class CommandParser:
         self.extractor = RuleBasedEntityExtractor(self.aliases)
 
     def parse(
-        self, original_text: str, session_id: UUID | None = None
+        self,
+        original_text: str,
+        session_id: UUID | None = None,
+        *,
+        source: CommandSource = CommandSource.TEXT,
     ) -> CommandParseResult:
         normalized = self.normalizer.normalize(original_text)
         if (
@@ -44,6 +48,7 @@ class CommandParser:
                 original_text,
                 normalized_text=normalized,
                 confidence=0.3,
+                source=source,
                 session_id=session_id,
             )
             return CommandParseResult(
@@ -59,6 +64,7 @@ class CommandParser:
                 original_text,
                 normalized_text=normalized,
                 confidence=0.0,
+                source=source,
                 session_id=session_id,
             )
             return CommandParseResult(
@@ -84,6 +90,7 @@ class CommandParser:
             intent=intent,
             entities=entities,
             confidence=confidence,
+            source=source,
             session_id=session_id,
         )
         if ambiguity:

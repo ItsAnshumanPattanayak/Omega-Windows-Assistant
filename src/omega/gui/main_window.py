@@ -24,6 +24,7 @@ from omega.gui.preferences import GuiPreferencesService
 from omega.gui.task_runner import GuiTaskRunner
 from omega.gui.theme import ThemeManager
 from omega.utils.logger import get_logger
+from omega.voice.models import VoiceState
 
 if TYPE_CHECKING:
     from omega.app import OmegaApplication
@@ -61,6 +62,9 @@ class OmegaMainWindow(GuiView):
             application.safety_gateway,
             runner,
             self,
+            voice_factory=lambda sink: application.create_voice_service(
+                event_sink=sink
+            ),
             logger=get_logger("gui.controller"),
         )
         self.apply_preferences(self.preferences)
@@ -103,6 +107,8 @@ class OmegaMainWindow(GuiView):
             ("Clear history", self._clear_history),
             ("Settings", self._settings),
             ("Help / About", self._help),
+            ("Start voice", self._start_voice),
+            ("Stop voice", self._stop_voice),
         )
         self.operation_buttons: list[ttk.Button] = []
         for toolbar_index, (label, command) in enumerate(actions):
@@ -191,6 +197,23 @@ class OmegaMainWindow(GuiView):
         self.status_label.grid(row=0, column=0, sticky="w")
         self.notification_label = ttk.Label(status, text="", style="Muted.TLabel")
         self.notification_label.grid(row=0, column=1, sticky="e")
+        self.voice_label = ttk.Label(
+            status,
+            text="Voice: disabled",
+            style="Muted.TLabel",
+        )
+        self.voice_label.grid(row=1, column=0, sticky="w", pady=(3, 0))
+        self.transcription_label = ttk.Label(
+            status,
+            text="",
+            style="Muted.TLabel",
+        )
+        self.transcription_label.grid(
+            row=1,
+            column=1,
+            sticky="e",
+            pady=(3, 0),
+        )
 
     def add_message(self, message: ConversationMessage) -> None:
         self.conversation.configure(state="normal")
@@ -297,6 +320,15 @@ class OmegaMainWindow(GuiView):
     def update_session_state(self, state: str) -> None:
         self.state_label.configure(text=state.upper())
 
+    def update_voice_state(self, state: VoiceState, detail: str) -> None:
+        self.voice_label.configure(
+            text=f"Voice: {state.value.replace('_', ' ')} — {detail}"
+        )
+
+    def show_voice_transcription(self, transcript: str) -> None:
+        preview = transcript if len(transcript) <= 80 else transcript[:79] + "…"
+        self.transcription_label.configure(text=f'Heard: "{preview}"')
+
     def close(self) -> None:
         self._closing = True
         self.dismiss_confirmation()
@@ -350,7 +382,8 @@ class OmegaMainWindow(GuiView):
                 f'Activate with "{self.application.session.activation_phrase}".\n'
                 "Commands and confirmations use the same production session "
                 "and safety gateway as terminal mode.\n\n"
-                "Voice and browser automation are not available."
+                "Voice is optional, offline-first, and starts only when requested. "
+                "Browser automation is not available."
             ),
             parent=self.root,
         )
@@ -372,3 +405,9 @@ class OmegaMainWindow(GuiView):
         self._runner.drain_callbacks()
         if not self._closing:
             self.root.after(25, self._poll_tasks)
+
+    def _start_voice(self) -> None:
+        self.controller.start_voice()
+
+    def _stop_voice(self) -> None:
+        self.controller.stop_voice()

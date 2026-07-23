@@ -6,6 +6,7 @@ import sys
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from omega.applications import (
     ApplicationManager,
@@ -76,6 +77,11 @@ from omega.session.session import OmegaSession
 from omega.utils.constants import MINIMUM_PYTHON_VERSION
 from omega.utils.logger import configure_logging, get_logger
 from omega.utils.paths import log_dir
+from omega.voice.models import AudioDevice
+from omega.voice.protocols import VoiceEventSink
+
+if TYPE_CHECKING:
+    from omega.voice.service import VoiceService
 
 
 class OmegaApplication:
@@ -266,6 +272,7 @@ class OmegaApplication:
             ),
             safety_gateway=safety_gateway,
         )
+        self.voice_configuration = self.settings.voice_configuration
 
         self.logger.info(
             "%s %s initialized in %s mode.",
@@ -323,3 +330,82 @@ class OmegaApplication:
 
         self.logger.info("Starting Omega's optional desktop interface.")
         return OmegaGuiApplication(self).run()
+
+    def create_voice_service(
+        self,
+        *,
+        event_sink: VoiceEventSink | None = None,
+    ) -> VoiceService:
+        """Explicitly create local audio adapters; never called by text startup."""
+
+        from omega.core.exceptions import VoiceInitializationError
+        from omega.voice.microphone import SoundDeviceMicrophone
+        from omega.voice.recognizer import VoskSpeechRecognizer
+        from omega.voice.service import VoiceService
+        from omega.voice.speaker import SapiSpeechSynthesizer
+
+        configuration = self.voice_configuration
+        if not configuration.enabled:
+            raise VoiceInitializationError(
+                "Voice is disabled. Set voice.enabled to true in "
+                "config/app_config.yaml."
+            )
+        if not configuration.offline_recognition_enabled:
+            raise VoiceInitializationError(
+                "Offline recognition must be enabled for Phase 12 voice mode."
+            )
+        microphone = SoundDeviceMicrophone(
+            device=configuration.microphone_device,
+            sample_rate_hz=configuration.sample_rate_hz,
+            block_size=configuration.audio_block_size,
+        )
+        recognizer = VoskSpeechRecognizer(
+            configuration.model_path,
+            sample_rate_hz=configuration.sample_rate_hz,
+            maximum_characters=configuration.maximum_transcript_characters,
+        )
+        speaker = (
+            SapiSpeechSynthesizer(
+                rate=configuration.speech_rate,
+                volume=configuration.speech_volume,
+                voice_name=configuration.voice_name,
+            )
+            if configuration.speak_responses
+            else None
+        )
+        return VoiceService(
+            configuration,
+            self.session,
+            self.safety_gateway,
+            microphone,
+            recognizer,
+            speaker,
+            event_sink=event_sink,
+            logger=get_logger("voice"),
+        )
+
+    def run_voice(
+        self,
+        *,
+        output_func: Callable[[str], None] = print,
+    ) -> int:
+        """Run explicit terminal voice mode with safe text-only fallback."""
+
+        from omega.voice.terminal import VoiceTerminalInterface
+
+        return VoiceTerminalInterface(
+            lambda sink: self.create_voice_service(event_sink=sink),
+            output_func=output_func,
+        ).run()
+
+    def list_audio_devices(self) -> tuple[AudioDevice, ...]:
+        """Enumerate bounded safe microphone metadata on explicit request."""
+
+        from omega.voice.microphone import SoundDeviceMicrophone
+
+        configuration = self.voice_configuration
+        return SoundDeviceMicrophone(
+            device=configuration.microphone_device,
+            sample_rate_hz=configuration.sample_rate_hz,
+            block_size=configuration.audio_block_size,
+        ).list_devices()

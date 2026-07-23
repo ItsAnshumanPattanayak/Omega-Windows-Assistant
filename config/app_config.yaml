@@ -91,3 +91,22 @@ history:
   maximum_limit: 100
   maximum_export_bytes: 1048576
   preserve_active_undo_records: true
+
+voice:
+  enabled: false
+  offline_recognition_enabled: true
+  model_path: null
+  microphone_device: null
+  sample_rate_hz: 16000
+  audio_block_size: 4000
+  passive_listening_timeout_seconds: 1
+  active_listening_timeout_seconds: 10
+  active_session_timeout_seconds: 300
+  maximum_transcript_characters: 1000
+  minimum_confidence: 0.50
+  speak_responses: true
+  speech_rate: 180
+  speech_volume: 1.0
+  voice_name: null
+  confirmation_confidence_threshold: 0.85
+  return_to_passive_after_session: true

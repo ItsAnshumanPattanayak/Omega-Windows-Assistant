@@ -74,6 +74,14 @@ class GuiTaskRunner:
             completed += 1
         return completed
 
+    def post(self, callback: Callable[[], None]) -> None:
+        """Marshal an externally produced event onto the UI callback queue."""
+
+        with self._lock:
+            if self._closed:
+                raise GuiTaskError("The GUI task runner is closed.")
+            self._callbacks.put(callback)
+
     def shutdown(self, *, wait: bool = False) -> None:
         """Prevent new work and release executor resources without retry."""
 

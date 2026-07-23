@@ -40,6 +40,8 @@ data/database/*.sqlite
 data/database/*.sqlite3
 data/history_exports/*.json
 data/pytest-temp/
+data/voice_models/
+data/voice_audio/
 
 # Temporary and platform files
 *.tmp

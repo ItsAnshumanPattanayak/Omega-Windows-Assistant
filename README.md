@@ -1,14 +1,40 @@
 # Omega
 
-Omega is a safety-first Windows desktop assistant project. **Current phase: Phase 11 — Desktop Graphical User Interface.**
+Omega is a safety-first Windows desktop assistant project. **Current phase: Phase 12 — Voice Interaction and Wake-Word Support.**
 
 ## Current status
 
 Omega is a locally controlled assistant that understands narrowly approved Windows tasks while enforcing clear safety boundaries. It starts inactive, accepts `Hello Omega` as a standalone activation phrase, greets Anshuman based on the current time, accepts commands without repeating its name, and uses `Shut down Omega` for safe termination.
 
-Phases 8–10 add recoverable Recycle Bin operations, SQLite command/action/result history, persistent recovery records, JSON-only mutable settings, transactional cleanup, bounded JSON export, explicit startup migrations, and lifecycle persistence around the central safety gateway. Phase 11 adds an optional native tkinter/ttk desktop presentation over the same production session and services.
+Phases 8–10 add recoverable Recycle Bin operations, SQLite command/action/result history, persistent recovery records, JSON-only mutable settings, transactional cleanup, bounded JSON export, explicit startup migrations, and lifecycle persistence around the central safety gateway. Phase 11 adds an optional native tkinter/ttk desktop presentation. Phase 12 adds explicitly started, offline-first microphone input, Vosk transcription, strict wake-phrase handling, and local Windows SAPI responses over those same production services.
 
-Omega still cannot permanently delete files or folders, run arbitrary shell commands, modify protected Windows paths, elevate to administrator, modify the Registry, merge or replace folders, process voice input, automate browser pages, or execute AI-generated actions. Recovery records are persistent when configured, but user-facing restoration remains fail-closed until a native restore backend is configured.
+Omega still cannot permanently delete files or folders, run arbitrary shell commands, modify protected Windows paths, elevate to administrator, modify the Registry, merge or replace folders, automate browser pages, or execute AI-generated actions. Voice is optional and does not change these boundaries. Recovery records are persistent when configured, but user-facing restoration remains fail-closed until a native restore backend is configured.
+
+## Optional offline voice
+
+Voice is disabled by default and never opens a microphone during import, ordinary terminal startup, or GUI construction. Install the optional local adapters with:
+
+```powershell
+python -m pip install -e ".[voice]"
+```
+
+Download an English Vosk model manually, extract it beneath `data/voice_models/`, set its relative directory in `config/app_config.yaml`, and set `voice.enabled: true`. Omega never downloads a model during startup and model directories are ignored by Git.
+
+Start terminal voice mode explicitly:
+
+```powershell
+omega --voice
+python -m omega --voice
+omega --list-audio-devices
+```
+
+The GUI has **Start voice** and **Stop voice** controls, microphone/listening state, a transcription preview, and a preference that can disable spoken responses. The microphone remains off until Start voice is selected.
+
+While passively listening, an exact, case-insensitive and boundary-punctuation-tolerant `Hello Omega` activates the existing session. `Hello Omega, open Chrome` is split only when that prefix is exact. Active speech is sent once through `OmegaSession`, the existing parser, persistence, dispatchers, and `SafeExecutionGateway`, with `CommandSource.VOICE`. `Shut down Omega` uses the existing shutdown lifecycle and releases listening resources.
+
+Voice confirmation remains strict: only a final transcription matching the pending action’s exact confirmation or cancellation phrase at the configured higher confidence threshold reaches the existing confirmation manager. Silence, partial text, low confidence, “yes”, expired confirmations, and duplicate callbacks cannot approve an action.
+
+Recognition is local through Vosk; microphone capture uses sounddevice; spoken output uses Windows SAPI through comtypes. There is no cloud upload, API key, telemetry, raw-audio logging, audio-file creation, or audio storage in SQLite. Transcripts follow the same command/history policy as typed commands. See [voice.md](docs/voice.md) for setup, privacy, troubleshooting, and opt-in hardware verification.
 
 ## Desktop interface
 
@@ -55,6 +81,7 @@ All commands—including toolbar operations—go through the existing `OmegaSess
 - Python 3.11+
 - PyYAML for safe YAML configuration
 - psutil for controlled process inspection and termination
+- optional Vosk, sounddevice, and comtypes for offline Windows voice interaction
 - pytest, Ruff, Black, and mypy for quality checks
 
 ## Architecture

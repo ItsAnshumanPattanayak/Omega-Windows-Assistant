@@ -15,6 +15,13 @@ dependencies = [
     "PyYAML>=6.0,<7.0",
 ]
 
+[project.optional-dependencies]
+voice = [
+    "comtypes>=1.4.16,<2.0; sys_platform == 'win32'",
+    "sounddevice>=0.5.5,<0.6",
+    "vosk>=0.3.45,<0.4",
+]
+
 [project.scripts]
 omega = "omega.__main__:main"
 
