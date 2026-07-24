@@ -11,6 +11,7 @@ requires-python = ">=3.11"
 license = { file = "LICENSE" }
 authors = [{ name = "Omega contributors" }]
 dependencies = [
+    "pypdf>=6.14,<7.0",
     "psutil>=6.0,<8.0",
     "PyYAML>=6.0,<7.0",
     "tzdata>=2025.2,<2027.0",

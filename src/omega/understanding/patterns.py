@@ -20,6 +20,93 @@ def _rule(name: str, intent: IntentType, expression: str) -> IntentPattern:
 
 
 INTENT_PATTERNS = (
+    _rule(
+        "create_knowledge_collection",
+        IntentType.CREATE_KNOWLEDGE_COLLECTION,
+        r"^create (?:a )?knowledge collection(?: called| named)? .+$",
+    ),
+    _rule(
+        "list_knowledge_collections",
+        IntentType.LIST_KNOWLEDGE_COLLECTIONS,
+        r"^(?:show|list) (?:my )?knowledge collections$",
+    ),
+    _rule(
+        "show_knowledge_collection",
+        IntentType.SHOW_KNOWLEDGE_COLLECTION,
+        r"^show (?:the )?.+ knowledge collection$",
+    ),
+    _rule(
+        "update_knowledge_collection",
+        IntentType.UPDATE_KNOWLEDGE_COLLECTION,
+        r"^(?:rename|update) (?:the )?.+ knowledge collection (?:to|with) .+$",
+    ),
+    _rule(
+        "archive_knowledge_collection",
+        IntentType.ARCHIVE_KNOWLEDGE_COLLECTION,
+        r"^archive (?:the )?.+ knowledge collection$",
+    ),
+    _rule(
+        "restore_knowledge_collection",
+        IntentType.RESTORE_KNOWLEDGE_COLLECTION,
+        r"^restore (?:the )?.+ knowledge collection$",
+    ),
+    _rule(
+        "delete_knowledge_collection",
+        IntentType.DELETE_KNOWLEDGE_COLLECTION,
+        r"^delete (?:the )?.+ knowledge collection$",
+    ),
+    _rule(
+        "import_knowledge_document",
+        IntentType.IMPORT_KNOWLEDGE_DOCUMENT,
+        r"^(?:import|add) .+\.(?:pdf|docx|txt|md|markdown)(?: .*)?$",
+    ),
+    _rule(
+        "list_knowledge_documents",
+        IntentType.LIST_KNOWLEDGE_DOCUMENTS,
+        r"^(?:show|list) (?:my )?(?:knowledge )?documents(?: in .+)?$",
+    ),
+    _rule(
+        "show_knowledge_document",
+        IntentType.SHOW_KNOWLEDGE_DOCUMENT,
+        r"^show (?:the )?.+ (?:knowledge )?document$",
+    ),
+    _rule(
+        "move_knowledge_document",
+        IntentType.MOVE_KNOWLEDGE_DOCUMENT,
+        r"^move (?:the )?.+ document to .+(?: collection)?$",
+    ),
+    _rule(
+        "reindex_knowledge_document",
+        IntentType.REINDEX_KNOWLEDGE_DOCUMENT,
+        r"^re-?index (?:the )?.+ document$",
+    ),
+    _rule(
+        "remove_knowledge_document",
+        IntentType.REMOVE_KNOWLEDGE_DOCUMENT,
+        r"^(?:remove|delete) (?:the )?.+ document from (?:my )?knowledge base$",
+    ),
+    _rule(
+        "search_knowledge",
+        IntentType.SEARCH_KNOWLEDGE,
+        r"^search (?:(?:my documents|my knowledge base)|"
+        r"(?!(?:the web|web|my notes|notes|my tasks|tasks)\b).+) for .+$",
+    ),
+    _rule(
+        "ask_knowledge",
+        IntentType.ASK_KNOWLEDGE,
+        r"^(?:ask (?:my documents|my knowledge base)|what does .+ "
+        r"(?:document|pdf|docx) say about) .+$",
+    ),
+    _rule(
+        "show_knowledge_sources",
+        IntentType.SHOW_KNOWLEDGE_SOURCES,
+        r"^show (?:the )?sources for (?:that|the last) answer$",
+    ),
+    _rule(
+        "export_knowledge_results",
+        IntentType.EXPORT_KNOWLEDGE_RESULTS,
+        r"^export (?:these|the last|my knowledge) (?:search )?results$",
+    ),
     _rule("list_notes", IntentType.LIST_NOTES, r"^(?:show|list) (?:my )?notes$"),
     _rule("search_notes", IntentType.SEARCH_NOTES, r"^search (?:my )?notes for .+$"),
     _rule("show_note", IntentType.SHOW_NOTE, r"^(?:show|open|view) (?:the )?.+ note$"),

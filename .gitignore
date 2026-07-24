@@ -63,6 +63,16 @@ data/personal_notes/
 data/personal_tasks/
 *.task-export.json
 *.notes-export.json
+data/knowledge/
+data/knowledge_documents/
+data/knowledge_indexes/
+data/knowledge_models/
+data/knowledge_extraction_cache/
+data/knowledge_exports/
+*.knowledge-export.json
+*.knowledge-export.md
+*.vector-index
+*.embedding-cache
 *.db-journal
 *.db-shm
 *.db-wal

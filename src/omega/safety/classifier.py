@@ -76,6 +76,13 @@ _LOW = frozenset(
         IntentType.SEARCH_TASKS,
         IntentType.SHOW_DUE_TASKS,
         IntentType.SHOW_OVERDUE_TASKS,
+        IntentType.LIST_KNOWLEDGE_COLLECTIONS,
+        IntentType.SHOW_KNOWLEDGE_COLLECTION,
+        IntentType.LIST_KNOWLEDGE_DOCUMENTS,
+        IntentType.SHOW_KNOWLEDGE_DOCUMENT,
+        IntentType.SEARCH_KNOWLEDGE,
+        IntentType.ASK_KNOWLEDGE,
+        IntentType.SHOW_KNOWLEDGE_SOURCES,
     }
 )
 _MEDIUM = frozenset(
@@ -136,6 +143,14 @@ _MEDIUM = frozenset(
         IntentType.UNLINK_TASK_REMINDER,
         IntentType.EXPORT_NOTES,
         IntentType.IMPORT_NOTES,
+        IntentType.CREATE_KNOWLEDGE_COLLECTION,
+        IntentType.UPDATE_KNOWLEDGE_COLLECTION,
+        IntentType.ARCHIVE_KNOWLEDGE_COLLECTION,
+        IntentType.RESTORE_KNOWLEDGE_COLLECTION,
+        IntentType.IMPORT_KNOWLEDGE_DOCUMENT,
+        IntentType.MOVE_KNOWLEDGE_DOCUMENT,
+        IntentType.REINDEX_KNOWLEDGE_DOCUMENT,
+        IntentType.EXPORT_KNOWLEDGE_RESULTS,
     }
 )
 _HIGH = frozenset(
@@ -154,6 +169,8 @@ _HIGH = frozenset(
         IntentType.DELETE_NOTE,
         IntentType.DELETE_TASK,
         IntentType.DELETE_TASK_LIST,
+        IntentType.REMOVE_KNOWLEDGE_DOCUMENT,
+        IntentType.DELETE_KNOWLEDGE_COLLECTION,
     }
 )
 _CRITICAL = frozenset(

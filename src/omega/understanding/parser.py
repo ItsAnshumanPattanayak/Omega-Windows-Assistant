@@ -84,6 +84,13 @@ _PRODUCTIVITY_NO_PARAMETER = frozenset(
         IntentType.EXPORT_NOTES,
     }
 )
+_KNOWLEDGE_NO_PARAMETER = frozenset(
+    {
+        IntentType.LIST_KNOWLEDGE_COLLECTIONS,
+        IntentType.SHOW_KNOWLEDGE_SOURCES,
+        IntentType.EXPORT_KNOWLEDGE_RESULTS,
+    }
+)
 
 
 class CommandParser:
@@ -246,6 +253,34 @@ class CommandParser:
             return [], None
         if intent in _PRODUCTIVITY_NO_PARAMETER:
             return [], None
+        if intent in _KNOWLEDGE_NO_PARAMETER:
+            return [], None
+        required_knowledge = {
+            IntentType.CREATE_KNOWLEDGE_COLLECTION: (
+                "collection_name",
+                "What should I call the knowledge collection?",
+            ),
+            IntentType.IMPORT_KNOWLEDGE_DOCUMENT: (
+                "document_path",
+                "Which approved PDF, DOCX, TXT, or Markdown file should I import?",
+            ),
+            IntentType.SEARCH_KNOWLEDGE: (
+                "knowledge_query",
+                "What should I search for in the local documents?",
+            ),
+            IntentType.ASK_KNOWLEDGE: (
+                "knowledge_query",
+                "What question should I answer from the indexed documents?",
+            ),
+        }
+        required = required_knowledge.get(intent)
+        if required and not any(
+            item.name == required[0]
+            and isinstance(item.value, str)
+            and bool(item.value.strip())
+            for item in entities
+        ):
+            return [required[0]], required[1]
         required_productivity = {
             IntentType.CREATE_NOTE: ("note_title", "What should I call the note?"),
             IntentType.CREATE_TASK: ("task_title", "What is the task?"),

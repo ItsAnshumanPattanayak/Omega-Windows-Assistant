@@ -305,6 +305,23 @@
     "show_due_tasks": {"enabled": true, "maximum_risk": "low"},
     "show_overdue_tasks": {"enabled": true, "maximum_risk": "low"},
     "link_task_reminder": {"enabled": true, "maximum_risk": "medium"},
-    "unlink_task_reminder": {"enabled": true, "maximum_risk": "medium"}
+    "unlink_task_reminder": {"enabled": true, "maximum_risk": "medium"},
+    "create_knowledge_collection": {"enabled": true, "maximum_risk": "medium"},
+    "list_knowledge_collections": {"enabled": true, "maximum_risk": "low"},
+    "show_knowledge_collection": {"enabled": true, "maximum_risk": "low"},
+    "update_knowledge_collection": {"enabled": true, "maximum_risk": "medium"},
+    "archive_knowledge_collection": {"enabled": true, "maximum_risk": "medium"},
+    "restore_knowledge_collection": {"enabled": true, "maximum_risk": "medium"},
+    "delete_knowledge_collection": {"enabled": true, "maximum_risk": "high", "requires_confirmation": true},
+    "import_knowledge_document": {"enabled": true, "maximum_risk": "medium"},
+    "list_knowledge_documents": {"enabled": true, "maximum_risk": "low"},
+    "show_knowledge_document": {"enabled": true, "maximum_risk": "low"},
+    "move_knowledge_document": {"enabled": true, "maximum_risk": "medium"},
+    "reindex_knowledge_document": {"enabled": true, "maximum_risk": "medium"},
+    "remove_knowledge_document": {"enabled": true, "maximum_risk": "high", "requires_confirmation": true},
+    "search_knowledge": {"enabled": true, "maximum_risk": "low"},
+    "ask_knowledge": {"enabled": true, "maximum_risk": "low"},
+    "show_knowledge_sources": {"enabled": true, "maximum_risk": "low"},
+    "export_knowledge_results": {"enabled": true, "maximum_risk": "medium"}
   }
 }

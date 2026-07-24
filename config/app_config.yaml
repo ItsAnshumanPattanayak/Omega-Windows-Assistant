@@ -207,3 +207,38 @@ productivity:
   preserve_archived_items: true
   reminder_linking_enabled: true
   automatically_create_deadline_reminders: false
+
+knowledge:
+  enabled: true
+  supported_extensions:
+    - .pdf
+    - .docx
+    - .txt
+    - .md
+    - .markdown
+  maximum_file_bytes: 26214400
+  maximum_document_characters: 2000000
+  maximum_documents: 5000
+  maximum_collections: 200
+  maximum_collection_name_characters: 120
+  maximum_document_title_characters: 300
+  maximum_pages: 2000
+  chunk_size_characters: 1500
+  chunk_overlap_characters: 200
+  maximum_chunks_per_document: 5000
+  default_search_limit: 10
+  maximum_search_limit: 100
+  maximum_query_characters: 1000
+  keyword_search_enabled: true
+  semantic_search_enabled: false
+  semantic_model_name: null
+  semantic_model_path: null
+  semantic_vector_dimension: null
+  minimum_semantic_score: 0.25
+  answer_maximum_context_characters: 20000
+  extraction_timeout_seconds: 30
+  indexing_worker_count: 2
+  allow_duplicate_content: false
+  preserve_original_files: true
+  copy_documents_into_data_directory: false
+  auto_reindex_changed_documents: false

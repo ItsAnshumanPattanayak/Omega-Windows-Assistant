@@ -100,6 +100,27 @@ _TASK_INTENTS = frozenset(
     }
 )
 _PRODUCTIVITY_INTENTS = _NOTE_INTENTS | _TASK_LIST_INTENTS | _TASK_INTENTS
+_KNOWLEDGE_INTENTS = frozenset(
+    {
+        IntentType.CREATE_KNOWLEDGE_COLLECTION,
+        IntentType.LIST_KNOWLEDGE_COLLECTIONS,
+        IntentType.SHOW_KNOWLEDGE_COLLECTION,
+        IntentType.UPDATE_KNOWLEDGE_COLLECTION,
+        IntentType.ARCHIVE_KNOWLEDGE_COLLECTION,
+        IntentType.RESTORE_KNOWLEDGE_COLLECTION,
+        IntentType.DELETE_KNOWLEDGE_COLLECTION,
+        IntentType.IMPORT_KNOWLEDGE_DOCUMENT,
+        IntentType.LIST_KNOWLEDGE_DOCUMENTS,
+        IntentType.SHOW_KNOWLEDGE_DOCUMENT,
+        IntentType.MOVE_KNOWLEDGE_DOCUMENT,
+        IntentType.REINDEX_KNOWLEDGE_DOCUMENT,
+        IntentType.REMOVE_KNOWLEDGE_DOCUMENT,
+        IntentType.SEARCH_KNOWLEDGE,
+        IntentType.ASK_KNOWLEDGE,
+        IntentType.SHOW_KNOWLEDGE_SOURCES,
+        IntentType.EXPORT_KNOWLEDGE_RESULTS,
+    }
+)
 
 
 def _entity(entity_type: EntityType, name: str, value: str, raw: str) -> CommandEntity:
@@ -118,7 +139,9 @@ class RuleBasedEntityExtractor:
 
     def extract(self, original: str, intent: IntentType) -> list[CommandEntity]:
         entities: list[CommandEntity] = []
-        if intent in _PRODUCTIVITY_INTENTS:
+        if intent in _KNOWLEDGE_INTENTS:
+            self._knowledge(original, intent, entities)
+        elif intent in _PRODUCTIVITY_INTENTS:
             self._productivity(original, intent, entities)
         elif intent in {
             IntentType.CREATE_REMINDER,
@@ -197,6 +220,158 @@ class RuleBasedEntityExtractor:
         }:
             self._folder_command(original, intent, entities)
         return entities
+
+    @staticmethod
+    def _knowledge(
+        original: str, intent: IntentType, entities: list[CommandEntity]
+    ) -> None:
+        text = original.strip()
+        quoted = re.findall(r'["\']([^"\']+)["\']', text)
+        if intent is IntentType.CREATE_KNOWLEDGE_COLLECTION:
+            match = re.search(
+                r"knowledge collection(?: called| named)?\s+(.+)$",
+                text,
+                re.IGNORECASE,
+            )
+            if match:
+                value = quoted[-1] if quoted else match.group(1).strip()
+                entities.append(
+                    _entity(
+                        EntityType.KNOWLEDGE_COLLECTION,
+                        "collection_name",
+                        value,
+                        value,
+                    )
+                )
+            return
+        if intent is IntentType.IMPORT_KNOWLEDGE_DOCUMENT:
+            path = re.search(
+                r'([A-Za-z]:[\\/][^"\r\n]+?\.(?:pdf|docx|txt|md|markdown)'
+                r'|[^"\s]+\.(?:pdf|docx|txt|md|markdown))',
+                text,
+                re.IGNORECASE,
+            )
+            if path:
+                value = path.group(1).strip()
+                entities.append(_entity(EntityType.PATH, "document_path", value, value))
+            collection = re.search(
+                r"\b(?:into|to)\s+(.+?)(?:\s+collection)?$",
+                text,
+                re.IGNORECASE,
+            )
+            if collection:
+                value = collection.group(1).strip()
+                if not re.fullmatch(r"(?:my )?knowledge base", value, re.IGNORECASE):
+                    entities.append(
+                        _entity(
+                            EntityType.KNOWLEDGE_COLLECTION,
+                            "collection_name",
+                            value,
+                            value,
+                        )
+                    )
+            return
+        if intent in {IntentType.SEARCH_KNOWLEDGE, IntentType.ASK_KNOWLEDGE}:
+            if intent is IntentType.SEARCH_KNOWLEDGE:
+                match = re.search(r"\bfor\s+(.+)$", text, re.IGNORECASE)
+                prefix = re.match(r"^search\s+(.+?)\s+for\s+", text, re.IGNORECASE)
+                if prefix:
+                    value = prefix.group(1).strip()
+                    if value.casefold() not in {
+                        "my documents",
+                        "my knowledge base",
+                    }:
+                        entities.append(
+                            _entity(
+                                EntityType.KNOWLEDGE_COLLECTION,
+                                "collection_name",
+                                value,
+                                value,
+                            )
+                        )
+            else:
+                match = re.match(
+                    r"^ask (?:my documents|my knowledge base)\s+(.+)$",
+                    text,
+                    re.IGNORECASE,
+                )
+                if match is None:
+                    match = re.match(r"^(what does .+)$", text, re.IGNORECASE)
+            if match:
+                value = match.group(1).strip()
+                entities.append(
+                    _entity(EntityType.SEARCH_QUERY, "knowledge_query", value, value)
+                )
+            return
+        collection_intents = {
+            IntentType.SHOW_KNOWLEDGE_COLLECTION,
+            IntentType.UPDATE_KNOWLEDGE_COLLECTION,
+            IntentType.ARCHIVE_KNOWLEDGE_COLLECTION,
+            IntentType.RESTORE_KNOWLEDGE_COLLECTION,
+            IntentType.DELETE_KNOWLEDGE_COLLECTION,
+            IntentType.LIST_KNOWLEDGE_DOCUMENTS,
+        }
+        if intent in collection_intents:
+            match = re.search(
+                r"(?:show|rename|update|archive|restore|delete)\s+(?:the )?(.+?)\s+"
+                r"knowledge collection",
+                text,
+                re.IGNORECASE,
+            )
+            if intent is IntentType.LIST_KNOWLEDGE_DOCUMENTS:
+                match = re.search(r"\bin\s+(.+)$", text, re.IGNORECASE)
+            if match:
+                value = match.group(1).strip()
+                entities.append(
+                    _entity(
+                        EntityType.KNOWLEDGE_COLLECTION,
+                        "collection_reference",
+                        value,
+                        value,
+                    )
+                )
+            return
+        document_intents = {
+            IntentType.SHOW_KNOWLEDGE_DOCUMENT,
+            IntentType.MOVE_KNOWLEDGE_DOCUMENT,
+            IntentType.REINDEX_KNOWLEDGE_DOCUMENT,
+            IntentType.REMOVE_KNOWLEDGE_DOCUMENT,
+        }
+        if intent in document_intents:
+            reference = re.sub(
+                r"^(?:show|move|re-?index|remove|delete)\s+(?:the )?",
+                "",
+                text,
+                flags=re.IGNORECASE,
+            )
+            reference = re.sub(
+                r"\s+(?:knowledge )?document(?:\s+.*)?$",
+                "",
+                reference,
+                flags=re.IGNORECASE,
+            )
+            entities.append(
+                _entity(
+                    EntityType.KNOWLEDGE_DOCUMENT,
+                    "document_reference",
+                    quoted[0] if quoted else reference.strip(),
+                    reference.strip(),
+                )
+            )
+            if intent is IntentType.MOVE_KNOWLEDGE_DOCUMENT:
+                destination = re.search(
+                    r"\bto\s+(.+?)(?:\s+collection)?$", text, re.IGNORECASE
+                )
+                if destination:
+                    value = destination.group(1).strip()
+                    entities.append(
+                        _entity(
+                            EntityType.KNOWLEDGE_COLLECTION,
+                            "collection_name",
+                            value,
+                            value,
+                        )
+                    )
 
     @staticmethod
     def _productivity(

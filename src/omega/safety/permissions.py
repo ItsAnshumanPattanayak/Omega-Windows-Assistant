@@ -120,6 +120,8 @@ class PermissionConfiguration:
             IntentType.DELETE_NOTE,
             IntentType.DELETE_TASK,
             IntentType.DELETE_TASK_LIST,
+            IntentType.REMOVE_KNOWLEDGE_DOCUMENT,
+            IntentType.DELETE_KNOWLEDGE_COLLECTION,
         }
 
         supported = {

@@ -149,6 +149,23 @@ class IntentType(StrEnum):
     SHOW_OVERDUE_TASKS = "show_overdue_tasks"
     LINK_TASK_REMINDER = "link_task_reminder"
     UNLINK_TASK_REMINDER = "unlink_task_reminder"
+    CREATE_KNOWLEDGE_COLLECTION = "create_knowledge_collection"
+    LIST_KNOWLEDGE_COLLECTIONS = "list_knowledge_collections"
+    SHOW_KNOWLEDGE_COLLECTION = "show_knowledge_collection"
+    UPDATE_KNOWLEDGE_COLLECTION = "update_knowledge_collection"
+    ARCHIVE_KNOWLEDGE_COLLECTION = "archive_knowledge_collection"
+    RESTORE_KNOWLEDGE_COLLECTION = "restore_knowledge_collection"
+    DELETE_KNOWLEDGE_COLLECTION = "delete_knowledge_collection"
+    IMPORT_KNOWLEDGE_DOCUMENT = "import_knowledge_document"
+    LIST_KNOWLEDGE_DOCUMENTS = "list_knowledge_documents"
+    SHOW_KNOWLEDGE_DOCUMENT = "show_knowledge_document"
+    MOVE_KNOWLEDGE_DOCUMENT = "move_knowledge_document"
+    REINDEX_KNOWLEDGE_DOCUMENT = "reindex_knowledge_document"
+    REMOVE_KNOWLEDGE_DOCUMENT = "remove_knowledge_document"
+    SEARCH_KNOWLEDGE = "search_knowledge"
+    ASK_KNOWLEDGE = "ask_knowledge"
+    SHOW_KNOWLEDGE_SOURCES = "show_knowledge_sources"
+    EXPORT_KNOWLEDGE_RESULTS = "export_knowledge_results"
 
 
 class ActionStatus(StrEnum):
@@ -225,6 +242,9 @@ class EntityType(StrEnum):
     TASK_LIST = "task_list"
     TAG = "tag"
     PRIORITY = "priority"
+    KNOWLEDGE_COLLECTION = "knowledge_collection"
+    KNOWLEDGE_DOCUMENT = "knowledge_document"
+    KNOWLEDGE_SOURCE = "knowledge_source"
     UNKNOWN = "unknown"
 
 

@@ -799,6 +799,49 @@ class ProductivityDeletionPolicy(_IntentPolicy):
     )
 
 
+class KnowledgePolicy(_IntentPolicy):
+    policy_id, priority = "SAFETY-KNOWLEDGE-001", 80
+    intents = frozenset(
+        {
+            IntentType.CREATE_KNOWLEDGE_COLLECTION,
+            IntentType.LIST_KNOWLEDGE_COLLECTIONS,
+            IntentType.SHOW_KNOWLEDGE_COLLECTION,
+            IntentType.UPDATE_KNOWLEDGE_COLLECTION,
+            IntentType.ARCHIVE_KNOWLEDGE_COLLECTION,
+            IntentType.RESTORE_KNOWLEDGE_COLLECTION,
+            IntentType.IMPORT_KNOWLEDGE_DOCUMENT,
+            IntentType.LIST_KNOWLEDGE_DOCUMENTS,
+            IntentType.SHOW_KNOWLEDGE_DOCUMENT,
+            IntentType.MOVE_KNOWLEDGE_DOCUMENT,
+            IntentType.REINDEX_KNOWLEDGE_DOCUMENT,
+            IntentType.SEARCH_KNOWLEDGE,
+            IntentType.ASK_KNOWLEDGE,
+            IntentType.SHOW_KNOWLEDGE_SOURCES,
+            IntentType.EXPORT_KNOWLEDGE_RESULTS,
+        }
+    )
+    disposition, reason_code, message = (
+        PolicyDisposition.ALLOW,
+        "LOCAL_KNOWLEDGE_ALLOWED",
+        "Validated local-only knowledge operations are allowed.",
+    )
+
+
+class KnowledgeDeletionPolicy(_IntentPolicy):
+    policy_id, priority = "SAFETY-KNOWLEDGE-DELETE-001", 70
+    intents = frozenset(
+        {
+            IntentType.REMOVE_KNOWLEDGE_DOCUMENT,
+            IntentType.DELETE_KNOWLEDGE_COLLECTION,
+        }
+    )
+    disposition, reason_code, message = (
+        PolicyDisposition.REQUIRE_CONFIRMATION,
+        "KNOWLEDGE_REMOVAL_CONFIRMATION",
+        "Removing indexed knowledge requires exact scoped confirmation.",
+    )
+
+
 DEFAULT_POLICIES = cast(
     tuple[SafetyPolicy, ...],
     (
@@ -819,6 +862,7 @@ DEFAULT_POLICIES = cast(
         BrowserMutationPolicy(),
         PowerActionPolicy(),
         ProductivityDeletionPolicy(),
+        KnowledgeDeletionPolicy(),
         ApplicationOpenPolicy(),
         ApplicationStatusPolicy(),
         FileReadPolicy(),
@@ -838,6 +882,7 @@ DEFAULT_POLICIES = cast(
         SystemControlPolicy(),
         SchedulingPolicy(),
         ProductivityPolicy(),
+        KnowledgePolicy(),
     ),
 )
 

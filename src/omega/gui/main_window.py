@@ -121,6 +121,8 @@ class OmegaMainWindow(GuiView):
             ("Tasks", self._list_tasks),
             ("Due today", self._due_tasks),
             ("Overdue", self._overdue_tasks),
+            ("Knowledge", self._knowledge_collections),
+            ("Documents", self._knowledge_documents),
         )
         self.operation_buttons: list[ttk.Button] = []
         for toolbar_index, (label, command) in enumerate(actions):
@@ -476,3 +478,9 @@ class OmegaMainWindow(GuiView):
 
     def _overdue_tasks(self) -> None:
         self.controller.submit_command("show overdue tasks")
+
+    def _knowledge_collections(self) -> None:
+        self.controller.submit_command("show my knowledge collections")
+
+    def _knowledge_documents(self) -> None:
+        self.controller.submit_command("list my knowledge documents")

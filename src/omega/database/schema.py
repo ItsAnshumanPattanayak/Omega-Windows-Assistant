@@ -14,7 +14,8 @@ RECOVERY_SCHEMA_VERSION = 4
 SETTINGS_SCHEMA_VERSION = 5
 SCHEDULING_SCHEMA_VERSION = 6
 PRODUCTIVITY_SCHEMA_VERSION = 7
-LATEST_SCHEMA_VERSION = PRODUCTIVITY_SCHEMA_VERSION
+KNOWLEDGE_SCHEMA_VERSION = 8
+LATEST_SCHEMA_VERSION = KNOWLEDGE_SCHEMA_VERSION
 
 BASELINE_MIGRATION_NAME = "phase_9a_database_foundation"
 COMMAND_MIGRATION_NAME = "phase_9b_command_repository"
@@ -23,6 +24,7 @@ RECOVERY_MIGRATION_NAME = "phase_10_recovery_repository"
 SETTINGS_MIGRATION_NAME = "phase_10_runtime_settings"
 SCHEDULING_MIGRATION_NAME = "phase_15_scheduling"
 PRODUCTIVITY_MIGRATION_NAME = "phase_16_productivity"
+KNOWLEDGE_MIGRATION_NAME = "phase_17_knowledge"
 
 CREATE_SCHEDULED_ITEMS_TABLE = """
 CREATE TABLE IF NOT EXISTS scheduled_items (
@@ -125,6 +127,62 @@ CREATE TABLE IF NOT EXISTS task_reminder_links (
  FOREIGN KEY(task_id) REFERENCES tasks(task_id) ON DELETE CASCADE,
  FOREIGN KEY(schedule_id) REFERENCES scheduled_items(schedule_id) ON DELETE RESTRICT,
  CHECK(link_type IN ('deadline','manual'))
+)
+"""
+
+CREATE_KNOWLEDGE_COLLECTIONS_TABLE = """
+CREATE TABLE IF NOT EXISTS knowledge_collections (
+ collection_id TEXT PRIMARY KEY, name TEXT NOT NULL COLLATE NOCASE,
+ description TEXT NOT NULL, is_archived INTEGER NOT NULL,
+ created_at TEXT NOT NULL, updated_at TEXT NOT NULL, archived_at TEXT,
+ metadata_json TEXT NOT NULL, revision INTEGER NOT NULL,
+ UNIQUE(name), CHECK(length(trim(name)) > 0), CHECK(is_archived IN (0,1)),
+ CHECK(revision >= 1), CHECK((is_archived=1 AND archived_at IS NOT NULL) OR
+ (is_archived=0 AND archived_at IS NULL))
+)
+"""
+CREATE_KNOWLEDGE_DOCUMENTS_TABLE = """
+CREATE TABLE IF NOT EXISTS knowledge_documents (
+ document_id TEXT PRIMARY KEY, collection_id TEXT NOT NULL, title TEXT NOT NULL,
+ original_filename TEXT NOT NULL, source_path TEXT NOT NULL, source_type TEXT NOT NULL,
+ file_size_bytes INTEGER NOT NULL, content_fingerprint TEXT NOT NULL,
+ status TEXT NOT NULL, extraction_status TEXT NOT NULL, index_status TEXT NOT NULL,
+ character_count INTEGER NOT NULL, page_count INTEGER, imported_at TEXT NOT NULL,
+ updated_at TEXT NOT NULL, last_indexed_at TEXT, removed_at TEXT,
+ metadata_json TEXT NOT NULL, revision INTEGER NOT NULL,
+ FOREIGN KEY(collection_id) REFERENCES knowledge_collections(collection_id)
+   ON DELETE RESTRICT,
+ CHECK(source_type IN ('pdf','docx','text','markdown')),
+ CHECK(status IN ('active','archived','removed')),
+ CHECK(extraction_status IN ('succeeded','failed')),
+ CHECK(index_status IN
+   ('pending','keyword_ready','semantic_ready','semantic_unavailable','failed')),
+ CHECK(file_size_bytes > 0), CHECK(character_count > 0), CHECK(revision >= 1),
+ CHECK((status='removed' AND removed_at IS NOT NULL) OR
+       (status!='removed' AND removed_at IS NULL))
+)
+"""
+CREATE_KNOWLEDGE_CHUNKS_TABLE = """
+CREATE TABLE IF NOT EXISTS knowledge_chunks (
+ chunk_id TEXT PRIMARY KEY, document_id TEXT NOT NULL, sequence_number INTEGER NOT NULL,
+ text TEXT NOT NULL, text_hash TEXT NOT NULL, character_start INTEGER NOT NULL,
+ character_end INTEGER NOT NULL, page_number INTEGER, section_title TEXT,
+ token_estimate INTEGER NOT NULL, created_at TEXT NOT NULL, metadata_json TEXT NOT NULL,
+ FOREIGN KEY(document_id) REFERENCES knowledge_documents(document_id)
+   ON DELETE CASCADE,
+ UNIQUE(document_id,sequence_number), CHECK(sequence_number >= 0),
+ CHECK(length(trim(text)) > 0), CHECK(character_start >= 0),
+ CHECK(character_end > character_start), CHECK(token_estimate > 0),
+ CHECK(page_number IS NULL OR page_number > 0)
+)
+"""
+CREATE_KNOWLEDGE_SEMANTIC_ENTRIES_TABLE = """
+CREATE TABLE IF NOT EXISTS knowledge_semantic_entries (
+ index_entry_id TEXT PRIMARY KEY, chunk_id TEXT NOT NULL UNIQUE,
+ model_name TEXT NOT NULL, vector_dimension INTEGER NOT NULL,
+ vector_json TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+ FOREIGN KEY(chunk_id) REFERENCES knowledge_chunks(chunk_id) ON DELETE CASCADE,
+ CHECK(vector_dimension > 0 AND vector_dimension <= 16384)
 )
 """
 
@@ -469,6 +527,39 @@ def apply_productivity_schema(connection: sqlite3.Connection) -> None:
         ) from error
 
 
+def apply_knowledge_schema(connection: sqlite3.Connection) -> None:
+    """Create local knowledge collections, documents, chunks, and vector metadata."""
+
+    try:
+        for statement in (
+            CREATE_KNOWLEDGE_COLLECTIONS_TABLE,
+            CREATE_KNOWLEDGE_DOCUMENTS_TABLE,
+            CREATE_KNOWLEDGE_CHUNKS_TABLE,
+            CREATE_KNOWLEDGE_SEMANTIC_ENTRIES_TABLE,
+            "CREATE INDEX IF NOT EXISTS idx_knowledge_collections_archive_name "
+            "ON knowledge_collections(is_archived,name)",
+            "CREATE INDEX IF NOT EXISTS idx_knowledge_documents_collection_status "
+            "ON knowledge_documents(collection_id,status,title)",
+            "CREATE INDEX IF NOT EXISTS idx_knowledge_documents_fingerprint "
+            "ON knowledge_documents(content_fingerprint,status)",
+            "CREATE INDEX IF NOT EXISTS idx_knowledge_documents_type_updated "
+            "ON knowledge_documents(source_type,updated_at DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_knowledge_documents_index_status "
+            "ON knowledge_documents(index_status)",
+            "CREATE INDEX IF NOT EXISTS idx_knowledge_chunks_document_sequence "
+            "ON knowledge_chunks(document_id,sequence_number)",
+            "CREATE INDEX IF NOT EXISTS idx_knowledge_chunks_hash "
+            "ON knowledge_chunks(text_hash)",
+            "CREATE INDEX IF NOT EXISTS idx_knowledge_semantic_model "
+            "ON knowledge_semantic_entries(model_name,vector_dimension)",
+        ):
+            connection.execute(statement)
+    except sqlite3.Error as error:
+        raise DatabaseSchemaError(
+            "Omega could not create the local knowledge schema."
+        ) from error
+
+
 def _record_migration(
     connection: sqlite3.Connection,
     *,
@@ -545,6 +636,12 @@ def initialize_schema(
             connection,
             version=PRODUCTIVITY_SCHEMA_VERSION,
             name=PRODUCTIVITY_MIGRATION_NAME,
+        )
+        apply_knowledge_schema(connection)
+        _record_migration(
+            connection,
+            version=KNOWLEDGE_SCHEMA_VERSION,
+            name=KNOWLEDGE_MIGRATION_NAME,
         )
 
         connection.commit()

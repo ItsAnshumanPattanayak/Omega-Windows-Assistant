@@ -42,6 +42,7 @@ from omega.execution import (
     FileActionDispatcher,
     FolderActionDispatcher,
     HistoryActionDispatcher,
+    KnowledgeActionDispatcher,
     ProductivityActionDispatcher,
     SchedulingActionDispatcher,
     SystemActionDispatcher,
@@ -70,6 +71,22 @@ from omega.folders import (
 )
 from omega.history import HistoryService
 from omega.interfaces.terminal import TerminalInterface
+from omega.knowledge import (
+    DeterministicChunker,
+    KnowledgeRepository,
+    KnowledgeService,
+    KnowledgeSourceType,
+)
+from omega.knowledge.export_service import KnowledgeExportService
+from omega.knowledge.extractors import (
+    DocxExtractor,
+    ExtractorRegistry,
+    MarkdownExtractor,
+    PdfExtractor,
+    TextExtractor,
+)
+from omega.knowledge.semantic_search import UnavailableSemanticSearch
+from omega.knowledge.validation import KnowledgeFileValidator
 from omega.productivity.export import ProductivityExportService
 from omega.productivity.importers import ProductivityImportService
 from omega.productivity.repositories import ProductivityRepository
@@ -316,6 +333,46 @@ class OmegaApplication:
             self.productivity_service,
             productivity_root / "imports",
         )
+        knowledge_configuration = self.settings.knowledge_configuration
+        knowledge_repository = KnowledgeRepository(database_factory)
+        knowledge_root = (
+            database_path.parent / "knowledge"
+            if database_path is not None
+            else data_dir() / "knowledge"
+        )
+        knowledge_validator = KnowledgeFileValidator(
+            knowledge_configuration,
+            (
+                Path.cwd(),
+                Path.home() / "Desktop",
+                Path.home() / "Documents",
+                Path.home() / "Downloads",
+                knowledge_root / "imports",
+            ),
+        )
+        knowledge_extractors = ExtractorRegistry(
+            {
+                KnowledgeSourceType.TEXT: TextExtractor(knowledge_configuration),
+                KnowledgeSourceType.MARKDOWN: MarkdownExtractor(
+                    knowledge_configuration
+                ),
+                KnowledgeSourceType.DOCX: DocxExtractor(knowledge_configuration),
+                KnowledgeSourceType.PDF: PdfExtractor(knowledge_configuration),
+            }
+        )
+        self.knowledge_service = KnowledgeService(
+            knowledge_configuration,
+            knowledge_repository,
+            knowledge_validator,
+            knowledge_extractors,
+            DeterministicChunker(knowledge_configuration),
+            UnavailableSemanticSearch(),
+        )
+        self.knowledge_export_service = KnowledgeExportService(
+            knowledge_configuration,
+            knowledge_repository,
+            knowledge_root / "exports",
+        )
         self.notifications = NotificationCenter(
             get_logger("scheduling"),
             speech_enabled=self.settings.scheduling_configuration.speak_notifications,
@@ -364,6 +421,11 @@ class OmegaApplication:
                 safety_gateway,
                 self.productivity_export_service,
                 self.productivity_import_service,
+            ),
+            knowledge_dispatcher=KnowledgeActionDispatcher(
+                self.knowledge_service,
+                safety_gateway,
+                self.knowledge_export_service,
             ),
             safety_gateway=safety_gateway,
         )

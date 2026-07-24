@@ -492,3 +492,39 @@ SQL, escaped LIKE values, deterministic ordering, and bounded results. Task
 deadline reminders reuse Phase 15 schedule IDs and services; no second
 scheduler exists and due tasks are informational unless explicitly linked to a
 notification.
+
+## Phase 17 local knowledge
+
+```text
+terminal / GUI / offline voice
+        ↓
+existing CommandParser
+        ↓ typed knowledge intent and inert query/path entities
+KnowledgeActionDispatcher
+        ↓ Action + revision/fingerprint SafetyContext
+SafeExecutionGateway
+        ↓ policy / exact confirmation / execute once
+KnowledgeService
+        ├─ explicit approved-file validation
+        ├─ PDF / DOCX / TXT / Markdown text extractors
+        ├─ deterministic bounded chunker
+        ├─ parameterized KnowledgeRepository
+        ├─ mandatory local keyword retrieval
+        ├─ optional explicit local semantic protocol
+        └─ extractive grounded answering
+```
+
+Migration 8 adds `knowledge_collections`, `knowledge_documents`,
+`knowledge_chunks`, and bounded JSON semantic-vector metadata. Repository
+construction never creates schema. Imports and chunk replacement are
+transactional; optimistic revisions and resource fingerprints prevent stale
+mutation or confirmation reuse. Re-indexing retains the old searchable version
+until replacement succeeds.
+
+Document contents are untrusted quoted data. They never enter the command
+parser, safety policy, dispatcher selection, tool execution, link launcher, or
+speech-recognition input. Source paths remain internal and are excluded from
+normal model serialization and exports. Search uses deterministic bounded
+parameterized queries with token/phrase/title ranking. Optional semantic
+providers are initialized explicitly, never download models, and cannot disable
+the keyword fallback.

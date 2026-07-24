@@ -27,6 +27,13 @@ The approved roadmap is intentionally incremental. Each phase should be designed
     bounded search, archive/restore, Phase 15 reminder links, safe JSON import,
     JSON/Markdown export, and shared terminal/GUI/voice gateway routing.
 
-18. **Phase 17 — Next:** to be defined after Phase 16 review.
+18. **Phase 17 — Local Knowledge Base and Document Search — Completed:**
+    explicit approved PDF/DOCX/TXT/Markdown import, safe extraction,
+    deterministic chunking, SQLite collections and indexes, bounded keyword
+    retrieval, optional local semantic fallback, extractive grounded answers
+    with sources, transactional re-indexing, source-preserving removal, safe
+    export, and shared terminal/GUI/voice gateway routing.
+
+19. **Phase 18 — Next:** to be defined after Phase 17 review.
 
 Later phases may cover local AI-assisted intent suggestions, additional Windows integrations, accessibility, packaging, installer support, and release hardening.

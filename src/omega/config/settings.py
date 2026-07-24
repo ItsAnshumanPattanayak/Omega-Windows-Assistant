@@ -12,6 +12,7 @@ import yaml
 from omega.browser.configuration import BrowserConfiguration
 from omega.core.exceptions import ConfigurationError
 from omega.database.configuration import DatabaseConfiguration
+from omega.knowledge.configuration import KnowledgeConfiguration
 from omega.productivity.configuration import ProductivityConfiguration
 from omega.scheduling.configuration import SchedulingConfiguration
 from omega.system.configuration import SystemConfiguration
@@ -75,6 +76,7 @@ class Settings:
     system: Mapping[str, Any]
     scheduling: Mapping[str, Any]
     productivity: Mapping[str, Any]
+    knowledge: Mapping[str, Any]
 
     @property
     def application_name(self) -> str:
@@ -136,6 +138,12 @@ class Settings:
         """Return strict local productivity limits without creating storage."""
 
         return ProductivityConfiguration.from_mapping(self.productivity)
+
+    @property
+    def knowledge_configuration(self) -> KnowledgeConfiguration:
+        """Return strict local knowledge limits without loading files or models."""
+
+        return KnowledgeConfiguration.from_mapping(self.knowledge)
 
 
 def _defaults() -> dict[str, dict[str, Any]]:
@@ -280,6 +288,7 @@ def _defaults() -> dict[str, dict[str, Any]]:
         "system": {},
         "scheduling": {},
         "productivity": {},
+        "knowledge": {},
     }
 
 
@@ -500,7 +509,15 @@ def _merge_defaults(
     for section, values in _defaults().items():
         supplied = (
             raw.get(section, {})
-            if section in {"voice", "browser", "system", "scheduling", "productivity"}
+            if section
+            in {
+                "voice",
+                "browser",
+                "system",
+                "scheduling",
+                "productivity",
+                "knowledge",
+            }
             else raw[section]
         )
 
@@ -570,5 +587,6 @@ def load_settings(
     SystemConfiguration.from_mapping(values["system"])
     SchedulingConfiguration.from_mapping(values["scheduling"])
     ProductivityConfiguration.from_mapping(values["productivity"])
+    KnowledgeConfiguration.from_mapping(values["knowledge"])
 
     return Settings(**values)
