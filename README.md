@@ -74,7 +74,7 @@ All supported operations pass through the same command-processing and safety lif
 
 ## Current capabilities
 
-Omega currently includes functionality completed through **Phase 18**:
+Omega currently includes functionality completed through **Phase 19**:
 
 | Area | Status |
 |---|---|
@@ -98,7 +98,8 @@ Omega currently includes functionality completed through **Phase 18**:
 | Alarms and timers | ✅ Implemented |
 | Notes and task management | ✅ Implemented |
 | Knowledge-base document search | ✅ Implemented |
-| Privacy-first email assistance | ✅ Implemented (provider adapter required) |
+| Privacy-first email assistance | ✅ Implemented (live adapter not bundled) |
+| Privacy-first calendar assistance | ✅ Implemented (live adapter not bundled) |
 
 ### Privacy-first email assistance
 
@@ -114,6 +115,19 @@ local demonstrations only. Omega stores no credentials, mailbox bodies, or
 attachment binaries in its database. It never renders remote HTML, loads remote
 images, opens links, downloads attachments, permanently deletes mail, or retries
 an ambiguous send automatically. See [docs/email.md](docs/email.md).
+
+### Privacy-first calendar assistance
+
+Phase 19 adds bounded, provider-independent calendar listing, search, event
+reading, deterministic agendas, busy-interval availability, and reviewable
+event proposals. Create, update, delete, and invitation-response mutations all
+require exact, scoped, expiring confirmation. Recurring mutations require an
+explicit scope, and ambiguous provider timeouts are never retried automatically.
+
+Calendar assistance is disabled by default. No live calendar provider or
+credential flow is bundled; the fake provider performs zero network operations.
+SQLite stores metadata-only idempotency receipts, never event content or
+credentials. See [docs/calendar.md](docs/calendar.md).
 
 ---
 
@@ -1447,12 +1461,12 @@ Phase 15 — Reminders, alarms, timers, and scheduling
 Phase 16 — Notes, tasks, and productivity
 Phase 17 — Local knowledge base and document search
 Phase 18 — Privacy-first email assistance
+Phase 19 — Privacy-first calendar integration
 ```
 
 ## Paused / planned
 
 ```text
-Phase 19 — Calendar and meeting management
 Phase 20 — Clipboard, screenshots, and desktop utilities
 Phase 21 — Workflow automation
 Phase 22 — Plugin and skill architecture

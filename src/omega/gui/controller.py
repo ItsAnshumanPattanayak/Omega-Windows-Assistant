@@ -240,6 +240,31 @@ class GuiController:
     def show_email_attachments(self) -> bool:
         return self.submit_command("show attachments for this email")
 
+    def calendar_status(self) -> bool:
+        return self.submit_command("calendar status")
+
+    def list_calendar_events(self, period: str = "today") -> bool:
+        return self.submit_command(f"show my calendar for {period}")
+
+    def search_calendar(self, query: str) -> bool:
+        return self.submit_command(f"search my calendar for {query}")
+
+    def open_calendar_event(self, number: int) -> bool:
+        return self.submit_command(f"open event number {number}")
+
+    def calendar_availability(self, period: str = "today") -> bool:
+        return self.submit_command(f"show my availability for {period}")
+
+    def create_calendar_event(
+        self, title: str, day: str, clock: str, duration_minutes: int = 60
+    ) -> bool:
+        return self.submit_command(
+            f"schedule event {title} {day} at {clock} for {duration_minutes} minutes"
+        )
+
+    def delete_calendar_event(self) -> bool:
+        return self.submit_command("delete this event")
+
     def confirm_pending(self) -> bool:
         """Route the current exact confirmation phrase through the session."""
 

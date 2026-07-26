@@ -104,6 +104,16 @@ _EMAIL_NO_PARAMETER = frozenset(
         IntentType.SHOW_EMAIL_ATTACHMENTS,
     }
 )
+_CALENDAR_NO_PARAMETER = frozenset(
+    {
+        IntentType.CALENDAR_STATUS,
+        IntentType.LIST_CALENDAR_EVENTS,
+        IntentType.SHOW_CALENDAR_AVAILABILITY,
+        IntentType.SHOW_CALENDAR_AGENDA,
+        IntentType.DELETE_CALENDAR_EVENT,
+        IntentType.RESPOND_CALENDAR_INVITATION,
+    }
+)
 
 
 class CommandParser:
@@ -270,6 +280,32 @@ class CommandParser:
             return [], None
         if intent in _EMAIL_NO_PARAMETER:
             return [], None
+        if intent in _CALENDAR_NO_PARAMETER:
+            return [], None
+        if (
+            intent is IntentType.SEARCH_CALENDAR_EVENTS
+            and "calendar_query" not in names
+        ):
+            return ["calendar_query"], "What should I search for in the calendar?"
+        if intent is IntentType.READ_CALENDAR_EVENT and "event_reference" not in names:
+            return ["event_reference"], "Which event number should I open?"
+        if intent is IntentType.CREATE_CALENDAR_EVENT:
+            required_calendar = {
+                "event_title",
+                "event_day",
+                "event_time",
+                "duration_minutes",
+            }
+            if not required_calendar.issubset(names):
+                return (
+                    sorted(required_calendar - names),
+                    "Provide an event title, date, and unambiguous time (for example: "
+                    "schedule event Planning tomorrow at 4 pm for 30 minutes).",
+                )
+        if intent is IntentType.UPDATE_CALENDAR_EVENT and not names.intersection(
+            {"event_title", "event_day", "event_time"}
+        ):
+            return ["event_update"], "What should I change about the selected event?"
         if intent is IntentType.SEARCH_EMAILS and not names.intersection(
             {"email_query", "email_sender", "email_subject_query"}
         ):

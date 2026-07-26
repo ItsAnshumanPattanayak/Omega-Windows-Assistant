@@ -181,6 +181,16 @@ class IntentType(StrEnum):
     SEND_EMAIL_DRAFT = "send_email_draft"
     ARCHIVE_EMAIL = "archive_email"
     SHOW_EMAIL_ATTACHMENTS = "show_email_attachments"
+    CALENDAR_STATUS = "calendar_status"
+    LIST_CALENDAR_EVENTS = "list_calendar_events"
+    SEARCH_CALENDAR_EVENTS = "search_calendar_events"
+    READ_CALENDAR_EVENT = "read_calendar_event"
+    SHOW_CALENDAR_AVAILABILITY = "show_calendar_availability"
+    SHOW_CALENDAR_AGENDA = "show_calendar_agenda"
+    CREATE_CALENDAR_EVENT = "create_calendar_event"
+    UPDATE_CALENDAR_EVENT = "update_calendar_event"
+    DELETE_CALENDAR_EVENT = "delete_calendar_event"
+    RESPOND_CALENDAR_INVITATION = "respond_calendar_invitation"
 
 
 class ActionStatus(StrEnum):
@@ -263,6 +273,7 @@ class EntityType(StrEnum):
     EMAIL_ADDRESS = "email_address"
     EMAIL_MESSAGE = "email_message"
     EMAIL_DRAFT = "email_draft"
+    CALENDAR_EVENT = "calendar_event"
     UNKNOWN = "unknown"
 
 

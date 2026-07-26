@@ -21,6 +21,67 @@ def _rule(name: str, intent: IntentType, expression: str) -> IntentPattern:
 
 INTENT_PATTERNS = (
     _rule(
+        "calendar_status",
+        IntentType.CALENDAR_STATUS,
+        r"^(?:show )?calendar (?:status|connection)$",
+    ),
+    _rule(
+        "calendar_agenda",
+        IntentType.SHOW_CALENDAR_AGENDA,
+        r"^(?:show|summari[sz]e) (?:my )?(?:calendar )?agenda"
+        r"(?: for (?:today|tomorrow|this week))?$",
+    ),
+    _rule(
+        "calendar_availability",
+        IntentType.SHOW_CALENDAR_AVAILABILITY,
+        r"^(?:(?:show|check) (?:my )?(?:calendar )?availability"
+        r"(?: for (?:today|tomorrow|this week))?|am i free "
+        r"(?:today|tomorrow|(?:next )?(?:monday|tuesday|wednesday|thursday|"
+        r"friday|saturday|sunday)|\d{4}-\d{2}-\d{2})(?: at .+)?)$",
+    ),
+    _rule(
+        "list_calendar",
+        IntentType.LIST_CALENDAR_EVENTS,
+        r"^(?:(?:show|list) (?:my )?(?:calendar|events)(?: for)?(?: "
+        r"(?:today|tomorrow|this week|(?:next )?(?:monday|tuesday|wednesday|"
+        r"thursday|friday|saturday|sunday)|\d{4}-\d{2}-\d{2}))?|"
+        r"what(?:'s| is) on my calendar(?: for)? (?:today|tomorrow|this week))$",
+    ),
+    _rule(
+        "search_calendar",
+        IntentType.SEARCH_CALENDAR_EVENTS,
+        r"^(?:(?:search|find) (?:my )?(?:calendar|events) for|"
+        r"find my meeting with) .+$",
+    ),
+    _rule(
+        "read_calendar_event",
+        IntentType.READ_CALENDAR_EVENT,
+        r"^(?:open|read|show) (?:calendar )?event(?: number)? \d+$",
+    ),
+    _rule(
+        "create_calendar_event",
+        IntentType.CREATE_CALENDAR_EVENT,
+        r"^(?:create|schedule|add) (?:a |an )?(?:(?:calendar )?event|meeting) .+$",
+    ),
+    _rule(
+        "update_calendar_event",
+        IntentType.UPDATE_CALENDAR_EVENT,
+        r"^(?:update|change|move|reschedule) (?:this|the current|selected) "
+        r"(?:calendar )?event .+$",
+    ),
+    _rule(
+        "delete_calendar_event",
+        IntentType.DELETE_CALENDAR_EVENT,
+        r"^(?:delete|cancel) (?:this|the current|selected) (?:calendar )?event"
+        r"(?: (?:this event|this and future|all events))?$",
+    ),
+    _rule(
+        "respond_calendar",
+        IntentType.RESPOND_CALENDAR_INVITATION,
+        r"^(?:accept|decline|tentatively accept) (?:this|the current|selected) "
+        r"(?:calendar )?(?:event|invitation)$",
+    ),
+    _rule(
         "email_status",
         IntentType.EMAIL_STATUS,
         r"^(?:show )?email (?:status|connection)$",

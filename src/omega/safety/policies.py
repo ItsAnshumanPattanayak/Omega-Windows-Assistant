@@ -883,6 +883,46 @@ class EmailMutationPolicy(_IntentPolicy):
     )
 
 
+class CalendarPolicy(_IntentPolicy):
+    """Allow bounded calendar reads through the central gateway."""
+
+    policy_id, priority = "SAFETY-CALENDAR-001", 80
+    intents = frozenset(
+        {
+            IntentType.CALENDAR_STATUS,
+            IntentType.LIST_CALENDAR_EVENTS,
+            IntentType.SEARCH_CALENDAR_EVENTS,
+            IntentType.READ_CALENDAR_EVENT,
+            IntentType.SHOW_CALENDAR_AVAILABILITY,
+            IntentType.SHOW_CALENDAR_AGENDA,
+        }
+    )
+    disposition, reason_code, message = (
+        PolicyDisposition.ALLOW,
+        "BOUNDED_CALENDAR_OPERATION_ALLOWED",
+        "Bounded calendar reads are allowed.",
+    )
+
+
+class CalendarMutationPolicy(_IntentPolicy):
+    """Require exact, scoped, single-use confirmation for calendar mutations."""
+
+    policy_id, priority = "SAFETY-CALENDAR-MUTATION-001", 70
+    intents = frozenset(
+        {
+            IntentType.CREATE_CALENDAR_EVENT,
+            IntentType.UPDATE_CALENDAR_EVENT,
+            IntentType.DELETE_CALENDAR_EVENT,
+            IntentType.RESPOND_CALENDAR_INVITATION,
+        }
+    )
+    disposition, reason_code, message = (
+        PolicyDisposition.REQUIRE_CONFIRMATION,
+        "CALENDAR_MUTATION_CONFIRMATION",
+        "Calendar mutations require exact scoped confirmation.",
+    )
+
+
 DEFAULT_POLICIES = cast(
     tuple[SafetyPolicy, ...],
     (
@@ -905,6 +945,7 @@ DEFAULT_POLICIES = cast(
         ProductivityDeletionPolicy(),
         KnowledgeDeletionPolicy(),
         EmailMutationPolicy(),
+        CalendarMutationPolicy(),
         ApplicationOpenPolicy(),
         ApplicationStatusPolicy(),
         FileReadPolicy(),
@@ -926,6 +967,7 @@ DEFAULT_POLICIES = cast(
         ProductivityPolicy(),
         KnowledgePolicy(),
         EmailPolicy(),
+        CalendarPolicy(),
     ),
 )
 

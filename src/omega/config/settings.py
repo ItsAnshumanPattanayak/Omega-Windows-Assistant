@@ -10,6 +10,7 @@ from typing import Any
 import yaml
 
 from omega.browser.configuration import BrowserConfiguration
+from omega.calendar.configuration import CalendarConfiguration
 from omega.core.exceptions import ConfigurationError
 from omega.database.configuration import DatabaseConfiguration
 from omega.email.configuration import EmailConfiguration
@@ -79,6 +80,7 @@ class Settings:
     productivity: Mapping[str, Any]
     knowledge: Mapping[str, Any]
     email: Mapping[str, Any] = field(default_factory=dict)
+    calendar: Mapping[str, Any] = field(default_factory=dict)
 
     @property
     def application_name(self) -> str:
@@ -152,6 +154,12 @@ class Settings:
         """Return credential-free email policy without contacting a provider."""
 
         return EmailConfiguration.from_mapping(self.email)
+
+    @property
+    def calendar_configuration(self) -> CalendarConfiguration:
+        """Return credential-free calendar policy without contacting a provider."""
+
+        return CalendarConfiguration.from_mapping(self.calendar)
 
 
 def _defaults() -> dict[str, dict[str, Any]]:
@@ -298,6 +306,7 @@ def _defaults() -> dict[str, dict[str, Any]]:
         "productivity": {},
         "knowledge": {},
         "email": {},
+        "calendar": {},
     }
 
 
@@ -527,6 +536,7 @@ def _merge_defaults(
                 "productivity",
                 "knowledge",
                 "email",
+                "calendar",
             }
             else raw[section]
         )
@@ -599,5 +609,6 @@ def load_settings(
     ProductivityConfiguration.from_mapping(values["productivity"])
     KnowledgeConfiguration.from_mapping(values["knowledge"])
     EmailConfiguration.from_mapping(values["email"])
+    CalendarConfiguration.from_mapping(values["calendar"])
 
     return Settings(**values)

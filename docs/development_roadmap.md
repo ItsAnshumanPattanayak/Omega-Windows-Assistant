@@ -40,6 +40,13 @@ The approved roadmap is intentionally incremental. Each phase should be designed
     metadata-only attachment handling, SQLite idempotency receipts, and shared
     terminal/GUI/voice safety routing backed by zero-network fake-provider tests.
 
-20. **Phase 19 — Next:** to be defined after Phase 18 review.
+20. **Phase 19 — Privacy-First Calendar Integration — Completed:** bounded
+    provider-independent calendar listing/search/reading, deterministic local
+    agenda and availability, timezone-aware event proposals, bounded recurrence
+    and reminders, exact-confirmed create/update/delete/invitation responses,
+    metadata-only SQLite idempotency receipts, and shared terminal/GUI/voice
+    safety routing backed by a zero-network fake provider.
+
+21. **Phase 20 — Next:** to be defined after Phase 19 review.
 
 Later phases may cover local AI-assisted intent suggestions, additional Windows integrations, accessibility, packaging, installer support, and release hardening.

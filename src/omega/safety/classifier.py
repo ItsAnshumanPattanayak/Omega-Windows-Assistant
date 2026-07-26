@@ -92,6 +92,12 @@ _LOW = frozenset(
         IntentType.SUMMARIZE_EMAIL,
         IntentType.LIST_EMAIL_DRAFTS,
         IntentType.SHOW_EMAIL_ATTACHMENTS,
+        IntentType.CALENDAR_STATUS,
+        IntentType.LIST_CALENDAR_EVENTS,
+        IntentType.SEARCH_CALENDAR_EVENTS,
+        IntentType.READ_CALENDAR_EVENT,
+        IntentType.SHOW_CALENDAR_AVAILABILITY,
+        IntentType.SHOW_CALENDAR_AGENDA,
     }
 )
 _MEDIUM = frozenset(
@@ -163,6 +169,8 @@ _MEDIUM = frozenset(
         IntentType.CREATE_EMAIL_DRAFT,
         IntentType.CREATE_EMAIL_REPLY_DRAFT,
         IntentType.UPDATE_EMAIL_DRAFT,
+        IntentType.CREATE_CALENDAR_EVENT,
+        IntentType.UPDATE_CALENDAR_EVENT,
     }
 )
 _HIGH = frozenset(
@@ -186,6 +194,8 @@ _HIGH = frozenset(
         IntentType.DELETE_KNOWLEDGE_COLLECTION,
         IntentType.SEND_EMAIL_DRAFT,
         IntentType.ARCHIVE_EMAIL,
+        IntentType.DELETE_CALENDAR_EVENT,
+        IntentType.RESPOND_CALENDAR_INVITATION,
     }
 )
 _CRITICAL = frozenset(

@@ -14,7 +14,7 @@ from omega.understanding import CommandParser
 
 def test_phase17_migration_is_contiguous() -> None:
     assert KNOWLEDGE_SCHEMA_VERSION == 8
-    assert LATEST_SCHEMA_VERSION == 10
+    assert LATEST_SCHEMA_VERSION == 11
 
 
 def test_knowledge_commands_use_existing_parser_and_preserve_queries() -> None:
@@ -104,7 +104,7 @@ def test_phase17_upgrade_preserves_phase16_and_adds_foreign_keys(
         connection.commit()
     finally:
         connection.close()
-    assert runner.migrate() == 10
+    assert runner.migrate() == 11
     connection = factory.connect()
     try:
         assert (

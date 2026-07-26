@@ -574,3 +574,41 @@ Migration 10 stores only minimal opaque operation receipts. A uniqueness
 constraint blocks duplicate send/archive attempts across restarts. Persistent
 command history receives a redacted email-operation record instead of recipient,
 query, subject, or body content.
+
+## Phase 19 privacy-first calendar integration
+
+```text
+terminal / tkinter GUI / offline voice
+        ↓
+existing CommandParser and session-scoped event selection
+        ↓ typed calendar intent and inert date/event entities
+CalendarActionDispatcher
+        ↓ redacted Action + event revision fingerprint
+SafeExecutionGateway
+        ↓ policy / exact scoped confirmation / execute once
+CalendarService
+        ├─ deterministic local time and agenda services
+        ├─ provider-independent CalendarProvider protocol
+        ├─ bounded event, availability, and proposal state
+        └─ metadata-only idempotency receipt store
+```
+
+Calendar models contain opaque IDs, aware datetimes, validated timezone names,
+bounded plain text, validated attendee addresses, enums, reminders, recurrence,
+and JSON-compatible metadata. Provider-native objects, credentials, sockets,
+callbacks, HTML renderers, executable content, and shell commands are excluded.
+The provider boundary is initialized explicitly during application composition;
+importing the package does not create schema, start background work, or contact
+a service.
+
+Read, search, agenda, and availability operations are bounded low-risk gateway
+actions. Creation is always a reviewable proposal. Create, update, delete, and
+invitation response are high-risk external mutations requiring one exact,
+scoped, expiring confirmation. Existing targets are revalidated by event ID and
+revision; recurring targets require an explicit recurrence scope. Provider
+timeouts are ambiguous and never retried automatically.
+
+Migration 11 adds only calendar operation receipts and leaves provider event
+content external. The unique account/operation/target key provides restart-safe
+duplicate protection. Session result IDs and proposals stay in memory and are
+cleared at lifecycle boundaries. See [calendar.md](calendar.md).

@@ -21,6 +21,8 @@ from omega.browser import (
     PlaywrightBrowserBackend,
     UrlValidator,
 )
+from omega.calendar import FakeCalendarProvider, SqliteCalendarOperationStore
+from omega.calendar.service import CalendarService
 from omega.config.settings import Settings, load_settings
 from omega.core.exceptions import (
     DatabaseError,
@@ -41,6 +43,7 @@ from omega.email.service import EmailService
 from omega.execution import (
     ApplicationActionDispatcher,
     BrowserActionDispatcher,
+    CalendarActionDispatcher,
     EmailActionDispatcher,
     FileActionDispatcher,
     FolderActionDispatcher,
@@ -387,6 +390,18 @@ class OmegaApplication:
             email_provider,
             SqliteEmailOperationStore(database_factory),
         )
+        calendar_configuration = self.settings.calendar_configuration
+        calendar_provider = (
+            FakeCalendarProvider()
+            if calendar_configuration.enabled
+            and calendar_configuration.provider == "fake"
+            else None
+        )
+        self.calendar_service = CalendarService(
+            calendar_configuration,
+            calendar_provider,
+            SqliteCalendarOperationStore(database_factory),
+        )
         self.notifications = NotificationCenter(
             get_logger("scheduling"),
             speech_enabled=self.settings.scheduling_configuration.speak_notifications,
@@ -443,6 +458,10 @@ class OmegaApplication:
             ),
             email_dispatcher=EmailActionDispatcher(
                 self.email_service,
+                safety_gateway,
+            ),
+            calendar_dispatcher=CalendarActionDispatcher(
+                self.calendar_service,
                 safety_gateway,
             ),
             safety_gateway=safety_gateway,

@@ -17,8 +17,8 @@ def test_phase_18_migration_is_contiguous_and_metadata_only(tmp_path) -> None:
     factory = DatabaseConnectionFactory(
         DatabaseConfiguration(), database_path=tmp_path / "omega.db"
     )
-    assert MigrationRunner(factory).migrate() == EMAIL_SCHEMA_VERSION == 10
-    assert LATEST_SCHEMA_VERSION == 10
+    assert EMAIL_SCHEMA_VERSION == 10
+    assert MigrationRunner(factory).migrate() == LATEST_SCHEMA_VERSION == 11
     connection = factory.connect()
     try:
         columns = {
@@ -69,7 +69,7 @@ def test_existing_phase_17_database_migrates_without_data_loss(tmp_path) -> None
         connection.commit()
     finally:
         connection.close()
-    assert runner.migrate() == 10
+    assert runner.migrate() == 11
     connection = factory.connect()
     try:
         assert (

@@ -13,6 +13,8 @@ from omega.database.schema import (
     ACTION_SCHEMA_VERSION,
     BASELINE_MIGRATION_NAME,
     BASELINE_SCHEMA_VERSION,
+    CALENDAR_MIGRATION_NAME,
+    CALENDAR_SCHEMA_VERSION,
     COMMAND_MIGRATION_NAME,
     COMMAND_SCHEMA_VERSION,
     EMAIL_MIGRATION_NAME,
@@ -31,6 +33,7 @@ from omega.database.schema import (
     SETTINGS_SCHEMA_VERSION,
     apply_action_schema,
     apply_baseline_schema,
+    apply_calendar_schema,
     apply_command_schema,
     apply_email_schema,
     apply_knowledge_schema,
@@ -115,6 +118,11 @@ EMAIL_MIGRATION = Migration(
     EMAIL_MIGRATION_NAME,
     apply_email_schema,
 )
+CALENDAR_MIGRATION = Migration(
+    CALENDAR_SCHEMA_VERSION,
+    CALENDAR_MIGRATION_NAME,
+    apply_calendar_schema,
+)
 
 DEFAULT_MIGRATIONS = (
     BASELINE_MIGRATION,
@@ -127,6 +135,7 @@ DEFAULT_MIGRATIONS = (
     KNOWLEDGE_MIGRATION,
     KNOWLEDGE_SOURCE_INDEX_MIGRATION,
     EMAIL_MIGRATION,
+    CALENDAR_MIGRATION,
 )
 
 

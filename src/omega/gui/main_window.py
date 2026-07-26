@@ -141,6 +141,10 @@ class OmegaMainWindow(GuiView):
             ("Send draft", self._send_email_draft),
             ("Archive email", self._archive_email),
             ("Attachments", self._email_attachments),
+            ("Calendar", self._calendar_today),
+            ("Availability", self._calendar_availability),
+            ("Calendar search", self._calendar_search),
+            ("Add event", self._calendar_add),
         )
         self.operation_buttons: list[ttk.Button] = []
         for toolbar_index, (label, command) in enumerate(actions):
@@ -606,3 +610,35 @@ class OmegaMainWindow(GuiView):
 
     def _email_attachments(self) -> None:
         self.controller.show_email_attachments()
+
+    def _calendar_today(self) -> None:
+        self.controller.list_calendar_events("today")
+
+    def _calendar_availability(self) -> None:
+        self.controller.calendar_availability("today")
+
+    def _calendar_search(self) -> None:
+        query = simpledialog.askstring(
+            "Search calendar", "Search for:", parent=self.root
+        )
+        if query and query.strip():
+            self.controller.search_calendar(query.strip())
+
+    def _calendar_add(self) -> None:
+        title = simpledialog.askstring("Add calendar event", "Title:", parent=self.root)
+        if not title or not title.strip():
+            return
+        day = simpledialog.askstring(
+            "Add calendar event",
+            "Day (today, tomorrow, or YYYY-MM-DD):",
+            parent=self.root,
+        )
+        if not day or not day.strip():
+            return
+        clock = simpledialog.askstring(
+            "Add calendar event", "Time (for example 4 pm or 16:00):", parent=self.root
+        )
+        if clock and clock.strip():
+            self.controller.create_calendar_event(
+                title.strip(), day.strip(), clock.strip()
+            )

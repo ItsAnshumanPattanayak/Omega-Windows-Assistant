@@ -118,6 +118,20 @@ _EMAIL_INTENTS = frozenset(
         IntentType.SHOW_EMAIL_ATTACHMENTS,
     }
 )
+_CALENDAR_INTENTS = frozenset(
+    {
+        IntentType.CALENDAR_STATUS,
+        IntentType.LIST_CALENDAR_EVENTS,
+        IntentType.SEARCH_CALENDAR_EVENTS,
+        IntentType.READ_CALENDAR_EVENT,
+        IntentType.SHOW_CALENDAR_AVAILABILITY,
+        IntentType.SHOW_CALENDAR_AGENDA,
+        IntentType.CREATE_CALENDAR_EVENT,
+        IntentType.UPDATE_CALENDAR_EVENT,
+        IntentType.DELETE_CALENDAR_EVENT,
+        IntentType.RESPOND_CALENDAR_INVITATION,
+    }
+)
 _KNOWLEDGE_INTENTS = frozenset(
     {
         IntentType.CREATE_KNOWLEDGE_COLLECTION,
@@ -161,7 +175,9 @@ class RuleBasedEntityExtractor:
 
     def extract(self, original: str, intent: IntentType) -> list[CommandEntity]:
         entities: list[CommandEntity] = []
-        if intent in _EMAIL_INTENTS:
+        if intent in _CALENDAR_INTENTS:
+            self._calendar(original, intent, entities)
+        elif intent in _EMAIL_INTENTS:
             self._email(original, intent, entities)
         elif intent in _KNOWLEDGE_INTENTS:
             self._knowledge(original, intent, entities)
@@ -244,6 +260,151 @@ class RuleBasedEntityExtractor:
         }:
             self._folder_command(original, intent, entities)
         return entities
+
+    @staticmethod
+    def _calendar(
+        original: str, intent: IntentType, entities: list[CommandEntity]
+    ) -> None:
+        text = original.strip().rstrip("?!")
+        reference = re.search(r"\bevent(?: number)?\s+(\d+)\b", text, re.IGNORECASE)
+        if reference:
+            entities.append(
+                _entity(
+                    EntityType.CALENDAR_EVENT,
+                    "event_reference",
+                    int(reference.group(1)),
+                    reference.group(1),
+                )
+            )
+        period = re.search(
+            r"\b(today|tomorrow|this week|(?:next )?monday|(?:next )?tuesday|"
+            r"(?:next )?wednesday|(?:next )?thursday|(?:next )?friday|"
+            r"friday|saturday|sunday|\d{4}-\d{2}-\d{2})\b",
+            text,
+            re.IGNORECASE,
+        )
+        if period:
+            entities.append(
+                _entity(
+                    EntityType.DATE_TIME,
+                    "calendar_period",
+                    period.group(1).casefold(),
+                    period.group(1),
+                )
+            )
+        if intent is IntentType.SHOW_CALENDAR_AVAILABILITY:
+            clock = re.search(
+                r"\bat\s+(\d{1,2}(?::\d{2})?\s*(?:am|pm)|\d{2}:\d{2})$",
+                text,
+                re.IGNORECASE,
+            )
+            if clock:
+                entities.append(
+                    _entity(
+                        EntityType.DATE_TIME,
+                        "event_time",
+                        clock.group(1).casefold().replace(" ", ""),
+                        clock.group(1),
+                    )
+                )
+        if intent is IntentType.SEARCH_CALENDAR_EVENTS:
+            query = re.search(r"\b(?:for|with)\s+(.+)$", text, re.IGNORECASE)
+            if query:
+                entities.append(
+                    _entity(
+                        EntityType.SEARCH_QUERY,
+                        "calendar_query",
+                        query.group(1),
+                        query.group(1),
+                    )
+                )
+        if intent is IntentType.CREATE_CALENDAR_EVENT:
+            match = re.match(
+                r"^(?:create|schedule|add) (?:a |an )?((?:calendar )?event|meeting)\s*"
+                r"(.*?)\s+(?:on\s+)?(today|tomorrow|(?:next )?monday|"
+                r"(?:next )?tuesday|(?:next )?wednesday|(?:next )?thursday|"
+                r"(?:next )?friday|(?:next )?saturday|(?:next )?sunday|"
+                r"\d{4}-\d{2}-\d{2})\s+at\s+"
+                r"(\d{1,2}(?::\d{2})?\s*(?:am|pm)|\d{2}:\d{2})"
+                r"(?:\s+for\s+(\d+)\s*(minutes?|hours?))?$",
+                text,
+                re.IGNORECASE,
+            )
+            if match:
+                entities.append(
+                    _entity(
+                        EntityType.TEXT_CONTENT,
+                        "event_title",
+                        match.group(2).strip() or match.group(1).strip().title(),
+                        match.group(2).strip() or match.group(1).strip(),
+                    )
+                )
+                entities.append(
+                    _entity(
+                        EntityType.DATE_TIME,
+                        "event_day",
+                        match.group(3).casefold(),
+                        match.group(3),
+                    )
+                )
+                entities.append(
+                    _entity(
+                        EntityType.DATE_TIME,
+                        "event_time",
+                        match.group(4).casefold().replace(" ", ""),
+                        match.group(4),
+                    )
+                )
+                if match.group(5):
+                    duration = int(match.group(5)) * (
+                        60 if match.group(6).casefold().startswith("hour") else 1
+                    )
+                    entities.append(
+                        _entity(
+                            EntityType.DURATION,
+                            "duration_minutes",
+                            duration,
+                            match.group(0),
+                        )
+                    )
+        if intent is IntentType.RESPOND_CALENDAR_INVITATION:
+            response = (
+                "tentative"
+                if text.casefold().startswith("tentatively")
+                else "accepted" if text.casefold().startswith("accept") else "declined"
+            )
+            entities.append(
+                _entity(
+                    EntityType.TEXT_CONTENT, "invitation_response", response, response
+                )
+            )
+        if intent in {
+            IntentType.DELETE_CALENDAR_EVENT,
+            IntentType.UPDATE_CALENDAR_EVENT,
+        }:
+            scopes = {
+                "this event": "this_event",
+                "this and future": "this_and_future",
+                "all events": "all_events",
+            }
+            for phrase, value in scopes.items():
+                if phrase in text.casefold():
+                    entities.append(
+                        _entity(
+                            EntityType.TEXT_CONTENT, "recurrence_scope", value, phrase
+                        )
+                    )
+            if intent is IntentType.UPDATE_CALENDAR_EVENT:
+                title = re.search(r"\btitle\s+to\s+(.+)$", text, re.IGNORECASE)
+                if title:
+                    entities.append(
+                        _entity(
+                            EntityType.TEXT_CONTENT,
+                            "event_title",
+                            title.group(1),
+                            title.group(1),
+                        )
+                    )
 
     @staticmethod
     def _email(

@@ -4,6 +4,10 @@ from omega.execution.browser_dispatcher import (
     BrowserActionDispatcher,
     BrowserDispatchResult,
 )
+from omega.execution.calendar_dispatcher import (
+    CalendarActionDispatcher,
+    CalendarDispatchResult,
+)
 from omega.execution.dispatcher import (
     ApplicationActionDispatcher,
     ApplicationControlCommand,
@@ -43,6 +47,8 @@ __all__ = [
     "ApplicationDispatchResult",
     "BrowserActionDispatcher",
     "BrowserDispatchResult",
+    "CalendarActionDispatcher",
+    "CalendarDispatchResult",
     "EmailActionDispatcher",
     "EmailDispatchResult",
     "FileActionDispatcher",

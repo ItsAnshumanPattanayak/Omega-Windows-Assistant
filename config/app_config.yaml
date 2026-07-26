@@ -276,3 +276,32 @@ email:
   maximum_attachment_bytes: 10485760
   require_confirmation_for_send: true
   require_confirmation_for_archive: true
+
+# Phase 19 calendar assistance is provider-independent and disabled by default.
+# No credentials or event bodies are persisted by Omega's calendar receipts.
+calendar:
+  enabled: false
+  provider: null
+  account_name: null
+  timezone_name: Asia/Calcutta
+  maximum_events_per_request: 50
+  maximum_search_query_characters: 300
+  maximum_date_range_days: 366
+  maximum_title_characters: 300
+  maximum_description_characters: 10000
+  maximum_location_characters: 500
+  maximum_attendees: 50
+  maximum_recurrence_occurrences: 500
+  default_event_duration_minutes: 60
+  minimum_event_duration_minutes: 5
+  maximum_event_duration_hours: 24
+  working_day_start: "09:00"
+  working_day_end: "18:00"
+  minimum_free_slot_minutes: 30
+  maximum_reminders: 5
+  maximum_reminder_lead_days: 30
+  provider_timeout_seconds: 20
+  require_confirmation_for_create: true
+  require_confirmation_for_update: true
+  require_confirmation_for_delete: true
+  require_confirmation_for_invitation_response: true
