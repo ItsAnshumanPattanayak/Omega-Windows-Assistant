@@ -636,3 +636,19 @@ files use the runtime data directory, while recent records and exact selections
 remain process-local. Existing file, productivity, and Recycle Bin services own
 file saving, note creation, and recoverable deletion respectively. No Phase 20
 schema migration is required. See [desktop_utilities.md](desktop_utilities.md).
+
+## Phase 21 workflow orchestration
+
+```text
+terminal / GUI / offline voice → CommandParser → WorkflowDispatcher
+    → SafeExecutionGateway → WorkflowService → validator / planner / executor
+    → allowlisted WorkflowStepHandler → existing application-facing domain service
+```
+
+Workflow parsing never performs a step. Planning is deterministic and has no side
+effects. The executor accepts only typed steps and injected handlers, runs one
+bounded step at a time, and has no import, shell, SQL, network, or provider-command
+facility. Workflow-level and step-level confirmations have separate scopes.
+Migration 12 stores JSON-compatible definitions and redacted run summaries; it
+does not store secret runtime values or private domain bodies. See
+[workflows.md](workflows.md).

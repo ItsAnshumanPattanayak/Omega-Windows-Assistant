@@ -963,6 +963,57 @@ class DesktopUtilityDestructivePolicy(_IntentPolicy):
     )
 
 
+class WorkflowPolicy(_IntentPolicy):
+    """Allow bounded workflow inspection and lifecycle requests."""
+
+    policy_id, priority = "SAFETY-WORKFLOW-001", 80
+    intents = frozenset(
+        {
+            IntentType.CREATE_WORKFLOW,
+            IntentType.ADD_WORKFLOW_STEP,
+            IntentType.REMOVE_WORKFLOW_STEP,
+            IntentType.MOVE_WORKFLOW_STEP,
+            IntentType.LIST_WORKFLOWS,
+            IntentType.SHOW_WORKFLOW,
+            IntentType.PREVIEW_WORKFLOW,
+            IntentType.VALIDATE_WORKFLOW,
+            IntentType.PAUSE_WORKFLOW,
+            IntentType.RESUME_WORKFLOW,
+            IntentType.CANCEL_WORKFLOW,
+            IntentType.SHOW_WORKFLOW_HISTORY,
+            IntentType.EXPORT_WORKFLOW,
+            IntentType.IMPORT_WORKFLOW,
+        }
+    )
+    disposition, reason_code, message = (
+        PolicyDisposition.ALLOW,
+        "BOUNDED_WORKFLOW_OPERATION_ALLOWED",
+        "Bounded workflow operations are allowed.",
+    )
+
+
+class WorkflowDeletionPolicy(_IntentPolicy):
+    policy_id, priority = "SAFETY-WORKFLOW-DELETE-001", 70
+    intents = frozenset({IntentType.DELETE_WORKFLOW})
+    disposition, reason_code, message = (
+        PolicyDisposition.REQUIRE_CONFIRMATION,
+        "WORKFLOW_DELETE_CONFIRMATION",
+        "Workflow deletion requires exact confirmation.",
+    )
+
+
+class WorkflowConfirmationPolicy(_IntentPolicy):
+    """Require scoped confirmation to save or start a workflow."""
+
+    policy_id, priority = "SAFETY-WORKFLOW-CONFIRM-001", 70
+    intents = frozenset({IntentType.SAVE_WORKFLOW, IntentType.RUN_WORKFLOW})
+    disposition, reason_code, message = (
+        PolicyDisposition.REQUIRE_CONFIRMATION,
+        "WORKFLOW_CONFIRMATION_REQUIRED",
+        "Saving or starting a workflow requires exact confirmation.",
+    )
+
+
 DEFAULT_POLICIES = cast(
     tuple[SafetyPolicy, ...],
     (
@@ -987,6 +1038,8 @@ DEFAULT_POLICIES = cast(
         EmailMutationPolicy(),
         CalendarMutationPolicy(),
         DesktopUtilityDestructivePolicy(),
+        WorkflowDeletionPolicy(),
+        WorkflowConfirmationPolicy(),
         ApplicationOpenPolicy(),
         ApplicationStatusPolicy(),
         FileReadPolicy(),
@@ -1010,6 +1063,7 @@ DEFAULT_POLICIES = cast(
         EmailPolicy(),
         CalendarPolicy(),
         DesktopUtilityPolicy(),
+        WorkflowPolicy(),
     ),
 )
 

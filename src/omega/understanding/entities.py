@@ -151,6 +151,21 @@ _DESKTOP_UTILITY_INTENTS = frozenset(
         IntentType.BRING_WINDOW_TO_FRONT,
     }
 )
+_WORKFLOW_INTENTS = frozenset(
+    {
+        IntentType.CREATE_WORKFLOW,
+        IntentType.ADD_WORKFLOW_STEP,
+        IntentType.REMOVE_WORKFLOW_STEP,
+        IntentType.MOVE_WORKFLOW_STEP,
+        IntentType.SHOW_WORKFLOW,
+        IntentType.PREVIEW_WORKFLOW,
+        IntentType.VALIDATE_WORKFLOW,
+        IntentType.RUN_WORKFLOW,
+        IntentType.DELETE_WORKFLOW,
+        IntentType.EXPORT_WORKFLOW,
+        IntentType.IMPORT_WORKFLOW,
+    }
+)
 _KNOWLEDGE_INTENTS = frozenset(
     {
         IntentType.CREATE_KNOWLEDGE_COLLECTION,
@@ -194,7 +209,9 @@ class RuleBasedEntityExtractor:
 
     def extract(self, original: str, intent: IntentType) -> list[CommandEntity]:
         entities: list[CommandEntity] = []
-        if intent in _DESKTOP_UTILITY_INTENTS:
+        if intent in _WORKFLOW_INTENTS:
+            self._workflow(original, intent, entities)
+        elif intent in _DESKTOP_UTILITY_INTENTS:
             self._desktop_utility(original, intent, entities)
         elif intent in _CALENDAR_INTENTS:
             self._calendar(original, intent, entities)
@@ -281,6 +298,67 @@ class RuleBasedEntityExtractor:
         }:
             self._folder_command(original, intent, entities)
         return entities
+
+    @staticmethod
+    def _workflow(
+        original: str, intent: IntentType, entities: list[CommandEntity]
+    ) -> None:
+        text = original.strip().rstrip("?!")
+        patterns = {
+            IntentType.CREATE_WORKFLOW: r"\bnamed\s+(.+)$",
+            IntentType.SHOW_WORKFLOW: r"^show workflow\s+(.+)$",
+            IntentType.PREVIEW_WORKFLOW: r"^preview workflow\s+(.+)$",
+            IntentType.VALIDATE_WORKFLOW: r"^validate workflow\s+(.+)$",
+            IntentType.RUN_WORKFLOW: r"^run (?:workflow )?(.+)$",
+            IntentType.DELETE_WORKFLOW: r"^delete workflow\s+(.+)$",
+            IntentType.EXPORT_WORKFLOW: r"^export workflow\s+(.+)$",
+            IntentType.IMPORT_WORKFLOW: r"^import workflow from\s+(.+)$",
+            IntentType.ADD_WORKFLOW_STEP: r"^add step:\s*(.+)$",
+            IntentType.REMOVE_WORKFLOW_STEP: r"^remove step\s+(\d+)$",
+            IntentType.MOVE_WORKFLOW_STEP: (
+                r"^move step\s+(\d+)\s+before step\s+(\d+)$"
+            ),
+        }
+        match = re.search(patterns[intent], text, re.IGNORECASE)
+        if match:
+            if intent is IntentType.REMOVE_WORKFLOW_STEP:
+                entities.append(
+                    _entity(
+                        EntityType.NUMBER,
+                        "workflow_step_number",
+                        int(match.group(1)),
+                        match.group(1),
+                    )
+                )
+                return
+            if intent is IntentType.MOVE_WORKFLOW_STEP:
+                for name, value in zip(
+                    ("workflow_step_source", "workflow_step_destination"),
+                    match.groups(),
+                    strict=True,
+                ):
+                    entities.append(_entity(EntityType.NUMBER, name, int(value), value))
+                return
+            if intent is IntentType.ADD_WORKFLOW_STEP:
+                entities.append(
+                    _entity(
+                        EntityType.WORKFLOW_STEP,
+                        "workflow_step_text",
+                        match.group(1),
+                        match.group(1),
+                    )
+                )
+                return
+            entity_type = (
+                EntityType.PATH
+                if intent is IntentType.IMPORT_WORKFLOW
+                else EntityType.WORKFLOW
+            )
+            entities.append(
+                _entity(
+                    entity_type, "workflow_reference", match.group(1), match.group(1)
+                )
+            )
 
     @staticmethod
     def _desktop_utility(

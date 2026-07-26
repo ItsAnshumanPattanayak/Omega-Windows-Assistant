@@ -74,7 +74,16 @@ All supported operations pass through the same command-processing and safety lif
 
 ## Current capabilities
 
-Omega currently includes functionality completed through **Phase 20**:
+Omega currently includes functionality completed through **Phase 21**:
+
+Phase 21 adds bounded, reviewable multi-step workflow definitions, static
+validation and preview, deterministic scalar variables and conditions, sequential
+execution, pause/cancellation controls, and privacy-minimized run history.
+Workflows are an allowlisted orchestration format—not a scripting language—and
+cannot contain shell, PowerShell, Python, JavaScript, raw SQL, arbitrary network
+requests, watchers, or unattended sensitive actions. Starting or saving a
+workflow never replaces the confirmation required by an individual sensitive
+step.
 
 Phase 20 provides explicit plain-text clipboard commands, bounded screenshot
 capture, display information, and visible-window metadata through the existing

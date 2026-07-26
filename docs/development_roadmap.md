@@ -54,6 +54,12 @@ The approved roadmap is intentionally incremental. Each phase should be designed
     history, background monitoring, OCR, cloud upload, and permanent deletion
     remain unavailable.
 
-22. **Phase 21 — Next:** to be defined after Phase 20 review.
+22. **Phase 21 — Safe Workflow Automation — Completed:** typed code-free workflow
+    definitions, deterministic validation and preview, bounded variables and
+    conditions, sequential execution, cancellation and pause state, SQLite
+    definition/version and redacted run persistence, shared command/GUI/voice
+    routing, and per-step safety boundaries.
+
+23. **Phase 22 — Next:** to be defined after Phase 21 review.
 
 Later phases may cover local AI-assisted intent suggestions, additional Windows integrations, accessibility, packaging, installer support, and release hardening.

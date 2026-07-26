@@ -18,7 +18,8 @@ KNOWLEDGE_SCHEMA_VERSION = 8
 KNOWLEDGE_SOURCE_INDEX_SCHEMA_VERSION = 9
 EMAIL_SCHEMA_VERSION = 10
 CALENDAR_SCHEMA_VERSION = 11
-LATEST_SCHEMA_VERSION = CALENDAR_SCHEMA_VERSION
+WORKFLOW_SCHEMA_VERSION = 12
+LATEST_SCHEMA_VERSION = WORKFLOW_SCHEMA_VERSION
 
 BASELINE_MIGRATION_NAME = "phase_9a_database_foundation"
 COMMAND_MIGRATION_NAME = "phase_9b_command_repository"
@@ -31,6 +32,48 @@ KNOWLEDGE_MIGRATION_NAME = "phase_17_knowledge"
 KNOWLEDGE_SOURCE_INDEX_MIGRATION_NAME = "phase_17_source_index"
 EMAIL_MIGRATION_NAME = "phase_18_email_operation_receipts"
 CALENDAR_MIGRATION_NAME = "phase_19_calendar_operation_receipts"
+WORKFLOW_MIGRATION_NAME = "phase_21_workflows"
+
+CREATE_WORKFLOW_DEFINITIONS_TABLE = """
+CREATE TABLE IF NOT EXISTS workflow_definitions (
+ workflow_id TEXT PRIMARY KEY, name TEXT NOT NULL COLLATE NOCASE,
+ status TEXT NOT NULL, version INTEGER NOT NULL, definition_json TEXT NOT NULL,
+ created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+ UNIQUE(name), CHECK(status IN ('draft','active','disabled','archived')),
+ CHECK(version >= 1), CHECK(length(trim(name)) > 0)
+)
+"""
+CREATE_WORKFLOW_RUNS_TABLE = """
+CREATE TABLE IF NOT EXISTS workflow_runs (
+ run_id TEXT PRIMARY KEY, workflow_id TEXT NOT NULL, workflow_version INTEGER NOT NULL,
+ workflow_name TEXT NOT NULL, status TEXT NOT NULL, current_step INTEGER NOT NULL,
+ completed_steps INTEGER NOT NULL, safe_error_code TEXT,
+ started_at TEXT, completed_at TEXT,
+ FOREIGN KEY(workflow_id) REFERENCES workflow_definitions(workflow_id)
+ ON DELETE CASCADE,
+ CHECK(status IN ('pending','running','paused','awaiting_confirmation',
+ 'succeeded','failed','cancelled','timed_out')),
+ CHECK(workflow_version >= 1), CHECK(current_step >= 0), CHECK(completed_steps >= 0)
+)
+"""
+CREATE_WORKFLOW_VERSIONS_TABLE = """
+CREATE TABLE IF NOT EXISTS workflow_versions (
+ workflow_id TEXT NOT NULL, version INTEGER NOT NULL, definition_json TEXT NOT NULL,
+ created_at TEXT NOT NULL,
+ PRIMARY KEY(workflow_id,version),
+ FOREIGN KEY(workflow_id) REFERENCES workflow_definitions(workflow_id)
+ ON DELETE CASCADE, CHECK(version >= 1)
+)
+"""
+CREATE_WORKFLOW_STEP_RUNS_TABLE = """
+CREATE TABLE IF NOT EXISTS workflow_step_runs (
+ run_id TEXT NOT NULL, step_id TEXT NOT NULL, sequence_number INTEGER NOT NULL,
+ success INTEGER NOT NULL, safe_error_code TEXT,
+ PRIMARY KEY(run_id,step_id),
+ FOREIGN KEY(run_id) REFERENCES workflow_runs(run_id) ON DELETE CASCADE,
+ CHECK(sequence_number >= 0), CHECK(success IN (0,1))
+)
+"""
 
 CREATE_CALENDAR_OPERATIONS_TABLE = """
 CREATE TABLE IF NOT EXISTS calendar_operations (
@@ -645,6 +688,27 @@ def apply_calendar_schema(connection: sqlite3.Connection) -> None:
         ) from error
 
 
+def apply_workflow_schema(connection: sqlite3.Connection) -> None:
+    """Create code-free workflow definitions and privacy-minimized run history."""
+    try:
+        connection.execute(CREATE_WORKFLOW_DEFINITIONS_TABLE)
+        connection.execute(CREATE_WORKFLOW_RUNS_TABLE)
+        connection.execute(CREATE_WORKFLOW_VERSIONS_TABLE)
+        connection.execute(CREATE_WORKFLOW_STEP_RUNS_TABLE)
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_workflows_status_updated "
+            "ON workflow_definitions(status,updated_at DESC)"
+        )
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_workflow_runs_workflow_started "
+            "ON workflow_runs(workflow_id,started_at DESC)"
+        )
+    except sqlite3.Error as error:
+        raise DatabaseSchemaError(
+            "Omega could not create the workflow schema."
+        ) from error
+
+
 def _record_migration(
     connection: sqlite3.Connection,
     *,
@@ -748,6 +812,11 @@ def initialize_schema(
             connection,
             version=CALENDAR_SCHEMA_VERSION,
             name=CALENDAR_MIGRATION_NAME,
+        )
+
+        apply_workflow_schema(connection)
+        _record_migration(
+            connection, version=WORKFLOW_SCHEMA_VERSION, name=WORKFLOW_MIGRATION_NAME
         )
 
         connection.commit()

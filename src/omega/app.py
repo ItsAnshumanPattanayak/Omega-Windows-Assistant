@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -64,6 +64,7 @@ from omega.execution import (
     ProductivityActionDispatcher,
     SchedulingActionDispatcher,
     SystemActionDispatcher,
+    WorkflowDispatcher,
 )
 from omega.files import (
     FileLocationResolver,
@@ -105,6 +106,7 @@ from omega.knowledge.extractors import (
 )
 from omega.knowledge.semantic_search import UnavailableSemanticSearch
 from omega.knowledge.validation import KnowledgeFileValidator
+from omega.models._serialization import JsonValue
 from omega.productivity.export import ProductivityExportService
 from omega.productivity.importers import ProductivityImportService
 from omega.productivity.repositories import ProductivityRepository
@@ -142,6 +144,16 @@ from omega.utils.logger import configure_logging, get_logger
 from omega.utils.paths import data_dir, log_dir
 from omega.voice.models import AudioDevice
 from omega.voice.protocols import VoiceEventSink
+from omega.workflows import (
+    WorkflowExecutor,
+    WorkflowPlanner,
+    WorkflowRepository,
+    WorkflowRunRepository,
+    WorkflowService,
+    WorkflowStep,
+    WorkflowStepType,
+    WorkflowValidator,
+)
 
 if TYPE_CHECKING:
     from omega.voice.service import VoiceService
@@ -444,6 +456,33 @@ class OmegaApplication:
             TkScreenInformationProvider(),
             WindowsWindowInformationProvider(),
         )
+        workflow_configuration = self.settings.workflow_configuration
+        workflow_validator = WorkflowValidator(workflow_configuration)
+
+        def inert_workflow_step(
+            step: WorkflowStep, context: Mapping[str, JsonValue]
+        ) -> JsonValue:
+            del context
+            return step.arguments.get("result")
+
+        workflow_executor = WorkflowExecutor(
+            workflow_configuration,
+            workflow_validator,
+            {
+                WorkflowStepType.ASSIGN: inert_workflow_step,
+                WorkflowStepType.CONDITION: inert_workflow_step,
+                WorkflowStepType.DISPLAY_MESSAGE: inert_workflow_step,
+                WorkflowStepType.STOP: inert_workflow_step,
+            },
+        )
+        self.workflow_service = WorkflowService(
+            workflow_configuration,
+            WorkflowRepository(database_factory),
+            WorkflowRunRepository(database_factory),
+            workflow_validator,
+            WorkflowPlanner(workflow_validator),
+            workflow_executor,
+        )
         self.notifications = NotificationCenter(
             get_logger("scheduling"),
             speech_enabled=self.settings.scheduling_configuration.speak_notifications,
@@ -513,6 +552,10 @@ class OmegaApplication:
                 safety_gateway,
                 save_text=self._save_clipboard_text,
                 create_note=self._create_clipboard_note,
+            ),
+            workflow_dispatcher=WorkflowDispatcher(
+                self.workflow_service,
+                safety_gateway,
             ),
             safety_gateway=safety_gateway,
         )

@@ -28,6 +28,7 @@ from omega.utils.constants import (
 )
 from omega.utils.paths import config_dir, data_dir
 from omega.voice.configuration import VoiceConfiguration
+from omega.workflows.configuration import WorkflowConfiguration
 
 REQUIRED_SECTIONS = frozenset(
     {
@@ -83,6 +84,7 @@ class Settings:
     email: Mapping[str, Any] = field(default_factory=dict)
     calendar: Mapping[str, Any] = field(default_factory=dict)
     desktop_utilities: Mapping[str, Any] = field(default_factory=dict)
+    workflows: Mapping[str, Any] = field(default_factory=dict)
 
     @property
     def application_name(self) -> str:
@@ -168,6 +170,10 @@ class Settings:
         """Return bounded local desktop-utility policy without device access."""
 
         return DesktopUtilitiesConfiguration.from_mapping(self.desktop_utilities)
+
+    @property
+    def workflow_configuration(self) -> WorkflowConfiguration:
+        return WorkflowConfiguration.from_mapping(self.workflows)
 
 
 def _defaults() -> dict[str, dict[str, Any]]:
@@ -316,6 +322,7 @@ def _defaults() -> dict[str, dict[str, Any]]:
         "email": {},
         "calendar": {},
         "desktop_utilities": {},
+        "workflows": {},
     }
 
 
@@ -547,6 +554,7 @@ def _merge_defaults(
                 "email",
                 "calendar",
                 "desktop_utilities",
+                "workflows",
             }
             else raw[section]
         )
@@ -621,5 +629,6 @@ def load_settings(
     EmailConfiguration.from_mapping(values["email"])
     CalendarConfiguration.from_mapping(values["calendar"])
     DesktopUtilitiesConfiguration.from_mapping(values["desktop_utilities"])
+    WorkflowConfiguration.from_mapping(values["workflows"])
 
     return Settings(**values)

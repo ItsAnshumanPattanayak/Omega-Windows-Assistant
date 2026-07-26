@@ -106,6 +106,11 @@ _LOW = frozenset(
         IntentType.SHOW_ACTIVE_WINDOW,
         IntentType.LIST_VISIBLE_WINDOWS,
         IntentType.FIND_WINDOW,
+        IntentType.LIST_WORKFLOWS,
+        IntentType.SHOW_WORKFLOW,
+        IntentType.PREVIEW_WORKFLOW,
+        IntentType.VALIDATE_WORKFLOW,
+        IntentType.SHOW_WORKFLOW_HISTORY,
     }
 )
 _MEDIUM = frozenset(
@@ -184,6 +189,17 @@ _MEDIUM = frozenset(
         IntentType.CLIPBOARD_TO_NOTE,
         IntentType.CAPTURE_SCREENSHOT,
         IntentType.BRING_WINDOW_TO_FRONT,
+        IntentType.CREATE_WORKFLOW,
+        IntentType.SAVE_WORKFLOW,
+        IntentType.ADD_WORKFLOW_STEP,
+        IntentType.REMOVE_WORKFLOW_STEP,
+        IntentType.MOVE_WORKFLOW_STEP,
+        IntentType.RUN_WORKFLOW,
+        IntentType.PAUSE_WORKFLOW,
+        IntentType.RESUME_WORKFLOW,
+        IntentType.CANCEL_WORKFLOW,
+        IntentType.EXPORT_WORKFLOW,
+        IntentType.IMPORT_WORKFLOW,
     }
 )
 _HIGH = frozenset(
@@ -211,6 +227,7 @@ _HIGH = frozenset(
         IntentType.RESPOND_CALENDAR_INVITATION,
         IntentType.CLEAR_CLIPBOARD,
         IntentType.DELETE_SCREENSHOT,
+        IntentType.DELETE_WORKFLOW,
     }
 )
 _CRITICAL = frozenset(

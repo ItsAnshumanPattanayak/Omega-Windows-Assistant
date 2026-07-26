@@ -23,6 +23,7 @@ from omega.execution.knowledge_dispatcher import KnowledgeActionDispatcher
 from omega.execution.productivity_dispatcher import ProductivityActionDispatcher
 from omega.execution.scheduling_dispatcher import SchedulingActionDispatcher
 from omega.execution.system_dispatcher import SystemActionDispatcher
+from omega.execution.workflow_dispatcher import WorkflowDispatcher
 from omega.models import CommandSource, UserCommand
 from omega.safety import SafeExecutionGateway
 from omega.session.greeting import greeting_for
@@ -66,6 +67,7 @@ class OmegaSession:
         email_dispatcher: EmailActionDispatcher | None = None,
         calendar_dispatcher: CalendarActionDispatcher | None = None,
         desktop_utility_dispatcher: DesktopUtilityActionDispatcher | None = None,
+        workflow_dispatcher: WorkflowDispatcher | None = None,
         safety_gateway: SafeExecutionGateway | None = None,
     ) -> None:
         self.display_name = self._required_text(user_settings, "display_name")
@@ -92,6 +94,7 @@ class OmegaSession:
         self._email_dispatcher = email_dispatcher
         self._calendar_dispatcher = calendar_dispatcher
         self._desktop_utility_dispatcher = desktop_utility_dispatcher
+        self._workflow_dispatcher = workflow_dispatcher
         self._safety_gateway = (
             safety_gateway
             or getattr(application_dispatcher, "gateway", None)
@@ -321,6 +324,10 @@ class OmegaSession:
                 desktop_result = self._desktop_utility_dispatcher.dispatch(result)
                 if desktop_result is not None:
                     return desktop_result.user_message
+            if self._workflow_dispatcher is not None:
+                workflow_result = self._workflow_dispatcher.dispatch(result)
+                if workflow_result is not None:
+                    return workflow_result.user_message
             if self._application_dispatcher is not None:
                 dispatched = self._application_dispatcher.dispatch(result)
                 if dispatched is not None:
@@ -361,3 +368,5 @@ class OmegaSession:
             self._calendar_dispatcher.clear_session(self.session_id)
         if self._desktop_utility_dispatcher is not None:
             self._desktop_utility_dispatcher.clear_session()
+        if self._workflow_dispatcher is not None:
+            self._workflow_dispatcher.clear_session()

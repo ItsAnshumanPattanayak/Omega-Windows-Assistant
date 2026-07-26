@@ -151,6 +151,9 @@ class OmegaMainWindow(GuiView):
             ("Screenshots", self.controller.list_screenshots),
             ("Displays", self.controller.show_display_information),
             ("Windows", self.controller.list_visible_windows),
+            ("Workflows", self.controller.list_workflows),
+            ("New workflow", self._create_workflow),
+            ("Preview workflow", self._preview_workflow),
         )
         self.operation_buttons: list[ttk.Button] = []
         for toolbar_index, (label, command) in enumerate(actions):
@@ -256,6 +259,20 @@ class OmegaMainWindow(GuiView):
             sticky="e",
             pady=(3, 0),
         )
+
+    def _create_workflow(self) -> None:
+        name = simpledialog.askstring(
+            "New workflow", "Workflow name:", parent=self.root
+        )
+        if name and name.strip():
+            self.controller.create_workflow(name.strip())
+
+    def _preview_workflow(self) -> None:
+        name = simpledialog.askstring(
+            "Preview workflow", "Workflow name:", parent=self.root
+        )
+        if name and name.strip():
+            self.controller.preview_workflow(name.strip())
 
     def add_message(self, message: ConversationMessage) -> None:
         self.conversation.configure(state="normal")

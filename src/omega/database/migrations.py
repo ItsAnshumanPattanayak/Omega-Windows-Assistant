@@ -31,6 +31,8 @@ from omega.database.schema import (
     SCHEDULING_SCHEMA_VERSION,
     SETTINGS_MIGRATION_NAME,
     SETTINGS_SCHEMA_VERSION,
+    WORKFLOW_MIGRATION_NAME,
+    WORKFLOW_SCHEMA_VERSION,
     apply_action_schema,
     apply_baseline_schema,
     apply_calendar_schema,
@@ -42,6 +44,7 @@ from omega.database.schema import (
     apply_recovery_schema,
     apply_scheduling_schema,
     apply_settings_schema,
+    apply_workflow_schema,
     ensure_migrations_table,
     get_schema_version,
     utc_timestamp,
@@ -123,6 +126,9 @@ CALENDAR_MIGRATION = Migration(
     CALENDAR_MIGRATION_NAME,
     apply_calendar_schema,
 )
+WORKFLOW_MIGRATION = Migration(
+    WORKFLOW_SCHEMA_VERSION, WORKFLOW_MIGRATION_NAME, apply_workflow_schema
+)
 
 DEFAULT_MIGRATIONS = (
     BASELINE_MIGRATION,
@@ -136,6 +142,7 @@ DEFAULT_MIGRATIONS = (
     KNOWLEDGE_SOURCE_INDEX_MIGRATION,
     EMAIL_MIGRATION,
     CALENDAR_MIGRATION,
+    WORKFLOW_MIGRATION,
 )
 
 

@@ -192,6 +192,15 @@ class GuiController:
     def list_visible_windows(self) -> bool:
         return self.submit_command("list visible windows")
 
+    def list_workflows(self) -> bool:
+        return self.submit_command("list my workflows")
+
+    def create_workflow(self, name: str) -> bool:
+        return self.submit_command(f"create workflow named {name}")
+
+    def preview_workflow(self, name: str) -> bool:
+        return self.submit_command(f"preview workflow {name}")
+
     def request_undo(self) -> bool:
         return self.submit_command("undo last action")
 

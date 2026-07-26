@@ -21,6 +21,49 @@ def _rule(name: str, intent: IntentType, expression: str) -> IntentPattern:
 
 INTENT_PATTERNS = (
     _rule(
+        "create_workflow",
+        IntentType.CREATE_WORKFLOW,
+        r"^create (?:a )?workflow(?: named .+)?$",
+    ),
+    _rule("save_workflow", IntentType.SAVE_WORKFLOW, r"^save (?:this )?workflow$"),
+    _rule("add_workflow_step", IntentType.ADD_WORKFLOW_STEP, r"^add step:\s*.+$"),
+    _rule(
+        "remove_workflow_step", IntentType.REMOVE_WORKFLOW_STEP, r"^remove step \d+$"
+    ),
+    _rule(
+        "move_workflow_step",
+        IntentType.MOVE_WORKFLOW_STEP,
+        r"^move step \d+ before step \d+$",
+    ),
+    _rule("list_workflows", IntentType.LIST_WORKFLOWS, r"^(?:show|list) my workflows$"),
+    _rule("preview_workflow", IntentType.PREVIEW_WORKFLOW, r"^preview workflow .+$"),
+    _rule(
+        "validate_workflow",
+        IntentType.VALIDATE_WORKFLOW,
+        r"^validate (?:this |workflow .+)?workflow$|^validate workflow .+$",
+    ),
+    _rule(
+        "run_workflow",
+        IntentType.RUN_WORKFLOW,
+        r"^run (?:workflow )?(?!(?:shell|powershell|cmd|python|javascript)\b).+$",
+    ),
+    _rule("pause_workflow", IntentType.PAUSE_WORKFLOW, r"^pause (?:this )?workflow$"),
+    _rule(
+        "resume_workflow", IntentType.RESUME_WORKFLOW, r"^resume (?:this )?workflow$"
+    ),
+    _rule(
+        "cancel_workflow", IntentType.CANCEL_WORKFLOW, r"^cancel (?:this )?workflow$"
+    ),
+    _rule("delete_workflow", IntentType.DELETE_WORKFLOW, r"^delete workflow .+$"),
+    _rule(
+        "workflow_history",
+        IntentType.SHOW_WORKFLOW_HISTORY,
+        r"^show (?:recent |the last )?workflow (?:runs|run|history)$",
+    ),
+    _rule("export_workflow", IntentType.EXPORT_WORKFLOW, r"^export workflow .+$"),
+    _rule("import_workflow", IntentType.IMPORT_WORKFLOW, r"^import workflow from .+$"),
+    _rule("show_workflow", IntentType.SHOW_WORKFLOW, r"^show workflow .+$"),
+    _rule(
         "copy_text_clipboard",
         IntentType.COPY_TEXT_TO_CLIPBOARD,
         r"^copy .+ to (?:the )?clipboard$",

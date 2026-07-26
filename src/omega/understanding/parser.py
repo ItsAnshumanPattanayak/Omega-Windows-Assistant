@@ -129,6 +129,19 @@ _DESKTOP_UTILITY_NO_PARAMETER = frozenset(
         IntentType.BRING_WINDOW_TO_FRONT,
     }
 )
+_WORKFLOW_NO_PARAMETER = frozenset(
+    {
+        IntentType.LIST_WORKFLOWS,
+        IntentType.SAVE_WORKFLOW,
+        IntentType.ADD_WORKFLOW_STEP,
+        IntentType.REMOVE_WORKFLOW_STEP,
+        IntentType.MOVE_WORKFLOW_STEP,
+        IntentType.PAUSE_WORKFLOW,
+        IntentType.RESUME_WORKFLOW,
+        IntentType.CANCEL_WORKFLOW,
+        IntentType.SHOW_WORKFLOW_HISTORY,
+    }
+)
 
 
 class CommandParser:
@@ -299,6 +312,22 @@ class CommandParser:
             return [], None
         if intent in _DESKTOP_UTILITY_NO_PARAMETER:
             return [], None
+        if intent in _WORKFLOW_NO_PARAMETER:
+            return [], None
+        if (
+            intent
+            in {
+                IntentType.CREATE_WORKFLOW,
+                IntentType.SHOW_WORKFLOW,
+                IntentType.PREVIEW_WORKFLOW,
+                IntentType.RUN_WORKFLOW,
+                IntentType.DELETE_WORKFLOW,
+                IntentType.EXPORT_WORKFLOW,
+                IntentType.IMPORT_WORKFLOW,
+            }
+            and "workflow_reference" not in names
+        ):
+            return ["workflow_reference"], "Which workflow should I use?"
         if (
             intent is IntentType.COPY_TEXT_TO_CLIPBOARD
             and "clipboard_text" not in names

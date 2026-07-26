@@ -44,6 +44,10 @@ from omega.execution.system_dispatcher import (
     SystemActionDispatcher,
     SystemDispatchResult,
 )
+from omega.execution.workflow_dispatcher import (
+    WorkflowDispatcher,
+    WorkflowDispatchResult,
+)
 
 __all__ = [
     "ApplicationActionDispatcher",
@@ -71,4 +75,6 @@ __all__ = [
     "SchedulingDispatchResult",
     "SystemActionDispatcher",
     "SystemDispatchResult",
+    "WorkflowDispatcher",
+    "WorkflowDispatchResult",
 ]

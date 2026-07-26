@@ -330,3 +330,31 @@ desktop_utilities:
   require_confirmation_for_delete_screenshot: true
   allow_background_clipboard_monitoring: false
   allow_background_screenshot_capture: false
+
+workflows:
+  enabled: true
+  maximum_workflows: 100
+  maximum_steps_per_workflow: 50
+  maximum_workflow_name_characters: 120
+  maximum_description_characters: 1000
+  maximum_serialized_definition_bytes: 262144
+  maximum_execution_seconds: 1800
+  maximum_step_seconds: 300
+  maximum_delay_seconds: 3600
+  maximum_retries: 2
+  maximum_condition_depth: 4
+  maximum_variable_characters: 10000
+  maximum_result_characters: 20000
+  maximum_history_results: 50
+  maximum_concurrent_runs: 1
+  allow_scheduled_workflows: true
+  allow_destructive_steps: false
+  allow_external_side_effect_steps: true
+  require_confirmation_before_run: true
+  require_confirmation_for_sensitive_steps: true
+  imported_workflows_enabled_by_default: false
+  stop_on_failure_by_default: true
+  allow_background_triggers: false
+  allow_shell_steps: false
+  allow_code_execution_steps: false
+  allow_network_request_steps: false

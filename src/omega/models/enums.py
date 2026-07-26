@@ -206,6 +206,23 @@ class IntentType(StrEnum):
     LIST_VISIBLE_WINDOWS = "list_visible_windows"
     FIND_WINDOW = "find_window"
     BRING_WINDOW_TO_FRONT = "bring_window_to_front"
+    CREATE_WORKFLOW = "create_workflow"
+    SAVE_WORKFLOW = "save_workflow"
+    ADD_WORKFLOW_STEP = "add_workflow_step"
+    REMOVE_WORKFLOW_STEP = "remove_workflow_step"
+    MOVE_WORKFLOW_STEP = "move_workflow_step"
+    LIST_WORKFLOWS = "list_workflows"
+    SHOW_WORKFLOW = "show_workflow"
+    PREVIEW_WORKFLOW = "preview_workflow"
+    VALIDATE_WORKFLOW = "validate_workflow"
+    RUN_WORKFLOW = "run_workflow"
+    PAUSE_WORKFLOW = "pause_workflow"
+    RESUME_WORKFLOW = "resume_workflow"
+    CANCEL_WORKFLOW = "cancel_workflow"
+    DELETE_WORKFLOW = "delete_workflow"
+    SHOW_WORKFLOW_HISTORY = "show_workflow_history"
+    EXPORT_WORKFLOW = "export_workflow"
+    IMPORT_WORKFLOW = "import_workflow"
 
 
 class ActionStatus(StrEnum):
@@ -292,6 +309,8 @@ class EntityType(StrEnum):
     SCREENSHOT = "screenshot"
     DISPLAY = "display"
     WINDOW = "window"
+    WORKFLOW = "workflow"
+    WORKFLOW_STEP = "workflow_step"
     UNKNOWN = "unknown"
 
 

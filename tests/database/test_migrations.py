@@ -30,8 +30,8 @@ def test_default_migrations_apply_once(
     first = runner.migrate()
     second = runner.migrate()
 
-    assert first == 11
-    assert second == 11
+    assert first == 12
+    assert second == 12
 
     connection = factory.connect()
 
@@ -47,7 +47,7 @@ def test_default_migrations_apply_once(
             )
         ]
 
-        assert versions == list(range(1, 12))
+        assert versions == list(range(1, 13))
     finally:
         connection.close()
 
@@ -151,7 +151,7 @@ def test_phase10_upgrade_preserves_existing_schema(
     runner = MigrationRunner(factory)
     runner.migrate(target_version=starting_version)
 
-    assert runner.migrate() == 11
+    assert runner.migrate() == 12
 
     connection = factory.connect()
     try:
@@ -167,7 +167,7 @@ def test_phase10_upgrade_preserves_existing_schema(
                 "SELECT name FROM sqlite_master WHERE type='table'"
             )
         }
-        assert versions == list(range(1, 12))
+        assert versions == list(range(1, 13))
         assert {"recovery_records", "runtime_settings"}.issubset(tables)
     finally:
         connection.close()
