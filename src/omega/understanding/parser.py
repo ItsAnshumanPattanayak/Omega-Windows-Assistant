@@ -92,6 +92,18 @@ _KNOWLEDGE_NO_PARAMETER = frozenset(
         IntentType.LIST_KNOWLEDGE_SOURCES,
     }
 )
+_EMAIL_NO_PARAMETER = frozenset(
+    {
+        IntentType.EMAIL_STATUS,
+        IntentType.LIST_EMAILS,
+        IntentType.LIST_UNREAD_EMAILS,
+        IntentType.SUMMARIZE_EMAIL,
+        IntentType.CREATE_EMAIL_REPLY_DRAFT,
+        IntentType.LIST_EMAIL_DRAFTS,
+        IntentType.ARCHIVE_EMAIL,
+        IntentType.SHOW_EMAIL_ATTACHMENTS,
+    }
+)
 
 
 class CommandParser:
@@ -256,6 +268,20 @@ class CommandParser:
             return [], None
         if intent in _KNOWLEDGE_NO_PARAMETER:
             return [], None
+        if intent in _EMAIL_NO_PARAMETER:
+            return [], None
+        if intent is IntentType.SEARCH_EMAILS and not names.intersection(
+            {"email_query", "email_sender", "email_subject_query"}
+        ):
+            return ["email_query"], "What should I search for in email?"
+        if intent is IntentType.READ_EMAIL and "email_reference" not in names:
+            return ["email_reference"], "Which email number should I open?"
+        if intent is IntentType.CREATE_EMAIL_DRAFT and "email_recipient" not in names:
+            return ["email_recipient"], "Who should receive the draft?"
+        if intent is IntentType.UPDATE_EMAIL_DRAFT and not names.intersection(
+            {"draft_subject", "draft_body"}
+        ):
+            return ["draft_update"], "What should I change in the draft?"
         required_knowledge = {
             IntentType.CREATE_KNOWLEDGE_COLLECTION: (
                 "collection_name",

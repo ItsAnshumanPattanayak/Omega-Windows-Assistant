@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +12,7 @@ import yaml
 from omega.browser.configuration import BrowserConfiguration
 from omega.core.exceptions import ConfigurationError
 from omega.database.configuration import DatabaseConfiguration
+from omega.email.configuration import EmailConfiguration
 from omega.knowledge.configuration import KnowledgeConfiguration
 from omega.productivity.configuration import ProductivityConfiguration
 from omega.scheduling.configuration import SchedulingConfiguration
@@ -77,6 +78,7 @@ class Settings:
     scheduling: Mapping[str, Any]
     productivity: Mapping[str, Any]
     knowledge: Mapping[str, Any]
+    email: Mapping[str, Any] = field(default_factory=dict)
 
     @property
     def application_name(self) -> str:
@@ -144,6 +146,12 @@ class Settings:
         """Return strict local knowledge limits without loading files or models."""
 
         return KnowledgeConfiguration.from_mapping(self.knowledge)
+
+    @property
+    def email_configuration(self) -> EmailConfiguration:
+        """Return credential-free email policy without contacting a provider."""
+
+        return EmailConfiguration.from_mapping(self.email)
 
 
 def _defaults() -> dict[str, dict[str, Any]]:
@@ -289,6 +297,7 @@ def _defaults() -> dict[str, dict[str, Any]]:
         "scheduling": {},
         "productivity": {},
         "knowledge": {},
+        "email": {},
     }
 
 
@@ -517,6 +526,7 @@ def _merge_defaults(
                 "scheduling",
                 "productivity",
                 "knowledge",
+                "email",
             }
             else raw[section]
         )
@@ -588,5 +598,6 @@ def load_settings(
     SchedulingConfiguration.from_mapping(values["scheduling"])
     ProductivityConfiguration.from_mapping(values["productivity"])
     KnowledgeConfiguration.from_mapping(values["knowledge"])
+    EmailConfiguration.from_mapping(values["email"])
 
     return Settings(**values)

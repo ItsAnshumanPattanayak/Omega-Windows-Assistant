@@ -845,6 +845,44 @@ class KnowledgeDeletionPolicy(_IntentPolicy):
     )
 
 
+class EmailPolicy(_IntentPolicy):
+    """Allow bounded reads and reviewable draft changes through the gateway."""
+
+    policy_id, priority = "SAFETY-EMAIL-001", 80
+    intents = frozenset(
+        {
+            IntentType.EMAIL_STATUS,
+            IntentType.LIST_EMAILS,
+            IntentType.LIST_UNREAD_EMAILS,
+            IntentType.SEARCH_EMAILS,
+            IntentType.READ_EMAIL,
+            IntentType.SUMMARIZE_EMAIL,
+            IntentType.CREATE_EMAIL_DRAFT,
+            IntentType.CREATE_EMAIL_REPLY_DRAFT,
+            IntentType.UPDATE_EMAIL_DRAFT,
+            IntentType.LIST_EMAIL_DRAFTS,
+            IntentType.SHOW_EMAIL_ATTACHMENTS,
+        }
+    )
+    disposition, reason_code, message = (
+        PolicyDisposition.ALLOW,
+        "BOUNDED_EMAIL_OPERATION_ALLOWED",
+        "Bounded email reads and reviewable local draft operations are allowed.",
+    )
+
+
+class EmailMutationPolicy(_IntentPolicy):
+    """Require exact, scoped, single-use confirmation for external mutations."""
+
+    policy_id, priority = "SAFETY-EMAIL-MUTATION-001", 70
+    intents = frozenset({IntentType.SEND_EMAIL_DRAFT, IntentType.ARCHIVE_EMAIL})
+    disposition, reason_code, message = (
+        PolicyDisposition.REQUIRE_CONFIRMATION,
+        "EMAIL_MUTATION_CONFIRMATION",
+        "Sending or archiving email requires exact scoped confirmation.",
+    )
+
+
 DEFAULT_POLICIES = cast(
     tuple[SafetyPolicy, ...],
     (
@@ -866,6 +904,7 @@ DEFAULT_POLICIES = cast(
         PowerActionPolicy(),
         ProductivityDeletionPolicy(),
         KnowledgeDeletionPolicy(),
+        EmailMutationPolicy(),
         ApplicationOpenPolicy(),
         ApplicationStatusPolicy(),
         FileReadPolicy(),
@@ -886,6 +925,7 @@ DEFAULT_POLICIES = cast(
         SchedulingPolicy(),
         ProductivityPolicy(),
         KnowledgePolicy(),
+        EmailPolicy(),
     ),
 )
 

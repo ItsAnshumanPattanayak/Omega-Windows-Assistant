@@ -45,6 +45,7 @@ def test_schema_initialization_creates_all_version_records(
             7,
             8,
             9,
+            10,
         ]
 
         assert [str(row["name"]) for row in rows] == [
@@ -57,6 +58,7 @@ def test_schema_initialization_creates_all_version_records(
             "phase_16_productivity",
             "phase_17_knowledge",
             "phase_17_source_index",
+            "phase_18_email_operation_receipts",
         ]
 
         assert all(row["applied_at"] for row in rows)
@@ -187,10 +189,10 @@ def test_schema_initialization_is_idempotent(
             """
         ).fetchone()
 
-        assert first == 9
-        assert second == 9
+        assert first == 10
+        assert second == 10
         assert count is not None
-        assert int(count[0]) == 9
+        assert int(count[0]) == 10
     finally:
         connection.close()
 

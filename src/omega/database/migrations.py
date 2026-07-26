@@ -15,6 +15,8 @@ from omega.database.schema import (
     BASELINE_SCHEMA_VERSION,
     COMMAND_MIGRATION_NAME,
     COMMAND_SCHEMA_VERSION,
+    EMAIL_MIGRATION_NAME,
+    EMAIL_SCHEMA_VERSION,
     KNOWLEDGE_MIGRATION_NAME,
     KNOWLEDGE_SCHEMA_VERSION,
     KNOWLEDGE_SOURCE_INDEX_MIGRATION_NAME,
@@ -30,6 +32,7 @@ from omega.database.schema import (
     apply_action_schema,
     apply_baseline_schema,
     apply_command_schema,
+    apply_email_schema,
     apply_knowledge_schema,
     apply_knowledge_source_index_schema,
     apply_productivity_schema,
@@ -107,6 +110,11 @@ KNOWLEDGE_SOURCE_INDEX_MIGRATION = Migration(
     KNOWLEDGE_SOURCE_INDEX_MIGRATION_NAME,
     apply_knowledge_source_index_schema,
 )
+EMAIL_MIGRATION = Migration(
+    EMAIL_SCHEMA_VERSION,
+    EMAIL_MIGRATION_NAME,
+    apply_email_schema,
+)
 
 DEFAULT_MIGRATIONS = (
     BASELINE_MIGRATION,
@@ -118,6 +126,7 @@ DEFAULT_MIGRATIONS = (
     PRODUCTIVITY_MIGRATION,
     KNOWLEDGE_MIGRATION,
     KNOWLEDGE_SOURCE_INDEX_MIGRATION,
+    EMAIL_MIGRATION,
 )
 
 

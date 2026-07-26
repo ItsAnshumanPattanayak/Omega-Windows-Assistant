@@ -101,6 +101,23 @@ _TASK_INTENTS = frozenset(
     }
 )
 _PRODUCTIVITY_INTENTS = _NOTE_INTENTS | _TASK_LIST_INTENTS | _TASK_INTENTS
+_EMAIL_INTENTS = frozenset(
+    {
+        IntentType.EMAIL_STATUS,
+        IntentType.LIST_EMAILS,
+        IntentType.LIST_UNREAD_EMAILS,
+        IntentType.SEARCH_EMAILS,
+        IntentType.READ_EMAIL,
+        IntentType.SUMMARIZE_EMAIL,
+        IntentType.CREATE_EMAIL_DRAFT,
+        IntentType.CREATE_EMAIL_REPLY_DRAFT,
+        IntentType.UPDATE_EMAIL_DRAFT,
+        IntentType.LIST_EMAIL_DRAFTS,
+        IntentType.SEND_EMAIL_DRAFT,
+        IntentType.ARCHIVE_EMAIL,
+        IntentType.SHOW_EMAIL_ATTACHMENTS,
+    }
+)
 _KNOWLEDGE_INTENTS = frozenset(
     {
         IntentType.CREATE_KNOWLEDGE_COLLECTION,
@@ -144,7 +161,9 @@ class RuleBasedEntityExtractor:
 
     def extract(self, original: str, intent: IntentType) -> list[CommandEntity]:
         entities: list[CommandEntity] = []
-        if intent in _KNOWLEDGE_INTENTS:
+        if intent in _EMAIL_INTENTS:
+            self._email(original, intent, entities)
+        elif intent in _KNOWLEDGE_INTENTS:
             self._knowledge(original, intent, entities)
         elif intent in _PRODUCTIVITY_INTENTS:
             self._productivity(original, intent, entities)
@@ -225,6 +244,94 @@ class RuleBasedEntityExtractor:
         }:
             self._folder_command(original, intent, entities)
         return entities
+
+    @staticmethod
+    def _email(
+        original: str, intent: IntentType, entities: list[CommandEntity]
+    ) -> None:
+        text = original.strip().rstrip("?!")
+        if intent in {IntentType.READ_EMAIL, IntentType.SEND_EMAIL_DRAFT}:
+            match = re.search(
+                r"\b(?:email|message|draft)(?: number)?\s+(\d+)\b", text, re.IGNORECASE
+            )
+            if match:
+                name = (
+                    "draft_reference"
+                    if intent is IntentType.SEND_EMAIL_DRAFT
+                    else "email_reference"
+                )
+                kind = (
+                    EntityType.EMAIL_DRAFT
+                    if intent is IntentType.SEND_EMAIL_DRAFT
+                    else EntityType.EMAIL_MESSAGE
+                )
+                entities.append(
+                    _entity(kind, name, int(match.group(1)), match.group(1))
+                )
+            return
+        if intent is IntentType.SEARCH_EMAILS:
+            sender = re.search(r"\bfrom\s+([^\s]+@[^\s]+)$", text, re.IGNORECASE)
+            subject = re.search(r"\bwith subject\s+(.+)$", text, re.IGNORECASE)
+            query = re.search(r"\bfor\s+(.+)$", text, re.IGNORECASE)
+            if sender:
+                entities.append(
+                    _entity(
+                        EntityType.EMAIL_ADDRESS,
+                        "email_sender",
+                        sender.group(1),
+                        sender.group(1),
+                    )
+                )
+            elif subject:
+                entities.append(
+                    _entity(
+                        EntityType.TEXT_CONTENT,
+                        "email_subject_query",
+                        subject.group(1),
+                        subject.group(1),
+                    )
+                )
+            elif query:
+                entities.append(
+                    _entity(
+                        EntityType.SEARCH_QUERY,
+                        "email_query",
+                        query.group(1),
+                        query.group(1),
+                    )
+                )
+            return
+        if intent is IntentType.CREATE_EMAIL_DRAFT:
+            address = re.search(r"\bto\s+([^\s]+@[^\s]+)", text, re.IGNORECASE)
+            if address:
+                value = address.group(1).rstrip(",")
+                entities.append(
+                    _entity(EntityType.EMAIL_ADDRESS, "email_recipient", value, value)
+                )
+            subject = re.search(r"\bsubject\s+(.+)$", text, re.IGNORECASE)
+            if subject:
+                entities.append(
+                    _entity(
+                        EntityType.TEXT_CONTENT,
+                        "email_subject",
+                        subject.group(1),
+                        subject.group(1),
+                    )
+                )
+            return
+        if intent is IntentType.UPDATE_EMAIL_DRAFT:
+            update = re.match(
+                r"^update .+ draft (subject|body) to (.+)$", text, re.IGNORECASE
+            )
+            if update:
+                entities.append(
+                    _entity(
+                        EntityType.TEXT_CONTENT,
+                        f"draft_{update.group(1).casefold()}",
+                        update.group(2),
+                        update.group(2),
+                    )
+                )
 
     @staticmethod
     def _knowledge(

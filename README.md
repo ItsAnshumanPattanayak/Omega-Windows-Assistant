@@ -74,7 +74,7 @@ All supported operations pass through the same command-processing and safety lif
 
 ## Current capabilities
 
-Omega currently includes functionality completed through **Phase 16**:
+Omega currently includes functionality completed through **Phase 18**:
 
 | Area | Status |
 |---|---|
@@ -97,7 +97,23 @@ Omega currently includes functionality completed through **Phase 16**:
 | Reminders and recurring reminders | ✅ Implemented |
 | Alarms and timers | ✅ Implemented |
 | Notes and task management | ✅ Implemented |
-| Knowledge-base document search | ⏸️ Planned / paused |
+| Knowledge-base document search | ✅ Implemented |
+| Privacy-first email assistance | ✅ Implemented (provider adapter required) |
+
+### Privacy-first email assistance
+
+Phase 18 adds bounded, provider-independent email workflows. Omega can list and
+search message summaries, read sanitized plain text, prepare deterministic local
+summaries, expose attachment metadata, and create or revise reviewable drafts.
+Sending and archiving require exact, scoped, expiring confirmation through the
+same safety gateway used by every interface. Draft creation never sends.
+
+Email is disabled by default. No live mail provider is bundled or claimed as
+verified; the in-memory fake provider exists for automated tests and explicit
+local demonstrations only. Omega stores no credentials, mailbox bodies, or
+attachment binaries in its database. It never renders remote HTML, loads remote
+images, opens links, downloads attachments, permanently deletes mail, or retries
+an ambiguous send automatically. See [docs/email.md](docs/email.md).
 
 ---
 
@@ -1429,13 +1445,13 @@ Phase 13 — Safe browser automation
 Phase 14 — Windows system controls
 Phase 15 — Reminders, alarms, timers, and scheduling
 Phase 16 — Notes, tasks, and productivity
+Phase 17 — Local knowledge base and document search
+Phase 18 — Privacy-first email assistance
 ```
 
 ## Paused / planned
 
 ```text
-Phase 17 — Local knowledge base and document search
-Phase 18 — Email assistance
 Phase 19 — Calendar and meeting management
 Phase 20 — Clipboard, screenshots, and desktop utilities
 Phase 21 — Workflow automation

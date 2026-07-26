@@ -34,6 +34,12 @@ The approved roadmap is intentionally incremental. Each phase should be designed
     with sources, transactional re-indexing, source-preserving removal, safe
     export, and shared terminal/GUI/voice gateway routing.
 
-19. **Phase 18 — Next:** to be defined after Phase 17 review.
+19. **Phase 18 — Privacy-First Email Assistance — Completed:** bounded
+    provider-independent message listing/search/reading, deterministic local
+    summaries, reviewable drafts and replies, exact-confirmed send/archive,
+    metadata-only attachment handling, SQLite idempotency receipts, and shared
+    terminal/GUI/voice safety routing backed by zero-network fake-provider tests.
+
+20. **Phase 19 — Next:** to be defined after Phase 18 review.
 
 Later phases may cover local AI-assisted intent suggestions, additional Windows integrations, accessibility, packaging, installer support, and release hardening.

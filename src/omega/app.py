@@ -36,9 +36,12 @@ from omega.database import (
     RuntimeSettingsRepository,
     SqliteRecoveryRecordStore,
 )
+from omega.email import FakeEmailProvider, SqliteEmailOperationStore
+from omega.email.service import EmailService
 from omega.execution import (
     ApplicationActionDispatcher,
     BrowserActionDispatcher,
+    EmailActionDispatcher,
     FileActionDispatcher,
     FolderActionDispatcher,
     HistoryActionDispatcher,
@@ -373,6 +376,17 @@ class OmegaApplication:
             knowledge_repository,
             knowledge_root / "exports",
         )
+        email_configuration = self.settings.email_configuration
+        email_provider = (
+            FakeEmailProvider()
+            if email_configuration.enabled and email_configuration.provider == "fake"
+            else None
+        )
+        self.email_service = EmailService(
+            email_configuration,
+            email_provider,
+            SqliteEmailOperationStore(database_factory),
+        )
         self.notifications = NotificationCenter(
             get_logger("scheduling"),
             speech_enabled=self.settings.scheduling_configuration.speak_notifications,
@@ -426,6 +440,10 @@ class OmegaApplication:
                 self.knowledge_service,
                 safety_gateway,
                 self.knowledge_export_service,
+            ),
+            email_dispatcher=EmailActionDispatcher(
+                self.email_service,
+                safety_gateway,
             ),
             safety_gateway=safety_gateway,
         )

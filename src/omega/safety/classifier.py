@@ -84,6 +84,14 @@ _LOW = frozenset(
         IntentType.ASK_KNOWLEDGE,
         IntentType.SHOW_KNOWLEDGE_SOURCES,
         IntentType.LIST_KNOWLEDGE_SOURCES,
+        IntentType.EMAIL_STATUS,
+        IntentType.LIST_EMAILS,
+        IntentType.LIST_UNREAD_EMAILS,
+        IntentType.SEARCH_EMAILS,
+        IntentType.READ_EMAIL,
+        IntentType.SUMMARIZE_EMAIL,
+        IntentType.LIST_EMAIL_DRAFTS,
+        IntentType.SHOW_EMAIL_ATTACHMENTS,
     }
 )
 _MEDIUM = frozenset(
@@ -152,6 +160,9 @@ _MEDIUM = frozenset(
         IntentType.MOVE_KNOWLEDGE_DOCUMENT,
         IntentType.REINDEX_KNOWLEDGE_DOCUMENT,
         IntentType.EXPORT_KNOWLEDGE_RESULTS,
+        IntentType.CREATE_EMAIL_DRAFT,
+        IntentType.CREATE_EMAIL_REPLY_DRAFT,
+        IntentType.UPDATE_EMAIL_DRAFT,
     }
 )
 _HIGH = frozenset(
@@ -173,6 +184,8 @@ _HIGH = frozenset(
         IntentType.DELETE_TASK_LIST,
         IntentType.REMOVE_KNOWLEDGE_DOCUMENT,
         IntentType.DELETE_KNOWLEDGE_COLLECTION,
+        IntentType.SEND_EMAIL_DRAFT,
+        IntentType.ARCHIVE_EMAIL,
     }
 )
 _CRITICAL = frozenset(

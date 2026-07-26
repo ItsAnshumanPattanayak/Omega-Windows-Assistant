@@ -16,7 +16,8 @@ SCHEDULING_SCHEMA_VERSION = 6
 PRODUCTIVITY_SCHEMA_VERSION = 7
 KNOWLEDGE_SCHEMA_VERSION = 8
 KNOWLEDGE_SOURCE_INDEX_SCHEMA_VERSION = 9
-LATEST_SCHEMA_VERSION = KNOWLEDGE_SOURCE_INDEX_SCHEMA_VERSION
+EMAIL_SCHEMA_VERSION = 10
+LATEST_SCHEMA_VERSION = EMAIL_SCHEMA_VERSION
 
 BASELINE_MIGRATION_NAME = "phase_9a_database_foundation"
 COMMAND_MIGRATION_NAME = "phase_9b_command_repository"
@@ -27,6 +28,25 @@ SCHEDULING_MIGRATION_NAME = "phase_15_scheduling"
 PRODUCTIVITY_MIGRATION_NAME = "phase_16_productivity"
 KNOWLEDGE_MIGRATION_NAME = "phase_17_knowledge"
 KNOWLEDGE_SOURCE_INDEX_MIGRATION_NAME = "phase_17_source_index"
+EMAIL_MIGRATION_NAME = "phase_18_email_operation_receipts"
+
+CREATE_EMAIL_OPERATIONS_TABLE = """
+CREATE TABLE IF NOT EXISTS email_operations (
+ operation_id TEXT PRIMARY KEY,
+ account_name TEXT NOT NULL,
+ operation_type TEXT NOT NULL,
+ target_id TEXT NOT NULL,
+ status TEXT NOT NULL,
+ provider_reference TEXT,
+ created_at TEXT NOT NULL,
+ updated_at TEXT NOT NULL,
+ UNIQUE(account_name, operation_type, target_id),
+ CHECK(operation_type IN ('send','archive')),
+ CHECK(status IN ('pending','succeeded','failed','ambiguous')),
+ CHECK(length(trim(account_name)) > 0),
+ CHECK(length(trim(target_id)) > 0)
+)
+"""
 
 CREATE_SCHEDULED_ITEMS_TABLE = """
 CREATE TABLE IF NOT EXISTS scheduled_items (
@@ -576,6 +596,21 @@ def apply_knowledge_source_index_schema(connection: sqlite3.Connection) -> None:
         ) from error
 
 
+def apply_email_schema(connection: sqlite3.Connection) -> None:
+    """Create metadata-only email idempotency receipts without message content."""
+
+    try:
+        connection.execute(CREATE_EMAIL_OPERATIONS_TABLE)
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_email_operations_status_updated "
+            "ON email_operations(status, updated_at)"
+        )
+    except sqlite3.Error as error:
+        raise DatabaseSchemaError(
+            "Omega could not create the email receipt schema."
+        ) from error
+
+
 def _record_migration(
     connection: sqlite3.Connection,
     *,
@@ -665,6 +700,13 @@ def initialize_schema(
             connection,
             version=KNOWLEDGE_SOURCE_INDEX_SCHEMA_VERSION,
             name=KNOWLEDGE_SOURCE_INDEX_MIGRATION_NAME,
+        )
+
+        apply_email_schema(connection)
+        _record_migration(
+            connection,
+            version=EMAIL_SCHEMA_VERSION,
+            name=EMAIL_MIGRATION_NAME,
         )
 
         connection.commit()

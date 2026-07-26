@@ -13,6 +13,7 @@ from uuid import UUID, uuid4
 from omega.core.exceptions import InvalidSessionTransitionError, ModelValidationError
 from omega.execution.browser_dispatcher import BrowserActionDispatcher
 from omega.execution.dispatcher import ApplicationActionDispatcher
+from omega.execution.email_dispatcher import EmailActionDispatcher
 from omega.execution.file_dispatcher import FileActionDispatcher
 from omega.execution.folder_dispatcher import FolderActionDispatcher
 from omega.execution.history_dispatcher import HistoryActionDispatcher
@@ -60,6 +61,7 @@ class OmegaSession:
         scheduling_dispatcher: SchedulingActionDispatcher | None = None,
         productivity_dispatcher: ProductivityActionDispatcher | None = None,
         knowledge_dispatcher: KnowledgeActionDispatcher | None = None,
+        email_dispatcher: EmailActionDispatcher | None = None,
         safety_gateway: SafeExecutionGateway | None = None,
     ) -> None:
         self.display_name = self._required_text(user_settings, "display_name")
@@ -83,6 +85,7 @@ class OmegaSession:
         self._scheduling_dispatcher = scheduling_dispatcher
         self._productivity_dispatcher = productivity_dispatcher
         self._knowledge_dispatcher = knowledge_dispatcher
+        self._email_dispatcher = email_dispatcher
         self._safety_gateway = (
             safety_gateway
             or getattr(application_dispatcher, "gateway", None)
@@ -155,6 +158,7 @@ class OmegaSession:
 
     def shutdown(self) -> str:
         """Safely terminate this terminal session."""
+        self._clear_email_selection()
         self._clear_confirmations()
         if self._browser_dispatcher is not None:
             self._browser_dispatcher.shutdown()
@@ -174,6 +178,7 @@ class OmegaSession:
 
     def interrupt(self) -> str:
         """Terminate gracefully in response to Ctrl+C or EOF."""
+        self._clear_email_selection()
         self._clear_confirmations()
         if self._browser_dispatcher is not None:
             self._browser_dispatcher.shutdown()
@@ -201,6 +206,7 @@ class OmegaSession:
         if self.state is not SessionState.ACTIVE:
             raise InvalidSessionTransitionError("Only an active session can time out.")
         self.transition_to(SessionState.INACTIVE)
+        self._clear_email_selection()
         self._clear_confirmations()
         if self._browser_dispatcher is not None:
             self._browser_dispatcher.shutdown()
@@ -294,6 +300,10 @@ class OmegaSession:
                 knowledge_result = self._knowledge_dispatcher.dispatch(result)
                 if knowledge_result is not None:
                     return knowledge_result.user_message
+            if self._email_dispatcher is not None:
+                email_result = self._email_dispatcher.dispatch(result)
+                if email_result is not None:
+                    return email_result.user_message
             if self._application_dispatcher is not None:
                 dispatched = self._application_dispatcher.dispatch(result)
                 if dispatched is not None:
@@ -324,3 +334,7 @@ class OmegaSession:
             self._application_dispatcher.clear_pending_confirmations()
         if self._file_dispatcher is not None:
             self._file_dispatcher.clear_pending_confirmations()
+
+    def _clear_email_selection(self) -> None:
+        if self._email_dispatcher is not None:
+            self._email_dispatcher.clear_session(self.session_id)

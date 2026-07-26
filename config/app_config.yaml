@@ -256,3 +256,23 @@ knowledge:
   preserve_original_files: true
   copy_documents_into_data_directory: false
   auto_reindex_changed_documents: false
+
+# Phase 18 email assistance is provider-independent and disabled by default.
+# Credentials are never stored here. The bundled fake provider is only for
+# automated tests and explicitly configured local demonstrations.
+email:
+  enabled: false
+  provider: null
+  account_name: null
+  maximum_messages_per_request: 20
+  maximum_search_query_characters: 300
+  maximum_body_characters: 20000
+  maximum_summary_characters: 1500
+  maximum_recipients: 10
+  maximum_subject_characters: 300
+  maximum_draft_body_characters: 50000
+  provider_timeout_seconds: 20
+  allow_attachment_downloads: false
+  maximum_attachment_bytes: 10485760
+  require_confirmation_for_send: true
+  require_confirmation_for_archive: true

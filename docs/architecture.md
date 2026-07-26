@@ -535,3 +535,42 @@ directory request expands deterministically into individually validated source
 documents, non-recursively by default and within configured file-count and byte
 limits. Status checks report changed or missing sources; no watcher, crawler,
 or automatic re-index service exists.
+
+## Phase 18 privacy-first email assistance
+
+```text
+terminal / tkinter GUI / offline voice
+        ↓
+existing CommandParser and session-scoped selection
+        ↓ typed email intent and bounded entities
+EmailActionDispatcher
+        ↓ redacted Action + SafetyContext
+SafeExecutionGateway
+        ↓ policy / exact confirmation / execute once
+EmailService
+        ├─ deterministic local summarizer
+        ├─ provider-independent EmailProvider protocol
+        ├─ bounded message and draft selection
+        └─ metadata-only idempotency receipt store
+```
+
+Email records contain validated addresses, provider identifiers, aware UTC
+timestamps, bounded plain text, labels, and attachment metadata. They do not
+contain credentials, sockets, executable callbacks, provider-native objects, or
+attachment binaries. Raw HTML is never rendered and remote resources are never
+loaded. The deterministic summarizer selects source sentences without inference.
+
+The adapter protocol deliberately omits permanent deletion, bulk mutation,
+arbitrary provider commands, link opening, and attachment download. A live
+provider is not bundled because secure authentication and provider semantics
+require an explicit future adapter. The fake provider performs no network work.
+
+Read/list/search actions are bounded gateway operations. Draft creation and
+updates remain reversible and reviewable. Send and archive proposals display an
+exact target; sending additionally displays recipients, subject, and full draft
+body. Both require one scoped, expiring confirmation. Provider timeouts after a
+send attempt are recorded as ambiguous and never retried automatically.
+Migration 10 stores only minimal opaque operation receipts. A uniqueness
+constraint blocks duplicate send/archive attempts across restarts. Persistent
+command history receives a redacted email-operation record instead of recipient,
+query, subject, or body content.

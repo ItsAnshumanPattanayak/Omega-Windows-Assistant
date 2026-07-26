@@ -21,6 +21,72 @@ def _rule(name: str, intent: IntentType, expression: str) -> IntentPattern:
 
 INTENT_PATTERNS = (
     _rule(
+        "email_status",
+        IntentType.EMAIL_STATUS,
+        r"^(?:show )?email (?:status|connection)$",
+    ),
+    _rule(
+        "list_unread_emails",
+        IntentType.LIST_UNREAD_EMAILS,
+        r"^(?:show|list) (?:my )?unread (?:emails|messages)$",
+    ),
+    _rule(
+        "list_emails",
+        IntentType.LIST_EMAILS,
+        r"^(?:show|list) (?:my )?(?:latest |recent )?(?:emails|messages|inbox)$",
+    ),
+    _rule(
+        "search_emails",
+        IntentType.SEARCH_EMAILS,
+        r"^(?:search|find) (?:my )?(?:emails|messages)(?: for| from| with subject) .+$",
+    ),
+    _rule(
+        "read_email",
+        IntentType.READ_EMAIL,
+        r"^(?:open|read|show) (?:email|message)(?: number)? \d+$",
+    ),
+    _rule(
+        "summarize_email",
+        IntentType.SUMMARIZE_EMAIL,
+        r"^summari[sz]e (?:this|the current|selected) (?:email|message)$",
+    ),
+    _rule(
+        "create_email_reply_draft",
+        IntentType.CREATE_EMAIL_REPLY_DRAFT,
+        r"^draft (?:a )?reply to (?:this|the current|selected) (?:email|message)$",
+    ),
+    _rule(
+        "create_email_draft",
+        IntentType.CREATE_EMAIL_DRAFT,
+        r"^(?:draft|compose) (?:an? )?email to .+$",
+    ),
+    _rule(
+        "update_email_draft",
+        IntentType.UPDATE_EMAIL_DRAFT,
+        r"^update (?:this|the current|selected) draft (?:subject|body) to .+$",
+    ),
+    _rule(
+        "list_email_drafts",
+        IntentType.LIST_EMAIL_DRAFTS,
+        r"^(?:show|list) (?:my )?(?:email )?drafts$",
+    ),
+    _rule(
+        "send_email_draft",
+        IntentType.SEND_EMAIL_DRAFT,
+        r"^send (?:(?:this|the current|selected) draft|draft(?: number)? \d+)$",
+    ),
+    _rule(
+        "archive_email",
+        IntentType.ARCHIVE_EMAIL,
+        r"^archive (?:this|the current|selected) (?:email|message)$",
+    ),
+    _rule(
+        "show_email_attachments",
+        IntentType.SHOW_EMAIL_ATTACHMENTS,
+        r"^(?:show|list) attachments (?:for|in) "
+        r"(?:this|the current|selected) (?:email|message)$",
+    ),
+    _rule(
         "create_knowledge_collection",
         IntentType.CREATE_KNOWLEDGE_COLLECTION,
         r"^create (?:a )?knowledge collection(?: called| named)? .+$",

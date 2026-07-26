@@ -204,6 +204,42 @@ class GuiController:
     def remove_knowledge_source(self, reference: str) -> bool:
         return self.submit_command(f"remove {reference} source from my knowledge base")
 
+    def email_status(self) -> bool:
+        return self.submit_command("email status")
+
+    def list_emails(self, *, unread_only: bool = False) -> bool:
+        return self.submit_command(
+            "show my unread emails" if unread_only else "show my latest emails"
+        )
+
+    def search_emails(self, query: str) -> bool:
+        return self.submit_command(f"search my emails for {query}")
+
+    def open_email(self, number: int) -> bool:
+        return self.submit_command(f"open email number {number}")
+
+    def summarize_email(self) -> bool:
+        return self.submit_command("summarize this email")
+
+    def create_email_draft(self, recipient: str, subject: str = "") -> bool:
+        suffix = f" subject {subject}" if subject else ""
+        return self.submit_command(f"draft an email to {recipient}{suffix}")
+
+    def reply_to_email(self) -> bool:
+        return self.submit_command("draft a reply to this email")
+
+    def list_email_drafts(self) -> bool:
+        return self.submit_command("show my drafts")
+
+    def send_email_draft(self) -> bool:
+        return self.submit_command("send this draft")
+
+    def archive_email(self) -> bool:
+        return self.submit_command("archive this email")
+
+    def show_email_attachments(self) -> bool:
+        return self.submit_command("show attachments for this email")
+
     def confirm_pending(self) -> bool:
         """Route the current exact confirmation phrase through the session."""
 

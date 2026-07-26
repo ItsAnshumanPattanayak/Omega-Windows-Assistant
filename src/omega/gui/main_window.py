@@ -129,6 +129,18 @@ class OmegaMainWindow(GuiView):
             ("Sources", self._knowledge_sources),
             ("Re-index source", self._reindex_knowledge_source),
             ("Remove source", self._remove_knowledge_source),
+            ("Email status", self._email_status),
+            ("Inbox", self._list_emails),
+            ("Unread email", self._list_unread_emails),
+            ("Email search", self._search_emails),
+            ("Open email", self._open_email),
+            ("Summarize email", self._summarize_email),
+            ("Draft email", self._draft_email),
+            ("Reply draft", self._reply_email),
+            ("Email drafts", self._list_email_drafts),
+            ("Send draft", self._send_email_draft),
+            ("Archive email", self._archive_email),
+            ("Attachments", self._email_attachments),
         )
         self.operation_buttons: list[ttk.Button] = []
         for toolbar_index, (label, command) in enumerate(actions):
@@ -541,3 +553,56 @@ class OmegaMainWindow(GuiView):
         )
         if reference and reference.strip():
             self.controller.remove_knowledge_source(reference.strip())
+
+    def _email_status(self) -> None:
+        self.controller.email_status()
+
+    def _list_emails(self) -> None:
+        self.controller.list_emails()
+
+    def _list_unread_emails(self) -> None:
+        self.controller.list_emails(unread_only=True)
+
+    def _search_emails(self) -> None:
+        query = simpledialog.askstring("Search email", "Search for:", parent=self.root)
+        if query and query.strip():
+            self.controller.search_emails(query.strip())
+
+    def _open_email(self) -> None:
+        number = simpledialog.askinteger(
+            "Open email", "Email number:", parent=self.root, minvalue=1
+        )
+        if number is not None:
+            self.controller.open_email(number)
+
+    def _summarize_email(self) -> None:
+        self.controller.summarize_email()
+
+    def _draft_email(self) -> None:
+        recipient = simpledialog.askstring(
+            "Draft email", "Recipient address:", parent=self.root
+        )
+        if not recipient or not recipient.strip():
+            return
+        subject = (
+            simpledialog.askstring(
+                "Draft email", "Subject (optional):", parent=self.root
+            )
+            or ""
+        )
+        self.controller.create_email_draft(recipient.strip(), subject.strip())
+
+    def _reply_email(self) -> None:
+        self.controller.reply_to_email()
+
+    def _list_email_drafts(self) -> None:
+        self.controller.list_email_drafts()
+
+    def _send_email_draft(self) -> None:
+        self.controller.send_email_draft()
+
+    def _archive_email(self) -> None:
+        self.controller.archive_email()
+
+    def _email_attachments(self) -> None:
+        self.controller.show_email_attachments()

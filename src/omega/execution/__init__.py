@@ -9,6 +9,7 @@ from omega.execution.dispatcher import (
     ApplicationControlCommand,
     ApplicationDispatchResult,
 )
+from omega.execution.email_dispatcher import EmailActionDispatcher, EmailDispatchResult
 from omega.execution.file_dispatcher import (
     FileActionDispatcher,
     FileControlCommand,
@@ -42,6 +43,8 @@ __all__ = [
     "ApplicationDispatchResult",
     "BrowserActionDispatcher",
     "BrowserDispatchResult",
+    "EmailActionDispatcher",
+    "EmailDispatchResult",
     "FileActionDispatcher",
     "FileControlCommand",
     "FileDispatchResult",

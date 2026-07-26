@@ -168,6 +168,19 @@ class IntentType(StrEnum):
     ASK_KNOWLEDGE = "ask_knowledge"
     SHOW_KNOWLEDGE_SOURCES = "show_knowledge_sources"
     EXPORT_KNOWLEDGE_RESULTS = "export_knowledge_results"
+    EMAIL_STATUS = "email_status"
+    LIST_EMAILS = "list_emails"
+    LIST_UNREAD_EMAILS = "list_unread_emails"
+    SEARCH_EMAILS = "search_emails"
+    READ_EMAIL = "read_email"
+    SUMMARIZE_EMAIL = "summarize_email"
+    CREATE_EMAIL_DRAFT = "create_email_draft"
+    CREATE_EMAIL_REPLY_DRAFT = "create_email_reply_draft"
+    UPDATE_EMAIL_DRAFT = "update_email_draft"
+    LIST_EMAIL_DRAFTS = "list_email_drafts"
+    SEND_EMAIL_DRAFT = "send_email_draft"
+    ARCHIVE_EMAIL = "archive_email"
+    SHOW_EMAIL_ATTACHMENTS = "show_email_attachments"
 
 
 class ActionStatus(StrEnum):
@@ -247,6 +260,9 @@ class EntityType(StrEnum):
     KNOWLEDGE_COLLECTION = "knowledge_collection"
     KNOWLEDGE_DOCUMENT = "knowledge_document"
     KNOWLEDGE_SOURCE = "knowledge_source"
+    EMAIL_ADDRESS = "email_address"
+    EMAIL_MESSAGE = "email_message"
+    EMAIL_DRAFT = "email_draft"
     UNKNOWN = "unknown"
 
 
