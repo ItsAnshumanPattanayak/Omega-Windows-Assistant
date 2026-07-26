@@ -270,6 +270,15 @@ class KnowledgeRepository:
         )
         return self._document(row) if row else None
 
+    def find_by_source_path(self, path: str) -> KnowledgeDocument | None:
+        row = self._one(
+            "SELECT * FROM knowledge_documents "
+            "WHERE lower(source_path)=lower(?) AND status!='removed' "
+            "ORDER BY imported_at,document_id LIMIT 1",
+            (path,),
+        )
+        return self._document(row) if row else None
+
     def list_documents(
         self,
         *,

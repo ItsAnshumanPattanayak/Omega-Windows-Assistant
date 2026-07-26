@@ -6,6 +6,7 @@ import logging
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Protocol
 
 from omega.core.exceptions import GuiTaskError, OmegaError
@@ -181,6 +182,27 @@ class GuiController:
 
     def clear_history(self) -> bool:
         return self.submit_command("clear history")
+
+    def add_knowledge_file(self, path: str) -> bool:
+        return self.submit_command(f'Index the document at "{Path(path)}"')
+
+    def add_knowledge_directory(self, path: str, *, recursive: bool = False) -> bool:
+        suffix = " recursively" if recursive else ""
+        return self.submit_command(
+            f'Add the folder "{Path(path)}" to my knowledge base{suffix}'
+        )
+
+    def list_knowledge_sources(self) -> bool:
+        return self.submit_command("list my knowledge sources")
+
+    def search_knowledge(self, query: str) -> bool:
+        return self.submit_command(f"search my knowledge base for {query}")
+
+    def reindex_knowledge_source(self, reference: str) -> bool:
+        return self.submit_command(f"re-index {reference} source")
+
+    def remove_knowledge_source(self, reference: str) -> bool:
+        return self.submit_command(f"remove {reference} source from my knowledge base")
 
     def confirm_pending(self) -> bool:
         """Route the current exact confirmation phrase through the session."""

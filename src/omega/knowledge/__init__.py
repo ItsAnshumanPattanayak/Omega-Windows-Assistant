@@ -9,9 +9,11 @@ from omega.knowledge.enums import (
     KnowledgeExportFormat,
     KnowledgeIndexStatus,
     KnowledgeSearchMode,
+    KnowledgeSourceStatus,
     KnowledgeSourceType,
 )
 from omega.knowledge.models import (
+    DirectoryImportResult,
     DocumentExtractionResult,
     DocumentImportResult,
     DocumentReindexResult,
@@ -26,6 +28,7 @@ from omega.knowledge.models import (
     KnowledgeSearchQuery,
     KnowledgeSearchResult,
     KnowledgeSourceReference,
+    KnowledgeSourceView,
 )
 from omega.knowledge.repositories import KnowledgeRepository
 from omega.knowledge.service import KnowledgeService
@@ -35,6 +38,7 @@ __all__ = [
     "DocumentExtractionResult",
     "DocumentImportResult",
     "DocumentReindexResult",
+    "DirectoryImportResult",
     "ExtractedSegment",
     "ExtractionStatus",
     "KnowledgeAnswer",
@@ -55,5 +59,7 @@ __all__ = [
     "KnowledgeSearchResult",
     "KnowledgeService",
     "KnowledgeSourceReference",
+    "KnowledgeSourceStatus",
     "KnowledgeSourceType",
+    "KnowledgeSourceView",
 ]

@@ -13,6 +13,7 @@ from omega.knowledge import (
 )
 from omega.knowledge.exceptions import (
     KnowledgeConflictError,
+    KnowledgeIndexError,
     StaleKnowledgeRevisionError,
 )
 from tests.knowledge.conftest import write_pdf
@@ -39,6 +40,26 @@ def test_chunking_is_deterministic_overlapping_and_bounded() -> None:
     assert [item.sequence_number for item in first] == list(range(len(first)))
     assert all(item.section_title == "Section" for item in first)
     assert all(item.text for item in first)
+
+
+def test_chunk_limit_is_enforced() -> None:
+    configuration = KnowledgeConfiguration(
+        chunk_size_characters=100,
+        chunk_overlap_characters=10,
+        maximum_chunks_per_document=1,
+    )
+    text = "word " * 100
+    extraction = DocumentExtractionResult(
+        "Title",
+        text,
+        "sample.txt",
+        KnowledgeSourceType.TEXT,
+        "0" * 64,
+        "test",
+        (ExtractedSegment(text),),
+    )
+    with pytest.raises(KnowledgeIndexError):
+        DeterministicChunker(configuration).chunk(uuid4(), extraction)
 
 
 def test_collection_document_repository_and_revision_safety(

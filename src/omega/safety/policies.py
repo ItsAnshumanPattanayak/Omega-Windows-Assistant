@@ -810,7 +810,9 @@ class KnowledgePolicy(_IntentPolicy):
             IntentType.ARCHIVE_KNOWLEDGE_COLLECTION,
             IntentType.RESTORE_KNOWLEDGE_COLLECTION,
             IntentType.IMPORT_KNOWLEDGE_DOCUMENT,
+            IntentType.IMPORT_KNOWLEDGE_DIRECTORY,
             IntentType.LIST_KNOWLEDGE_DOCUMENTS,
+            IntentType.LIST_KNOWLEDGE_SOURCES,
             IntentType.SHOW_KNOWLEDGE_DOCUMENT,
             IntentType.MOVE_KNOWLEDGE_DOCUMENT,
             IntentType.REINDEX_KNOWLEDGE_DOCUMENT,
@@ -831,14 +833,15 @@ class KnowledgeDeletionPolicy(_IntentPolicy):
     policy_id, priority = "SAFETY-KNOWLEDGE-DELETE-001", 70
     intents = frozenset(
         {
+            IntentType.IMPORT_KNOWLEDGE_DIRECTORY,
             IntentType.REMOVE_KNOWLEDGE_DOCUMENT,
             IntentType.DELETE_KNOWLEDGE_COLLECTION,
         }
     )
     disposition, reason_code, message = (
         PolicyDisposition.REQUIRE_CONFIRMATION,
-        "KNOWLEDGE_REMOVAL_CONFIRMATION",
-        "Removing indexed knowledge requires exact scoped confirmation.",
+        "KNOWLEDGE_SENSITIVE_CONFIRMATION",
+        "Bulk knowledge indexing and removal require exact scoped confirmation.",
     )
 
 

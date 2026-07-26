@@ -6,6 +6,7 @@ import re
 from pathlib import PureWindowsPath
 
 from omega.models import CommandEntity, EntityType, IntentType
+from omega.models._serialization import JsonValue
 from omega.understanding.aliases import ApplicationAliasRegistry
 
 EXTENSIONS = {
@@ -110,6 +111,8 @@ _KNOWLEDGE_INTENTS = frozenset(
         IntentType.RESTORE_KNOWLEDGE_COLLECTION,
         IntentType.DELETE_KNOWLEDGE_COLLECTION,
         IntentType.IMPORT_KNOWLEDGE_DOCUMENT,
+        IntentType.IMPORT_KNOWLEDGE_DIRECTORY,
+        IntentType.LIST_KNOWLEDGE_SOURCES,
         IntentType.LIST_KNOWLEDGE_DOCUMENTS,
         IntentType.SHOW_KNOWLEDGE_DOCUMENT,
         IntentType.MOVE_KNOWLEDGE_DOCUMENT,
@@ -123,7 +126,9 @@ _KNOWLEDGE_INTENTS = frozenset(
 )
 
 
-def _entity(entity_type: EntityType, name: str, value: str, raw: str) -> CommandEntity:
+def _entity(
+    entity_type: EntityType, name: str, value: JsonValue, raw: str
+) -> CommandEntity:
     return CommandEntity(entity_type, value, raw_value=raw, name=name, confidence=1.0)
 
 
@@ -271,9 +276,30 @@ class RuleBasedEntityExtractor:
                         )
                     )
             return
+        if intent is IntentType.IMPORT_KNOWLEDGE_DIRECTORY:
+            match = re.search(
+                r"(?:folder|directory)\s+(.+?)\s+(?:to|in)\s+(?:my )?"
+                r"knowledge base(?:\s+recursively)?$",
+                text,
+                re.IGNORECASE,
+            )
+            if match:
+                value = quoted[0] if quoted else match.group(1).strip()
+                entities.append(
+                    _entity(EntityType.PATH, "directory_path", value, value)
+                )
+            if re.search(r"\brecursively\s*$", text, re.IGNORECASE):
+                entities.append(
+                    _entity(EntityType.BOOLEAN, "recursive", True, "recursively")
+                )
+            return
         if intent in {IntentType.SEARCH_KNOWLEDGE, IntentType.ASK_KNOWLEDGE}:
             if intent is IntentType.SEARCH_KNOWLEDGE:
                 match = re.search(r"\bfor\s+(.+)$", text, re.IGNORECASE)
+                if match is None:
+                    match = re.match(
+                        r"^find documents mentioning\s+(.+)$", text, re.IGNORECASE
+                    )
                 prefix = re.match(r"^search\s+(.+?)\s+for\s+", text, re.IGNORECASE)
                 if prefix:
                     value = prefix.group(1).strip()
@@ -345,7 +371,7 @@ class RuleBasedEntityExtractor:
                 flags=re.IGNORECASE,
             )
             reference = re.sub(
-                r"\s+(?:knowledge )?document(?:\s+.*)?$",
+                r"\s+(?:(?:knowledge )?document|source)(?:\s+.*)?$",
                 "",
                 reference,
                 flags=re.IGNORECASE,

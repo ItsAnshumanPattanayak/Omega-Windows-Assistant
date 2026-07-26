@@ -66,6 +66,25 @@ def test_pdf_and_docx_extract_real_text_without_embedded_execution(
     assert "normalization" in docx_result.text
 
 
+def test_multi_page_pdf_preserves_page_citations(tmp_path: Path) -> None:
+    pdf_path = tmp_path / "pages.pdf"
+    write_pdf(pdf_path, ("First page.", "Needle appears on page two."))
+    configuration = KnowledgeConfiguration()
+    validated = KnowledgeFileValidator(configuration, (tmp_path,)).validate(pdf_path)
+    result = PdfExtractor(configuration).extract(validated.path, validated.fingerprint)
+    assert result.page_count == 2
+    assert [segment.page_number for segment in result.segments] == [1, 2]
+
+
+def test_malformed_pdf_fails_without_crashing(tmp_path: Path) -> None:
+    pdf_path = tmp_path / "broken.pdf"
+    pdf_path.write_bytes(b"%PDF-1.7\nnot a valid PDF")
+    configuration = KnowledgeConfiguration()
+    validated = KnowledgeFileValidator(configuration, (tmp_path,)).validate(pdf_path)
+    with pytest.raises(DocumentExtractionError):
+        PdfExtractor(configuration).extract(validated.path, validated.fingerprint)
+
+
 def test_validation_rejects_unsafe_paths_and_formats(tmp_path: Path) -> None:
     validator = KnowledgeFileValidator(KnowledgeConfiguration(), (tmp_path,))
     executable = tmp_path / "run.exe"

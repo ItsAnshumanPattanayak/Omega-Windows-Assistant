@@ -32,5 +32,5 @@ class TextExtractor:
             KnowledgeSourceType.TEXT,
             fingerprint,
             self.name,
-            (ExtractedSegment(text),),
+            (ExtractedSegment(text, line_start=1, line_end=text.count("\n") + 1),),
         )

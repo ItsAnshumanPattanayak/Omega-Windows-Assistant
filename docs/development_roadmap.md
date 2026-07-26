@@ -28,7 +28,7 @@ The approved roadmap is intentionally incremental. Each phase should be designed
     JSON/Markdown export, and shared terminal/GUI/voice gateway routing.
 
 18. **Phase 17 — Local Knowledge Base and Document Search — Completed:**
-    explicit approved PDF/DOCX/TXT/Markdown import, safe extraction,
+    explicit approved PDF/DOCX/TXT/Markdown and bounded directory import, safe extraction,
     deterministic chunking, SQLite collections and indexes, bounded keyword
     retrieval, optional local semantic fallback, extractive grounded answers
     with sources, transactional re-indexing, source-preserving removal, safe

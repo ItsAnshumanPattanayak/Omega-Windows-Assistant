@@ -17,6 +17,8 @@ from omega.database.schema import (
     COMMAND_SCHEMA_VERSION,
     KNOWLEDGE_MIGRATION_NAME,
     KNOWLEDGE_SCHEMA_VERSION,
+    KNOWLEDGE_SOURCE_INDEX_MIGRATION_NAME,
+    KNOWLEDGE_SOURCE_INDEX_SCHEMA_VERSION,
     PRODUCTIVITY_MIGRATION_NAME,
     PRODUCTIVITY_SCHEMA_VERSION,
     RECOVERY_MIGRATION_NAME,
@@ -29,6 +31,7 @@ from omega.database.schema import (
     apply_baseline_schema,
     apply_command_schema,
     apply_knowledge_schema,
+    apply_knowledge_source_index_schema,
     apply_productivity_schema,
     apply_recovery_schema,
     apply_scheduling_schema,
@@ -99,6 +102,11 @@ KNOWLEDGE_MIGRATION = Migration(
     KNOWLEDGE_MIGRATION_NAME,
     apply_knowledge_schema,
 )
+KNOWLEDGE_SOURCE_INDEX_MIGRATION = Migration(
+    KNOWLEDGE_SOURCE_INDEX_SCHEMA_VERSION,
+    KNOWLEDGE_SOURCE_INDEX_MIGRATION_NAME,
+    apply_knowledge_source_index_schema,
+)
 
 DEFAULT_MIGRATIONS = (
     BASELINE_MIGRATION,
@@ -109,6 +117,7 @@ DEFAULT_MIGRATIONS = (
     SCHEDULING_MIGRATION,
     PRODUCTIVITY_MIGRATION,
     KNOWLEDGE_MIGRATION,
+    KNOWLEDGE_SOURCE_INDEX_MIGRATION,
 )
 
 

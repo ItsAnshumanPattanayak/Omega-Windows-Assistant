@@ -314,6 +314,8 @@
     "restore_knowledge_collection": {"enabled": true, "maximum_risk": "medium"},
     "delete_knowledge_collection": {"enabled": true, "maximum_risk": "high", "requires_confirmation": true},
     "import_knowledge_document": {"enabled": true, "maximum_risk": "medium"},
+    "import_knowledge_directory": {"enabled": true, "maximum_risk": "high", "requires_confirmation": true},
+    "list_knowledge_sources": {"enabled": true, "maximum_risk": "low"},
     "list_knowledge_documents": {"enabled": true, "maximum_risk": "low"},
     "show_knowledge_document": {"enabled": true, "maximum_risk": "low"},
     "move_knowledge_document": {"enabled": true, "maximum_risk": "medium"},

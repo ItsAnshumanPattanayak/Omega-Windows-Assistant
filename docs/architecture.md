@@ -528,3 +528,10 @@ normal model serialization and exports. Search uses deterministic bounded
 parameterized queries with token/phrase/title ranking. Optional semantic
 providers are initialized explicitly, never download models, and cannot disable
 the keyword fallback.
+
+Migration 9 adds an index for canonical source-path lookup without changing the
+meaning of migration 8. Source files are the persistence unit: an explicit
+directory request expands deterministically into individually validated source
+documents, non-recursively by default and within configured file-count and byte
+limits. Status checks report changed or missing sources; no watcher, crawler,
+or automatic re-index service exists.

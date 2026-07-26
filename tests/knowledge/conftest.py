@@ -35,25 +35,28 @@ from omega.knowledge.validation import KnowledgeFileValidator
 
 
 def write_pdf(
-    path: Path, text: str = "Gradient descent reduces a loss function."
+    path: Path,
+    text: str | tuple[str, ...] = "Gradient descent reduces a loss function.",
 ) -> None:
     writer = PdfWriter()
-    page = writer.add_blank_page(width=612, height=792)
-    font = DictionaryObject(
-        {
-            NameObject("/Type"): NameObject("/Font"),
-            NameObject("/Subtype"): NameObject("/Type1"),
-            NameObject("/BaseFont"): NameObject("/Helvetica"),
-        }
-    )
-    font_ref = writer._add_object(font)
-    page[NameObject("/Resources")] = DictionaryObject(
-        {NameObject("/Font"): DictionaryObject({NameObject("/F1"): font_ref})}
-    )
-    stream = DecodedStreamObject()
-    safe = text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
-    stream.set_data(f"BT /F1 12 Tf 72 720 Td ({safe}) Tj ET".encode("ascii"))
-    page[NameObject("/Contents")] = writer._add_object(stream)
+    values = (text,) if isinstance(text, str) else text
+    for value in values:
+        page = writer.add_blank_page(width=612, height=792)
+        font = DictionaryObject(
+            {
+                NameObject("/Type"): NameObject("/Font"),
+                NameObject("/Subtype"): NameObject("/Type1"),
+                NameObject("/BaseFont"): NameObject("/Helvetica"),
+            }
+        )
+        font_ref = writer._add_object(font)
+        page[NameObject("/Resources")] = DictionaryObject(
+            {NameObject("/Font"): DictionaryObject({NameObject("/F1"): font_ref})}
+        )
+        stream = DecodedStreamObject()
+        safe = value.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+        stream.set_data(f"BT /F1 12 Tf 72 720 Td ({safe}) Tj ET".encode("ascii"))
+        page[NameObject("/Contents")] = writer._add_object(stream)
     with path.open("wb") as output:
         writer.write(output)
 

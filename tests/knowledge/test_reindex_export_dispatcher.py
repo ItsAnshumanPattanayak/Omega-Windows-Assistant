@@ -131,3 +131,30 @@ def test_terminal_and_voice_use_the_same_knowledge_lifecycle(
     assert "Created knowledge collection" in response
     assert session.history[-1].intent is IntentType.CREATE_KNOWLEDGE_COLLECTION
     assert session.history[-1].source is CommandSource.VOICE
+
+
+def test_directory_import_requires_scoped_gateway_confirmation(
+    tmp_path: Path, knowledge: tuple[object, object, object]
+) -> None:
+    service, repository, configuration = knowledge
+    source = tmp_path / "folder"
+    source.mkdir()
+    (source / "one.txt").write_text("confirmed folder import", encoding="utf-8")
+    gateway = SafeExecutionGateway()
+    dispatcher = KnowledgeActionDispatcher(
+        service,  # type: ignore[arg-type]
+        gateway,
+        KnowledgeExportService(configuration, repository, tmp_path / "exports"),
+    )
+    session_id = uuid4()
+    parsed = CommandParser().parse(
+        f'Add the folder "{source}" to my knowledge base', session_id
+    )
+    result = dispatcher.dispatch(parsed)
+    assert result is not None and not result.result.success
+    assert repository.list_documents() == ()  # type: ignore[attr-defined]
+    confirmed = gateway.handle_confirmation(
+        f"confirm index knowledge directory {source}", session_id
+    )
+    assert confirmed is not None and confirmed.result.success
+    assert len(repository.list_documents()) == 1  # type: ignore[attr-defined]

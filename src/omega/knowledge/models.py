@@ -14,6 +14,7 @@ from omega.knowledge.enums import (
     KnowledgeExportFormat,
     KnowledgeIndexStatus,
     KnowledgeSearchMode,
+    KnowledgeSourceStatus,
     KnowledgeSourceType,
 )
 from omega.models._serialization import (
@@ -173,6 +174,8 @@ class ExtractedSegment:
     text: str
     page_number: int | None = None
     section_title: str | None = None
+    line_start: int | None = None
+    line_end: int | None = None
 
     def __post_init__(self) -> None:
         _text(self.text, "segment text", 2_000_000)
@@ -180,6 +183,14 @@ class ExtractedSegment:
             raise ModelValidationError("page_number must be positive.")
         if self.section_title is not None:
             _text(self.section_title, "section title", 300)
+        if (self.line_start is None) != (self.line_end is None):
+            raise ModelValidationError("Line locations must be supplied together.")
+        if self.line_start is not None and (
+            self.line_start < 1
+            or self.line_end is None
+            or self.line_end < self.line_start
+        ):
+            raise ModelValidationError("Segment line range is invalid.")
 
 
 @dataclass(frozen=True)
@@ -271,6 +282,9 @@ class KnowledgeSourceReference:
     preview: str
     page_number: int | None = None
     section_title: str | None = None
+    source_path_display: str | None = None
+    line_start: int | None = None
+    line_end: int | None = None
 
     def __post_init__(self) -> None:
         _text(self.document_title, "document title", 300)
@@ -278,18 +292,46 @@ class KnowledgeSourceReference:
         _text(self.preview, "source preview", 1_000)
         if self.chunk_sequence < 0:
             raise ModelValidationError("chunk_sequence must be non-negative.")
+        if self.source_path_display is not None:
+            _text(self.source_path_display, "source path display", 300)
+        if (self.line_start is None) != (self.line_end is None):
+            raise ModelValidationError(
+                "Source line locations must be supplied together."
+            )
 
     def label(self) -> str:
         location = (
             f"page {self.page_number}"
             if self.page_number is not None
             else (
-                self.section_title
-                if self.section_title is not None
-                else f"chunk {self.chunk_sequence + 1}"
+                f"lines {self.line_start}-{self.line_end}"
+                if self.line_start is not None
+                else (
+                    self.section_title
+                    if self.section_title is not None
+                    else f"chunk {self.chunk_sequence + 1}"
+                )
             )
         )
         return f"{self.document_title} ({location})"
+
+
+@dataclass(frozen=True)
+class KnowledgeSourceView:
+    document: KnowledgeDocument
+    status: KnowledgeSourceStatus
+    display_path: str
+    detail: str = ""
+
+
+@dataclass(frozen=True)
+class DirectoryImportResult:
+    directory: str
+    documents_indexed: int
+    chunks_created: int
+    duplicates: int
+    skipped: int
+    failures: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

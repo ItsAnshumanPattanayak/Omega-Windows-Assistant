@@ -58,7 +58,18 @@ INTENT_PATTERNS = (
     _rule(
         "import_knowledge_document",
         IntentType.IMPORT_KNOWLEDGE_DOCUMENT,
-        r"^(?:import|add) .+\.(?:pdf|docx|txt|md|markdown)(?: .*)?$",
+        r"^(?:import|add|index) .+\.(?:pdf|docx|txt|md|markdown)(?: .*)?$",
+    ),
+    _rule(
+        "import_knowledge_directory",
+        IntentType.IMPORT_KNOWLEDGE_DIRECTORY,
+        r"^(?:add|index) (?:the )?(?:folder|directory) .+ "
+        r"(?:to|in) (?:my )?knowledge base(?: recursively)?$",
+    ),
+    _rule(
+        "list_knowledge_sources",
+        IntentType.LIST_KNOWLEDGE_SOURCES,
+        r"^(?:show|list) (?:my )?knowledge sources$",
     ),
     _rule(
         "list_knowledge_documents",
@@ -78,18 +89,24 @@ INTENT_PATTERNS = (
     _rule(
         "reindex_knowledge_document",
         IntentType.REINDEX_KNOWLEDGE_DOCUMENT,
-        r"^re-?index (?:the )?.+ document$",
+        r"^re-?index (?:the )?.+ (?:document|source)$",
     ),
     _rule(
         "remove_knowledge_document",
         IntentType.REMOVE_KNOWLEDGE_DOCUMENT,
-        r"^(?:remove|delete) (?:the )?.+ document from (?:my )?knowledge base$",
+        r"^(?:remove|delete) (?:the )?.+ (?:document|source) "
+        r"from (?:my )?knowledge base$",
     ),
     _rule(
         "search_knowledge",
         IntentType.SEARCH_KNOWLEDGE,
         r"^search (?:(?:my documents|my knowledge base)|"
         r"(?!(?:the web|web|my notes|notes|my tasks|tasks)\b).+) for .+$",
+    ),
+    _rule(
+        "find_knowledge_mentions",
+        IntentType.SEARCH_KNOWLEDGE,
+        r"^find documents mentioning .+$",
     ),
     _rule(
         "ask_knowledge",

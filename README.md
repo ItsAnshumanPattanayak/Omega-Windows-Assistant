@@ -35,6 +35,23 @@
 **Omega** is a modular Windows assistant designed to help users interact with their computer through text, a desktop graphical interface, and optional offline voice commands.
 
 Unlike a basic command launcher, Omega uses a structured application architecture with:
+Omega can explicitly import approved PDF, DOCX, TXT, and Markdown files into
+local collections. It validates size, signature, location, and format; extracts
+text without running macros, scripts, links, attachments, or document
+instructions; creates deterministic bounded chunks; and persists metadata and
+chunks in SQLite migration 8, with canonical source-path lookup added by
+migration 9.
+
+Keyword search, collection/document filters, source previews, page or section
+references, extractive document-grounded answers, transactional re-indexing,
+source-preserving removal, and bounded JSON/Markdown metadata exports work
+fully offline. Semantic search is an optional local adapter boundary and falls
+back clearly to keyword search when no explicit local model is configured.
+Explicit folder indexing is non-recursive by default and bounded by configured
+file-count and total-byte limits. Omega does not automatically crawl or watch
+folders, perform OCR, upload documents, download models,
+execute document content, or provide cloud RAG. See
+[knowledge.md](docs/knowledge.md).
 
 - Typed commands and actions
 - Intent recognition and entity extraction

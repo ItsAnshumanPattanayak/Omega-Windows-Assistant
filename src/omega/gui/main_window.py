@@ -5,7 +5,7 @@ from __future__ import annotations
 import tkinter as tk
 from collections.abc import Sequence
 from datetime import UTC, datetime
-from tkinter import messagebox, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 from typing import TYPE_CHECKING
 
 from omega.gui.controller import GuiController, GuiView
@@ -123,6 +123,12 @@ class OmegaMainWindow(GuiView):
             ("Overdue", self._overdue_tasks),
             ("Knowledge", self._knowledge_collections),
             ("Documents", self._knowledge_documents),
+            ("Add document", self._add_knowledge_file),
+            ("Add folder", self._add_knowledge_folder),
+            ("Knowledge search", self._search_knowledge),
+            ("Sources", self._knowledge_sources),
+            ("Re-index source", self._reindex_knowledge_source),
+            ("Remove source", self._remove_knowledge_source),
         )
         self.operation_buttons: list[ttk.Button] = []
         for toolbar_index, (label, command) in enumerate(actions):
@@ -484,3 +490,54 @@ class OmegaMainWindow(GuiView):
 
     def _knowledge_documents(self) -> None:
         self.controller.submit_command("list my knowledge documents")
+
+    def _add_knowledge_file(self) -> None:
+        path = filedialog.askopenfilename(
+            parent=self.root,
+            title="Add a local knowledge document",
+            filetypes=(
+                ("Supported documents", "*.pdf *.docx *.txt *.md *.markdown"),
+                ("All files", "*.*"),
+            ),
+        )
+        if path:
+            self.controller.add_knowledge_file(path)
+
+    def _add_knowledge_folder(self) -> None:
+        path = filedialog.askdirectory(
+            parent=self.root,
+            title="Add a local knowledge folder (non-recursive)",
+            mustexist=True,
+        )
+        if path:
+            self.controller.add_knowledge_directory(path)
+
+    def _search_knowledge(self) -> None:
+        query = simpledialog.askstring(
+            "Search local knowledge",
+            "Search for:",
+            parent=self.root,
+        )
+        if query and query.strip():
+            self.controller.search_knowledge(query.strip())
+
+    def _knowledge_sources(self) -> None:
+        self.controller.list_knowledge_sources()
+
+    def _reindex_knowledge_source(self) -> None:
+        reference = simpledialog.askstring(
+            "Re-index local source",
+            "Document title, filename, or source ID:",
+            parent=self.root,
+        )
+        if reference and reference.strip():
+            self.controller.reindex_knowledge_source(reference.strip())
+
+    def _remove_knowledge_source(self) -> None:
+        reference = simpledialog.askstring(
+            "Remove local source",
+            "Document title, filename, or source ID:",
+            parent=self.root,
+        )
+        if reference and reference.strip():
+            self.controller.remove_knowledge_source(reference.strip())

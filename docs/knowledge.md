@@ -2,8 +2,10 @@
 
 Phase 17 adds a private, offline document index. Omega imports only a file the
 user explicitly names and only when it resides under an approved local root.
-It does not scan folders, watch the filesystem, upload content, use telemetry,
-or download a model.
+An explicitly selected directory can be indexed non-recursively by default;
+recursive indexing requires an explicit command and remains bounded. Omega does
+not automatically scan or watch folders, upload content, use telemetry, or
+download a model.
 
 ## Supported formats and extraction
 
@@ -22,13 +24,20 @@ Desktop, Documents, Downloads, or knowledge-import root. It rejects hidden,
 network, device, protected runtime/configuration/database, executable,
 oversized, malformed, and recognizable credential/private-key files.
 
+Directory requests are deterministic and reject network, device, protected,
+hidden, ignored, or symlink roots. They skip unsupported entries, never follow
+directory symlinks, and enforce both `maximum_files_per_request` and
+`maximum_total_bytes_per_request` before extraction. Each accepted file remains
+an independently removable source; removing its index never deletes that file.
+
 ## Collections, indexing, and search
 
 Collections and documents have UUIDs, aware UTC timestamps, metadata, and
 optimistic revisions. Migration 8 stores collections, document metadata,
 deterministic chunks, and optional numeric semantic-vector metadata. Foreign
 keys and indexes cover collection/status, fingerprint, source type, updated
-time, chunk order/hash, and semantic model identity.
+time, chunk order/hash, and semantic model identity. Migration 9 adds canonical
+source-path lookup while preserving the meaning of migration 8.
 
 Chunking prefers paragraph or word boundaries, validates overlap, preserves
 page/section metadata, assigns stable UUID5 chunk IDs, and enforces character
@@ -41,6 +50,9 @@ bounded candidate set, then deterministic phrase/token/title ranking. Results
 exclude archived collections and removed documents and include document ID,
 title, collection, chunk sequence, page or section when available, and a
 bounded preview.
+TXT and Markdown results include line ranges; PDF results include page numbers.
+Source listings report indexed, changed, missing, unsupported, or failed status
+without exposing full private paths.
 
 Semantic search is disabled by default. Enabling it requires an explicit local
 model name, existing local path, and vector dimension. Phase 17 defines the
@@ -76,10 +88,17 @@ normal command box use `GuiController` and its bounded background runner, so
 widgets never access repositories or extract files directly. All operations
 reach `SafeExecutionGateway` through `KnowledgeActionDispatcher`.
 
+The GUI provides file and folder selection, source listing, search, re-index,
+and confirmed removal through the existing conversation surface. It does not
+automatically open or reveal source files; opening a source remains a separate
+explicit request through Omega's existing safe file-opening workflow.
+
 ## Configuration and troubleshooting
 
-The `knowledge` YAML section controls supported extensions and all file, text,
-page, chunk, search, context, timeout, worker, duplicate, and semantic limits.
+The `knowledge` YAML section controls supported extensions and all per-file,
+per-directory file-count/byte, ignored-directory, recursive-default, text,
+page, chunk, excerpt, search, context, timeout, worker, duplicate, and semantic
+limits.
 Unknown keys and unsafe values fail closed. No runtime preference may enable a
 new file type, cloud upload, path bypass, executable content, automatic scan,
 or model download.
@@ -94,3 +113,9 @@ Run focused tests with:
 ```powershell
 python -m pytest -p no:cacheprovider tests/knowledge -v
 ```
+
+Example text commands include `Index the document at <path>`, `Add the folder
+<path> to my knowledge base`, `List my knowledge sources`, `Find documents
+mentioning <query>`, `Re-index <name> source`, and `Remove <name> source from my
+knowledge base`. Bulk directory indexing and source removal use the existing
+scoped confirmation flow.

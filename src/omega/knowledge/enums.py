@@ -30,6 +30,14 @@ class KnowledgeSourceType(StrEnum):
     MARKDOWN = "markdown"
 
 
+class KnowledgeSourceStatus(StrEnum):
+    INDEXED = "indexed"
+    CHANGED = "changed"
+    MISSING = "missing"
+    FAILED = "failed"
+    UNSUPPORTED = "unsupported"
+
+
 class ExtractionStatus(StrEnum):
     SUCCEEDED = "succeeded"
     FAILED = "failed"

@@ -242,6 +242,26 @@ def test_toolbar_commands_route_through_session():
     ]
 
 
+def test_knowledge_gui_helpers_route_through_normal_session() -> None:
+    controller, session, _, _, _ = _controller()
+
+    controller.add_knowledge_file("C:/Notes/course.pdf")
+    controller.add_knowledge_directory("C:/Notes")
+    controller.list_knowledge_sources()
+    controller.search_knowledge("gradient descent")
+    controller.reindex_knowledge_source("course.pdf")
+    controller.remove_knowledge_source("course.pdf")
+
+    assert session.calls == [
+        'Index the document at "C:\\Notes\\course.pdf"',
+        'Add the folder "C:\\Notes" to my knowledge base',
+        "list my knowledge sources",
+        "search my knowledge base for gradient descent",
+        "re-index course.pdf source",
+        "remove course.pdf source from my knowledge base",
+    ]
+
+
 def test_worker_exception_is_safe_and_not_retried():
     controller, session, _, _, view = _controller()
 

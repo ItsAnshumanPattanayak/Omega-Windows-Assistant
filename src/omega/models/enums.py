@@ -157,6 +157,8 @@ class IntentType(StrEnum):
     RESTORE_KNOWLEDGE_COLLECTION = "restore_knowledge_collection"
     DELETE_KNOWLEDGE_COLLECTION = "delete_knowledge_collection"
     IMPORT_KNOWLEDGE_DOCUMENT = "import_knowledge_document"
+    IMPORT_KNOWLEDGE_DIRECTORY = "import_knowledge_directory"
+    LIST_KNOWLEDGE_SOURCES = "list_knowledge_sources"
     LIST_KNOWLEDGE_DOCUMENTS = "list_knowledge_documents"
     SHOW_KNOWLEDGE_DOCUMENT = "show_knowledge_document"
     MOVE_KNOWLEDGE_DOCUMENT = "move_knowledge_document"

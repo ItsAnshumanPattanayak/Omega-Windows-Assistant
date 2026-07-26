@@ -15,7 +15,8 @@ SETTINGS_SCHEMA_VERSION = 5
 SCHEDULING_SCHEMA_VERSION = 6
 PRODUCTIVITY_SCHEMA_VERSION = 7
 KNOWLEDGE_SCHEMA_VERSION = 8
-LATEST_SCHEMA_VERSION = KNOWLEDGE_SCHEMA_VERSION
+KNOWLEDGE_SOURCE_INDEX_SCHEMA_VERSION = 9
+LATEST_SCHEMA_VERSION = KNOWLEDGE_SOURCE_INDEX_SCHEMA_VERSION
 
 BASELINE_MIGRATION_NAME = "phase_9a_database_foundation"
 COMMAND_MIGRATION_NAME = "phase_9b_command_repository"
@@ -25,6 +26,7 @@ SETTINGS_MIGRATION_NAME = "phase_10_runtime_settings"
 SCHEDULING_MIGRATION_NAME = "phase_15_scheduling"
 PRODUCTIVITY_MIGRATION_NAME = "phase_16_productivity"
 KNOWLEDGE_MIGRATION_NAME = "phase_17_knowledge"
+KNOWLEDGE_SOURCE_INDEX_MIGRATION_NAME = "phase_17_source_index"
 
 CREATE_SCHEDULED_ITEMS_TABLE = """
 CREATE TABLE IF NOT EXISTS scheduled_items (
@@ -560,6 +562,20 @@ def apply_knowledge_schema(connection: sqlite3.Connection) -> None:
         ) from error
 
 
+def apply_knowledge_source_index_schema(connection: sqlite3.Connection) -> None:
+    """Add canonical source-path lookup without changing migration 8."""
+
+    try:
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_knowledge_documents_source_path "
+            "ON knowledge_documents(source_path,status)"
+        )
+    except sqlite3.Error as error:
+        raise DatabaseSchemaError(
+            "Omega could not create the knowledge source-path index."
+        ) from error
+
+
 def _record_migration(
     connection: sqlite3.Connection,
     *,
@@ -642,6 +658,13 @@ def initialize_schema(
             connection,
             version=KNOWLEDGE_SCHEMA_VERSION,
             name=KNOWLEDGE_MIGRATION_NAME,
+        )
+
+        apply_knowledge_source_index_schema(connection)
+        _record_migration(
+            connection,
+            version=KNOWLEDGE_SOURCE_INDEX_SCHEMA_VERSION,
+            name=KNOWLEDGE_SOURCE_INDEX_MIGRATION_NAME,
         )
 
         connection.commit()

@@ -89,6 +89,7 @@ _KNOWLEDGE_NO_PARAMETER = frozenset(
         IntentType.LIST_KNOWLEDGE_COLLECTIONS,
         IntentType.SHOW_KNOWLEDGE_SOURCES,
         IntentType.EXPORT_KNOWLEDGE_RESULTS,
+        IntentType.LIST_KNOWLEDGE_SOURCES,
     }
 )
 
@@ -263,6 +264,10 @@ class CommandParser:
             IntentType.IMPORT_KNOWLEDGE_DOCUMENT: (
                 "document_path",
                 "Which approved PDF, DOCX, TXT, or Markdown file should I import?",
+            ),
+            IntentType.IMPORT_KNOWLEDGE_DIRECTORY: (
+                "directory_path",
+                "Which approved local folder should I index?",
             ),
             IntentType.SEARCH_KNOWLEDGE: (
                 "knowledge_query",

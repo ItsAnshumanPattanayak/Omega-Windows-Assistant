@@ -11,6 +11,7 @@ from omega.knowledge.models import (
     DocumentExtractionResult,
     KnowledgeChunk,
 )
+from omega.models._serialization import JsonValue
 
 
 class DeterministicChunker:
@@ -44,6 +45,13 @@ class DeterministicChunker:
                         chunk_id=uuid5(document_id, f"{sequence}:{text_hash}"),
                         page_number=segment.page_number,
                         section_title=segment.section_title,
+                        metadata=self._location_metadata(
+                            segment.line_start,
+                            segment.line_end,
+                            segment.text,
+                            local_start,
+                            piece,
+                        ),
                     )
                 )
                 local_search = max(
@@ -58,6 +66,20 @@ class DeterministicChunker:
         if not chunks:
             raise KnowledgeIndexError("No non-empty chunks could be created.")
         return tuple(chunks)
+
+    @staticmethod
+    def _location_metadata(
+        segment_start: int | None,
+        segment_end: int | None,
+        segment_text: str,
+        local_start: int,
+        piece: str,
+    ) -> dict[str, JsonValue]:
+        if segment_start is None or segment_end is None:
+            return {}
+        line_start = segment_start + segment_text[:local_start].count("\n")
+        line_end = min(segment_end, line_start + piece.count("\n"))
+        return {"line_start": line_start, "line_end": line_end}
 
     def _split(self, text: str) -> tuple[str, ...]:
         size = self.configuration.chunk_size_characters

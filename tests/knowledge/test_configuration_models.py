@@ -20,6 +20,9 @@ def test_configuration_defaults_are_local_and_strict() -> None:
     assert value.keyword_search_enabled
     assert not value.semantic_search_enabled
     assert value.supported_extensions == (".docx", ".markdown", ".md", ".pdf", ".txt")
+    assert value.maximum_files_per_request == 100
+    assert not value.recursive_directory_indexing_default
+    assert "models" in value.ignored_directory_names
     with pytest.raises(KnowledgeConfigurationError):
         KnowledgeConfiguration.from_mapping({"unknown": True})
     with pytest.raises(KnowledgeConfigurationError):
@@ -30,6 +33,8 @@ def test_configuration_defaults_are_local_and_strict() -> None:
         )
     with pytest.raises(KnowledgeConfigurationError):
         KnowledgeConfiguration.from_mapping({"supported_extensions": [".exe"]})
+    with pytest.raises(KnowledgeConfigurationError):
+        KnowledgeConfiguration.from_mapping({"ignored_directory_names": ["../bad"]})
 
 
 def test_semantic_search_requires_an_explicit_local_model() -> None:

@@ -52,7 +52,9 @@ _COLLECTION_INTENTS = frozenset(
 _DOCUMENT_INTENTS = frozenset(
     {
         IntentType.IMPORT_KNOWLEDGE_DOCUMENT,
+        IntentType.IMPORT_KNOWLEDGE_DIRECTORY,
         IntentType.LIST_KNOWLEDGE_DOCUMENTS,
+        IntentType.LIST_KNOWLEDGE_SOURCES,
         IntentType.SHOW_KNOWLEDGE_DOCUMENT,
         IntentType.MOVE_KNOWLEDGE_DOCUMENT,
         IntentType.REINDEX_KNOWLEDGE_DOCUMENT,
@@ -72,6 +74,7 @@ _DESTRUCTIVE = frozenset(
     {
         IntentType.REMOVE_KNOWLEDGE_DOCUMENT,
         IntentType.DELETE_KNOWLEDGE_COLLECTION,
+        IntentType.IMPORT_KNOWLEDGE_DIRECTORY,
     }
 )
 _READ_ONLY = frozenset(
@@ -83,6 +86,7 @@ _READ_ONLY = frozenset(
         IntentType.SEARCH_KNOWLEDGE,
         IntentType.ASK_KNOWLEDGE,
         IntentType.SHOW_KNOWLEDGE_SOURCES,
+        IntentType.LIST_KNOWLEDGE_SOURCES,
     }
 )
 
@@ -147,16 +151,22 @@ class KnowledgeActionDispatcher:
             confirmation_status=ConfirmationStatus.NOT_REQUIRED,
             requires_confirmation=False,
         )
-        raw_path = self._text(command, "document_path")
+        raw_path = self._text(command, "document_path") or self._text(
+            command, "directory_path"
+        )
         context = SafetyContext(
             command,
             action,
             command.session_id or UUID(int=0),
             logical_source=Path(raw_path).name if raw_path else reference,
             target_type=(
-                "knowledge_document"
-                if command.intent in _DOCUMENT_INTENTS
-                else "knowledge_collection"
+                "knowledge_directory"
+                if command.intent is IntentType.IMPORT_KNOWLEDGE_DIRECTORY
+                else (
+                    "knowledge_document"
+                    if command.intent in _DOCUMENT_INTENTS
+                    else "knowledge_collection"
+                )
             ),
             target_exists=target is not None,
             additional_context={
@@ -303,6 +313,62 @@ class KnowledgeActionDispatcher:
                     "chunks_created": import_result.chunks_created,
                     "duplicate": import_result.duplicate,
                     "semantic_available": import_result.semantic_available,
+                },
+            )
+        if intent is IntentType.IMPORT_KNOWLEDGE_DIRECTORY:
+            collection_name = self._text(command, "collection_name")
+            collection = (
+                self.service.repository.resolve_collection(collection_name)
+                if collection_name
+                else self.service.ensure_default_collection()
+            )
+            result = self.service.import_directory(
+                Path(self._required(command, "directory_path")),
+                collection,
+                recursive=self._boolean(command, "recursive"),
+            )
+            message = (
+                f"Indexed {result.documents_indexed} document(s) as "
+                f"{result.chunks_created} chunk(s); {result.duplicates} duplicate(s), "
+                f"{result.skipped} unsupported or unsafe item(s), and "
+                f"{len(result.failures)} failed document(s)."
+            )
+            return self._success(
+                action,
+                "Knowledge directory indexed.",
+                message,
+                {
+                    "documents_indexed": result.documents_indexed,
+                    "chunks_created": result.chunks_created,
+                    "duplicates": result.duplicates,
+                    "skipped": result.skipped,
+                    "failures": list(result.failures),
+                },
+            )
+        if intent is IntentType.LIST_KNOWLEDGE_SOURCES:
+            sources = self.service.list_sources()
+            message = (
+                "\n".join(
+                    f"{item.document.title} [{item.status.value}] — {item.display_path}"
+                    + (f" — {item.detail}" if item.detail else "")
+                    for item in sources
+                )
+                or "No knowledge sources found."
+            )
+            return self._success(
+                action,
+                "Knowledge sources listed.",
+                message,
+                {
+                    "items": [
+                        {
+                            "document": item.document.to_dict(),
+                            "status": item.status.value,
+                            "display_path": item.display_path,
+                            "detail": item.detail,
+                        }
+                        for item in sources
+                    ]
                 },
             )
         if intent is IntentType.LIST_KNOWLEDGE_DOCUMENTS:
@@ -521,6 +587,15 @@ class KnowledgeActionDispatcher:
     ) -> ConfirmationSpec | None:
         if command.intent not in _DESTRUCTIVE:
             return None
+        if command.intent is IntentType.IMPORT_KNOWLEDGE_DIRECTORY:
+            phrase = f"confirm index knowledge directory {reference}"
+            return ConfirmationSpec(
+                reference,
+                f'Indexing local directory "{reference}" requires confirmation. '
+                f'Type "{phrase}".',
+                phrase,
+                f"cancel index knowledge directory {reference}",
+            )
         kind = "document" if isinstance(target, KnowledgeDocument) else "collection"
         phrase = f"confirm remove knowledge {kind} {reference}"
         return ConfirmationSpec(
@@ -536,6 +611,7 @@ class KnowledgeActionDispatcher:
             self._text(command, "document_reference")
             or self._text(command, "collection_reference")
             or self._text(command, "collection_name")
+            or self._text(command, "directory_path")
             or (
                 Path(self._text(command, "document_path") or "").name
                 if self._text(command, "document_path")
@@ -556,6 +632,13 @@ class KnowledgeActionDispatcher:
         if value is None or not value.strip():
             raise ValueError(f"{name} is required.")
         return value
+
+    @staticmethod
+    def _boolean(command: UserCommand, name: str) -> bool | None:
+        for item in command.entities:
+            if item.name == name and isinstance(item.value, bool):
+                return item.value
+        return None
 
     @staticmethod
     def _updated_collection_name(text: str) -> str:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import sqlite3
 from uuid import UUID
@@ -79,8 +80,7 @@ class KeywordSearchService:
         )
         return KnowledgeSearchResult(query, hits)
 
-    @staticmethod
-    def _hit(row: sqlite3.Row, query: str) -> KnowledgeSearchHit:
+    def _hit(self, row: sqlite3.Row, query: str) -> KnowledgeSearchHit:
         text = str(row["text"])
         folded = text.casefold()
         needle = query.casefold().strip()
@@ -98,7 +98,12 @@ class KeywordSearchService:
         title = str(row["document_title"]).casefold()
         title_bonus = 1.0 if needle in title else 0.0
         score = min(1.0, 0.55 * phrase + 0.35 * token_ratio + 0.10 * title_bonus)
-        preview = KeywordSearchService._preview(text, needle)
+        preview = self._preview(
+            text, needle, maximum=self.configuration.maximum_excerpt_characters
+        )
+        metadata = json.loads(str(row["metadata_json"]))
+        line_start = metadata.get("line_start")
+        line_end = metadata.get("line_end")
         source = KnowledgeSourceReference(
             UUID(row["document_id"]),
             row["document_title"],
@@ -107,6 +112,9 @@ class KeywordSearchService:
             preview,
             int(row["page_number"]) if row["page_number"] is not None else None,
             row["section_title"],
+            str(row["original_filename"]),
+            int(line_start) if isinstance(line_start, int) else None,
+            int(line_end) if isinstance(line_end, int) else None,
         )
         return KnowledgeSearchHit(
             UUID(row["chunk_id"]),

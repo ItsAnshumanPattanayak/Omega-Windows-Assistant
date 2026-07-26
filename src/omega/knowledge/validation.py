@@ -112,7 +112,7 @@ class KnowledgeFileValidator:
                 "Files identified as credentials, secrets, tokens, or private keys "
                 "are not approved for indexing."
             )
-        if path.is_symlink() or not candidate.is_file():
+        if self._is_link_or_junction(path) or not candidate.is_file():
             raise DocumentValidationError(
                 "The selected document must be a regular non-symbolic-link file."
             )
@@ -145,6 +145,118 @@ class KnowledgeFileValidator:
         self._signature(source_type, head)
         return ValidatedKnowledgeFile(
             candidate, source_type, stat.st_size, digest.hexdigest()
+        )
+
+    def discover_directory(
+        self, path: Path, *, recursive: bool = False
+    ) -> tuple[tuple[Path, ...], int]:
+        """Return a deterministic bounded set from one explicitly selected folder."""
+
+        candidate = self._validate_directory(path)
+        files: list[Path] = []
+        skipped = 0
+        total_bytes = 0
+        pending = [candidate]
+        while pending:
+            current = pending.pop()
+            try:
+                entries = sorted(
+                    current.iterdir(), key=lambda item: item.name.casefold()
+                )
+            except OSError as error:
+                raise DocumentValidationError(
+                    "The selected directory cannot be read safely."
+                ) from error
+            for entry in entries:
+                if self._is_link_or_junction(entry):
+                    skipped += 1
+                    continue
+                if entry.is_dir():
+                    if (
+                        recursive
+                        and not self._ignored_directory(entry.name)
+                        and not any(
+                            self._contained(entry.resolve(strict=False), root)
+                            for root in self.protected_roots
+                        )
+                    ):
+                        pending.append(entry)
+                    continue
+                if (
+                    entry.suffix.casefold()
+                    not in self.configuration.supported_extensions
+                ):
+                    skipped += 1
+                    continue
+                try:
+                    size = entry.stat().st_size
+                except OSError:
+                    skipped += 1
+                    continue
+                files.append(entry)
+                total_bytes += size
+                if len(files) > self.configuration.maximum_files_per_request:
+                    raise DocumentValidationError(
+                        "The directory contains too many supported documents."
+                    )
+                if total_bytes > self.configuration.maximum_total_bytes_per_request:
+                    raise DocumentValidationError(
+                        "The directory exceeds the total indexing byte limit."
+                    )
+        return tuple(sorted(files, key=lambda item: str(item).casefold())), skipped
+
+    def _validate_directory(self, path: Path) -> Path:
+        if not isinstance(path, Path):
+            raise DocumentValidationError("A directory path is required.")
+        raw = str(path)
+        if (
+            raw.startswith("\\\\")
+            or raw.startswith("\\\\.\\")
+            or raw.startswith("\\\\?\\")
+        ):
+            raise DocumentValidationError(
+                "Network and device directories are not approved."
+            )
+        try:
+            candidate = path.resolve(strict=True)
+        except OSError as error:
+            raise DocumentValidationError(
+                "The selected directory does not exist or is unavailable."
+            ) from error
+        if self._is_link_or_junction(path) or not candidate.is_dir():
+            raise DocumentValidationError(
+                "The selected source must be a regular non-symbolic-link directory."
+            )
+        matching_roots = tuple(
+            root for root in self.approved_roots if self._contained(candidate, root)
+        )
+        if not matching_roots:
+            raise DocumentValidationError(
+                "The directory is outside Omega's approved local locations."
+            )
+        if any(self._contained(candidate, root) for root in self.protected_roots):
+            raise DocumentValidationError("That directory is protected from indexing.")
+        approved_root = max(matching_roots, key=lambda root: len(root.parts))
+        relative_parts = candidate.relative_to(approved_root).parts
+        if any(self._ignored_directory(part) for part in relative_parts):
+            raise DocumentValidationError(
+                "That directory is ignored by knowledge policy."
+            )
+        return candidate
+
+    def _ignored_directory(self, name: str) -> bool:
+        folded = name.casefold()
+        return (
+            folded in self.configuration.ignored_directory_names
+            or folded.startswith("vosk-model")
+            or folded.startswith("knowledge_models")
+        )
+
+    @staticmethod
+    def _is_link_or_junction(path: Path) -> bool:
+        junction_check = getattr(os.path, "isjunction", None)
+        return path.is_symlink() or bool(
+            junction_check is not None and junction_check(path)
         )
 
     @staticmethod

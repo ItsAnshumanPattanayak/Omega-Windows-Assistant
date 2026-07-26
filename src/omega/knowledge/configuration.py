@@ -19,6 +19,8 @@ class KnowledgeConfiguration:
     enabled: bool = True
     supported_extensions: tuple[str, ...] = tuple(sorted(HARD_SUPPORTED_EXTENSIONS))
     maximum_file_bytes: int = 26_214_400
+    maximum_files_per_request: int = 100
+    maximum_total_bytes_per_request: int = 104_857_600
     maximum_document_characters: int = 2_000_000
     maximum_documents: int = 5_000
     maximum_collections: int = 200
@@ -31,6 +33,19 @@ class KnowledgeConfiguration:
     default_search_limit: int = 10
     maximum_search_limit: int = 100
     maximum_query_characters: int = 1_000
+    maximum_excerpt_characters: int = 320
+    recursive_directory_indexing_default: bool = False
+    ignored_directory_names: tuple[str, ...] = (
+        ".git",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".ruff_cache",
+        ".venv",
+        "__pycache__",
+        "data",
+        "models",
+        "node_modules",
+    )
     keyword_search_enabled: bool = True
     semantic_search_enabled: bool = False
     semantic_model_name: str | None = None
@@ -63,6 +78,7 @@ class KnowledgeConfiguration:
             "preserve_original_files",
             "copy_documents_into_data_directory",
             "auto_reindex_changed_documents",
+            "recursive_directory_indexing_default",
         }
         for name in booleans:
             if not isinstance(merged[name], bool):
@@ -71,6 +87,8 @@ class KnowledgeConfiguration:
             raise KnowledgeConfigurationError("Keyword search must remain enabled.")
         integer_limits = {
             "maximum_file_bytes": (1, 100_000_000),
+            "maximum_files_per_request": (1, 10_000),
+            "maximum_total_bytes_per_request": (1, 1_000_000_000),
             "maximum_document_characters": (1, 10_000_000),
             "maximum_documents": (1, 100_000),
             "maximum_collections": (1, 10_000),
@@ -83,6 +101,7 @@ class KnowledgeConfiguration:
             "default_search_limit": (1, 100),
             "maximum_search_limit": (1, 1_000),
             "maximum_query_characters": (1, 5_000),
+            "maximum_excerpt_characters": (40, 2_000),
             "answer_maximum_context_characters": (100, 100_000),
             "extraction_timeout_seconds": (1, 300),
             "indexing_worker_count": (1, 8),
@@ -102,6 +121,14 @@ class KnowledgeConfiguration:
         if merged["default_search_limit"] > merged["maximum_search_limit"]:
             raise KnowledgeConfigurationError(
                 "Default search limit cannot exceed the maximum."
+            )
+        if merged["maximum_files_per_request"] > merged["maximum_documents"]:
+            raise KnowledgeConfigurationError(
+                "Per-request file limit cannot exceed the document limit."
+            )
+        if merged["maximum_total_bytes_per_request"] < merged["maximum_file_bytes"]:
+            raise KnowledgeConfigurationError(
+                "Per-request byte limit cannot be smaller than the per-file limit."
             )
         score = merged["minimum_semantic_score"]
         if isinstance(score, bool) or not isinstance(score, (int, float)):
@@ -128,6 +155,27 @@ class KnowledgeConfiguration:
             if item not in normalized:
                 normalized.append(item)
         merged["supported_extensions"] = tuple(normalized)
+        ignored = merged["ignored_directory_names"]
+        if not isinstance(ignored, (list, tuple)) or not ignored:
+            raise KnowledgeConfigurationError(
+                "knowledge.ignored_directory_names must be a non-empty list."
+            )
+        normalized_ignored: list[str] = []
+        for value in ignored:
+            if (
+                not isinstance(value, str)
+                or not value.strip()
+                or "/" in value
+                or "\\" in value
+                or value in {".", ".."}
+            ):
+                raise KnowledgeConfigurationError(
+                    "Ignored directory names must be simple non-empty names."
+                )
+            folded = value.casefold()
+            if folded not in normalized_ignored:
+                normalized_ignored.append(folded)
+        merged["ignored_directory_names"] = tuple(normalized_ignored)
         for name in ("semantic_model_name", "semantic_model_path"):
             value = merged[name]
             if value is not None and not isinstance(value, (str, Path)):

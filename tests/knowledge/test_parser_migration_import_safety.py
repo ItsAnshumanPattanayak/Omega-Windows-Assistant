@@ -14,7 +14,7 @@ from omega.understanding import CommandParser
 
 def test_phase17_migration_is_contiguous() -> None:
     assert KNOWLEDGE_SCHEMA_VERSION == 8
-    assert LATEST_SCHEMA_VERSION == 8
+    assert LATEST_SCHEMA_VERSION == 9
 
 
 def test_knowledge_commands_use_existing_parser_and_preserve_queries() -> None:
@@ -104,7 +104,7 @@ def test_phase17_upgrade_preserves_phase16_and_adds_foreign_keys(
         connection.commit()
     finally:
         connection.close()
-    assert runner.migrate() == 8
+    assert runner.migrate() == 9
     connection = factory.connect()
     try:
         assert (
@@ -130,5 +130,12 @@ def test_phase17_upgrade_preserves_phase16_and_adds_foreign_keys(
         ).fetchall()
         assert {row["table"] for row in foreign_keys} == {"knowledge_documents"}
         assert connection.execute("PRAGMA foreign_keys").fetchone()[0] == 1
+        indexes = {
+            row["name"]
+            for row in connection.execute(
+                "PRAGMA index_list(knowledge_documents)"
+            ).fetchall()
+        }
+        assert "idx_knowledge_documents_source_path" in indexes
     finally:
         connection.close()

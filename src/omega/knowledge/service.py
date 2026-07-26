@@ -13,17 +13,20 @@ from omega.knowledge.configuration import KnowledgeConfiguration
 from omega.knowledge.enums import (
     KnowledgeDocumentStatus,
     KnowledgeIndexStatus,
+    KnowledgeSourceStatus,
 )
 from omega.knowledge.exceptions import (
     DocumentImportError,
     DocumentNotFoundError,
     KnowledgeCollectionNotFoundError,
     KnowledgeConflictError,
+    KnowledgeSearchError,
     StaleKnowledgeRevisionError,
 )
 from omega.knowledge.extractors import ExtractorRegistry
 from omega.knowledge.keyword_search import KeywordSearchService
 from omega.knowledge.models import (
+    DirectoryImportResult,
     DocumentImportResult,
     DocumentReindexResult,
     KnowledgeAnswer,
@@ -32,6 +35,7 @@ from omega.knowledge.models import (
     KnowledgeRemovalResult,
     KnowledgeSearchQuery,
     KnowledgeSearchResult,
+    KnowledgeSourceView,
 )
 from omega.knowledge.protocols import SemanticSearchProvider
 from omega.knowledge.repositories import KnowledgeRepository
@@ -129,6 +133,20 @@ class KnowledgeService:
         if self.repository.document_count() >= self.configuration.maximum_documents:
             raise DocumentImportError("The document limit has been reached.")
         validated = self.validator.validate(path)
+        existing_source = self.repository.find_by_source_path(str(validated.path))
+        if existing_source is not None:
+            if existing_source.content_fingerprint == validated.fingerprint:
+                return DocumentImportResult(
+                    existing_source,
+                    len(
+                        self.repository.chunks_for_document(existing_source.document_id)
+                    ),
+                    duplicate=True,
+                    semantic_available=self.semantic.available,
+                )
+            raise DocumentImportError(
+                "That source is already indexed and has changed; re-index it instead."
+            )
         duplicate = self.repository.find_by_fingerprint(validated.fingerprint)
         if duplicate is not None and not self.configuration.allow_duplicate_content:
             return DocumentImportResult(
@@ -183,10 +201,86 @@ class KnowledgeService:
             document, len(chunks), False, self.semantic.available
         )
 
+    def import_directory(
+        self,
+        path: Path,
+        collection: KnowledgeCollection,
+        *,
+        recursive: bool | None = None,
+    ) -> DirectoryImportResult:
+        selected_recursive = (
+            self.configuration.recursive_directory_indexing_default
+            if recursive is None
+            else recursive
+        )
+        paths, skipped = self.validator.discover_directory(
+            path, recursive=selected_recursive
+        )
+        indexed = chunks = duplicates = 0
+        failures: list[str] = []
+        for source in paths:
+            try:
+                result = self.import_document(source, collection)
+            except Exception as error:
+                failures.append(f"{source.name}: {type(error).__name__}")
+                continue
+            if result.duplicate:
+                duplicates += 1
+            else:
+                indexed += 1
+                chunks += result.chunks_created
+        return DirectoryImportResult(
+            str(path.resolve(strict=False)),
+            indexed,
+            chunks,
+            duplicates,
+            skipped,
+            tuple(failures),
+        )
+
     def list_documents(
         self, collection_id: UUID | None = None
     ) -> tuple[KnowledgeDocument, ...]:
         return self.repository.list_documents(collection_id=collection_id)
+
+    def list_sources(self) -> tuple[KnowledgeSourceView, ...]:
+        return tuple(self._source_view(item) for item in self.list_documents())
+
+    def _source_view(self, item: KnowledgeDocument) -> KnowledgeSourceView:
+        source = Path(item.source_path)
+        try:
+            if not source.exists():
+                return KnowledgeSourceView(
+                    item,
+                    KnowledgeSourceStatus.MISSING,
+                    item.original_filename,
+                    "The original source is missing.",
+                )
+            if source.suffix.casefold() not in self.configuration.supported_extensions:
+                return KnowledgeSourceView(
+                    item,
+                    KnowledgeSourceStatus.UNSUPPORTED,
+                    item.original_filename,
+                    "The source extension is no longer supported.",
+                )
+            validated = self.validator.validate(source)
+            if validated.fingerprint != item.content_fingerprint:
+                return KnowledgeSourceView(
+                    item,
+                    KnowledgeSourceStatus.CHANGED,
+                    item.original_filename,
+                    "The source changed after it was indexed.",
+                )
+            return KnowledgeSourceView(
+                item, KnowledgeSourceStatus.INDEXED, item.original_filename
+            )
+        except Exception:
+            return KnowledgeSourceView(
+                item,
+                KnowledgeSourceStatus.FAILED,
+                item.original_filename,
+                "The source could not be checked safely.",
+            )
 
     def move_document(
         self,
@@ -274,6 +368,12 @@ class KnowledgeService:
         return KnowledgeRemovalResult(document_id, chunks, True)
 
     def search(self, query: KnowledgeSearchQuery) -> KnowledgeSearchResult:
+        if len(query.text) > self.configuration.maximum_query_characters:
+            raise KnowledgeSearchError(
+                "The knowledge query exceeds its configured limit."
+            )
+        if query.limit > self.configuration.maximum_search_limit:
+            raise KnowledgeSearchError("The requested result count exceeds its limit.")
         return self.retrieval.retrieve(query)
 
     def answer(self, question: str) -> KnowledgeAnswer:

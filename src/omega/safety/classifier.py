@@ -83,6 +83,7 @@ _LOW = frozenset(
         IntentType.SEARCH_KNOWLEDGE,
         IntentType.ASK_KNOWLEDGE,
         IntentType.SHOW_KNOWLEDGE_SOURCES,
+        IntentType.LIST_KNOWLEDGE_SOURCES,
     }
 )
 _MEDIUM = frozenset(
@@ -167,6 +168,7 @@ _HIGH = frozenset(
         IntentType.SLEEP_COMPUTER,
         IntentType.HIBERNATE_COMPUTER,
         IntentType.DELETE_NOTE,
+        IntentType.IMPORT_KNOWLEDGE_DIRECTORY,
         IntentType.DELETE_TASK,
         IntentType.DELETE_TASK_LIST,
         IntentType.REMOVE_KNOWLEDGE_DOCUMENT,

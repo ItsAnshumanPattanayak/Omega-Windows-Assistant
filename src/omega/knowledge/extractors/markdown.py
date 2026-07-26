@@ -32,18 +32,22 @@ class MarkdownExtractor:
         segments: list[ExtractedSegment] = []
         heading: str | None = None
         buffer: list[str] = []
+        buffer_start = 1
         title = title_from_path(path)
-        for line in raw.replace("\r\n", "\n").replace("\r", "\n").splitlines():
+        for line_number, line in enumerate(
+            raw.replace("\r\n", "\n").replace("\r", "\n").splitlines(), start=1
+        ):
             match = _HEADING.match(line)
             if match:
-                self._append(segments, buffer, heading)
+                self._append(segments, buffer, heading, buffer_start)
                 heading = match.group(1).strip()[:300]
                 if not segments and title == title_from_path(path):
                     title = heading
                 buffer = [line]
+                buffer_start = line_number
             else:
                 buffer.append(line)
-        self._append(segments, buffer, heading)
+        self._append(segments, buffer, heading, buffer_start)
         if not segments:
             raise DocumentExtractionError("No usable Markdown text was found.")
         text = "\n\n".join(item.text for item in segments)
@@ -64,8 +68,18 @@ class MarkdownExtractor:
 
     @staticmethod
     def _append(
-        segments: list[ExtractedSegment], buffer: list[str], heading: str | None
+        segments: list[ExtractedSegment],
+        buffer: list[str],
+        heading: str | None,
+        line_start: int,
     ) -> None:
         text = normalize_text("\n".join(buffer))
         if text:
-            segments.append(ExtractedSegment(text, section_title=heading))
+            segments.append(
+                ExtractedSegment(
+                    text,
+                    section_title=heading,
+                    line_start=line_start,
+                    line_end=line_start + len(buffer) - 1,
+                )
+            )

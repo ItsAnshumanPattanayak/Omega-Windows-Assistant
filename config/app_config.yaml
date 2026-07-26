@@ -93,9 +93,9 @@ history:
   preserve_active_undo_records: true
 
 voice:
-  enabled: false
+  enabled: true
   offline_recognition_enabled: true
-  model_path: null
+  model_path: vosk-model-small-en-us-0.15
   microphone_device: null
   sample_rate_hz: 16000
   audio_block_size: 4000
@@ -217,6 +217,8 @@ knowledge:
     - .md
     - .markdown
   maximum_file_bytes: 26214400
+  maximum_files_per_request: 100
+  maximum_total_bytes_per_request: 104857600
   maximum_document_characters: 2000000
   maximum_documents: 5000
   maximum_collections: 200
@@ -229,6 +231,18 @@ knowledge:
   default_search_limit: 10
   maximum_search_limit: 100
   maximum_query_characters: 1000
+  maximum_excerpt_characters: 320
+  recursive_directory_indexing_default: false
+  ignored_directory_names:
+    - .git
+    - .mypy_cache
+    - .pytest_cache
+    - .ruff_cache
+    - .venv
+    - __pycache__
+    - data
+    - models
+    - node_modules
   keyword_search_enabled: true
   semantic_search_enabled: false
   semantic_model_name: null
