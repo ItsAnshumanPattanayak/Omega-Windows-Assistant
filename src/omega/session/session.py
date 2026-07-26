@@ -20,6 +20,7 @@ from omega.execution.file_dispatcher import FileActionDispatcher
 from omega.execution.folder_dispatcher import FolderActionDispatcher
 from omega.execution.history_dispatcher import HistoryActionDispatcher
 from omega.execution.knowledge_dispatcher import KnowledgeActionDispatcher
+from omega.execution.plugin_dispatcher import PluginDispatcher
 from omega.execution.productivity_dispatcher import ProductivityActionDispatcher
 from omega.execution.scheduling_dispatcher import SchedulingActionDispatcher
 from omega.execution.system_dispatcher import SystemActionDispatcher
@@ -68,6 +69,7 @@ class OmegaSession:
         calendar_dispatcher: CalendarActionDispatcher | None = None,
         desktop_utility_dispatcher: DesktopUtilityActionDispatcher | None = None,
         workflow_dispatcher: WorkflowDispatcher | None = None,
+        plugin_dispatcher: PluginDispatcher | None = None,
         safety_gateway: SafeExecutionGateway | None = None,
     ) -> None:
         self.display_name = self._required_text(user_settings, "display_name")
@@ -95,6 +97,7 @@ class OmegaSession:
         self._calendar_dispatcher = calendar_dispatcher
         self._desktop_utility_dispatcher = desktop_utility_dispatcher
         self._workflow_dispatcher = workflow_dispatcher
+        self._plugin_dispatcher = plugin_dispatcher
         self._safety_gateway = (
             safety_gateway
             or getattr(application_dispatcher, "gateway", None)
@@ -328,6 +331,10 @@ class OmegaSession:
                 workflow_result = self._workflow_dispatcher.dispatch(result)
                 if workflow_result is not None:
                     return workflow_result.user_message
+            if self._plugin_dispatcher is not None:
+                plugin_result = self._plugin_dispatcher.dispatch(result)
+                if plugin_result is not None:
+                    return plugin_result.user_message
             if self._application_dispatcher is not None:
                 dispatched = self._application_dispatcher.dispatch(result)
                 if dispatched is not None:
@@ -370,3 +377,5 @@ class OmegaSession:
             self._desktop_utility_dispatcher.clear_session()
         if self._workflow_dispatcher is not None:
             self._workflow_dispatcher.clear_session()
+        if self._plugin_dispatcher is not None:
+            self._plugin_dispatcher.clear_session()

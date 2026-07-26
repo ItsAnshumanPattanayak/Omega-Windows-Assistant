@@ -142,6 +142,9 @@ _WORKFLOW_NO_PARAMETER = frozenset(
         IntentType.SHOW_WORKFLOW_HISTORY,
     }
 )
+_PLUGIN_NO_PARAMETER = frozenset(
+    {IntentType.LIST_PLUGINS, IntentType.SHOW_FAILED_PLUGINS}
+)
 
 
 class CommandParser:
@@ -314,6 +317,25 @@ class CommandParser:
             return [], None
         if intent in _WORKFLOW_NO_PARAMETER:
             return [], None
+        if intent in _PLUGIN_NO_PARAMETER:
+            return [], None
+        if (
+            intent
+            in {
+                IntentType.SHOW_PLUGIN,
+                IntentType.ENABLE_PLUGIN,
+                IntentType.DISABLE_PLUGIN,
+                IntentType.REMOVE_PLUGIN,
+                IntentType.RELOAD_PLUGIN,
+            }
+            and "plugin_reference" not in names
+        ):
+            return ["plugin_reference"], "Which plugin should I use?"
+        if (
+            intent in {IntentType.VALIDATE_PLUGIN_PACKAGE, IntentType.INSTALL_PLUGIN}
+            and "plugin_package_path" not in names
+        ):
+            return ["plugin_package_path"], "Which local plugin package should I use?"
         if (
             intent
             in {

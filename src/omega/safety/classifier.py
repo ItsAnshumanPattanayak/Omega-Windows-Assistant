@@ -111,6 +111,11 @@ _LOW = frozenset(
         IntentType.PREVIEW_WORKFLOW,
         IntentType.VALIDATE_WORKFLOW,
         IntentType.SHOW_WORKFLOW_HISTORY,
+        IntentType.LIST_PLUGINS,
+        IntentType.SHOW_PLUGIN,
+        IntentType.VALIDATE_PLUGIN_PACKAGE,
+        IntentType.SHOW_PLUGIN_PERMISSIONS,
+        IntentType.SHOW_FAILED_PLUGINS,
     }
 )
 _MEDIUM = frozenset(
@@ -200,6 +205,12 @@ _MEDIUM = frozenset(
         IntentType.CANCEL_WORKFLOW,
         IntentType.EXPORT_WORKFLOW,
         IntentType.IMPORT_WORKFLOW,
+        IntentType.INSTALL_PLUGIN,
+        IntentType.ENABLE_PLUGIN,
+        IntentType.DISABLE_PLUGIN,
+        IntentType.GRANT_PLUGIN_PERMISSION,
+        IntentType.REVOKE_PLUGIN_PERMISSION,
+        IntentType.RELOAD_PLUGIN,
     }
 )
 _HIGH = frozenset(
@@ -228,6 +239,7 @@ _HIGH = frozenset(
         IntentType.CLEAR_CLIPBOARD,
         IntentType.DELETE_SCREENSHOT,
         IntentType.DELETE_WORKFLOW,
+        IntentType.REMOVE_PLUGIN,
     }
 )
 _CRITICAL = frozenset(

@@ -60,6 +60,12 @@ The approved roadmap is intentionally incremental. Each phase should be designed
     definition/version and redacted run persistence, shared command/GUI/voice
     routing, and per-step safety boundaries.
 
-23. **Phase 22 — Next:** to be defined after Phase 21 review.
+23. **Phase 22 — Secure Plugin Architecture — Completed:** bounded JSON manifests,
+    manifest-only discovery, safe local ZIP validation and disabled installation,
+    fingerprint-bound permissions, versioned compatibility, lazy reviewed loading,
+    namespaced extension registration, isolated local storage, lifecycle containment,
+    SQLite metadata, and shared command/GUI safety routing.
+
+24. **Phase 23 — Next:** to be defined after Phase 22 review.
 
 Later phases may cover local AI-assisted intent suggestions, additional Windows integrations, accessibility, packaging, installer support, and release hardening.

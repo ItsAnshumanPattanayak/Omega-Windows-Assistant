@@ -223,6 +223,18 @@ class IntentType(StrEnum):
     SHOW_WORKFLOW_HISTORY = "show_workflow_history"
     EXPORT_WORKFLOW = "export_workflow"
     IMPORT_WORKFLOW = "import_workflow"
+    LIST_PLUGINS = "list_plugins"
+    SHOW_PLUGIN = "show_plugin"
+    VALIDATE_PLUGIN_PACKAGE = "validate_plugin_package"
+    INSTALL_PLUGIN = "install_plugin"
+    ENABLE_PLUGIN = "enable_plugin"
+    DISABLE_PLUGIN = "disable_plugin"
+    REMOVE_PLUGIN = "remove_plugin"
+    SHOW_PLUGIN_PERMISSIONS = "show_plugin_permissions"
+    GRANT_PLUGIN_PERMISSION = "grant_plugin_permission"
+    REVOKE_PLUGIN_PERMISSION = "revoke_plugin_permission"
+    RELOAD_PLUGIN = "reload_plugin"
+    SHOW_FAILED_PLUGINS = "show_failed_plugins"
 
 
 class ActionStatus(StrEnum):
@@ -311,6 +323,8 @@ class EntityType(StrEnum):
     WINDOW = "window"
     WORKFLOW = "workflow"
     WORKFLOW_STEP = "workflow_step"
+    PLUGIN = "plugin"
+    PLUGIN_PERMISSION = "plugin_permission"
     UNKNOWN = "unknown"
 
 

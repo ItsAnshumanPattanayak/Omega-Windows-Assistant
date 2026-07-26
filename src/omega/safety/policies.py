@@ -1014,6 +1014,58 @@ class WorkflowConfirmationPolicy(_IntentPolicy):
     )
 
 
+class PluginReadPolicy(_IntentPolicy):
+    policy_id, priority = "SAFETY-PLUGIN-READ-001", 80
+    intents = frozenset(
+        {
+            IntentType.LIST_PLUGINS,
+            IntentType.SHOW_PLUGIN,
+            IntentType.VALIDATE_PLUGIN_PACKAGE,
+            IntentType.SHOW_PLUGIN_PERMISSIONS,
+            IntentType.SHOW_FAILED_PLUGINS,
+        }
+    )
+    disposition, reason_code, message = (
+        PolicyDisposition.ALLOW,
+        "BOUNDED_PLUGIN_INSPECTION_ALLOWED",
+        "Bounded plugin metadata inspection is allowed.",
+    )
+
+
+class PluginMutationPolicy(_IntentPolicy):
+    policy_id, priority = "SAFETY-PLUGIN-MUTATION-001", 70
+    intents = frozenset(
+        {
+            IntentType.INSTALL_PLUGIN,
+            IntentType.ENABLE_PLUGIN,
+            IntentType.GRANT_PLUGIN_PERMISSION,
+            IntentType.REMOVE_PLUGIN,
+        }
+    )
+    disposition, reason_code, message = (
+        PolicyDisposition.REQUIRE_CONFIRMATION,
+        "PLUGIN_MUTATION_CONFIRMATION",
+        "Plugin installation, enablement, permission grants, and removal require "
+        "exact confirmation.",
+    )
+
+
+class PluginControlPolicy(_IntentPolicy):
+    policy_id, priority = "SAFETY-PLUGIN-CONTROL-001", 80
+    intents = frozenset(
+        {
+            IntentType.DISABLE_PLUGIN,
+            IntentType.REVOKE_PLUGIN_PERMISSION,
+            IntentType.RELOAD_PLUGIN,
+        }
+    )
+    disposition, reason_code, message = (
+        PolicyDisposition.ALLOW,
+        "BOUNDED_PLUGIN_CONTROL_ALLOWED",
+        "Restrictive plugin lifecycle control is allowed.",
+    )
+
+
 DEFAULT_POLICIES = cast(
     tuple[SafetyPolicy, ...],
     (
@@ -1040,6 +1092,7 @@ DEFAULT_POLICIES = cast(
         DesktopUtilityDestructivePolicy(),
         WorkflowDeletionPolicy(),
         WorkflowConfirmationPolicy(),
+        PluginMutationPolicy(),
         ApplicationOpenPolicy(),
         ApplicationStatusPolicy(),
         FileReadPolicy(),
@@ -1064,6 +1117,8 @@ DEFAULT_POLICIES = cast(
         CalendarPolicy(),
         DesktopUtilityPolicy(),
         WorkflowPolicy(),
+        PluginReadPolicy(),
+        PluginControlPolicy(),
     ),
 )
 

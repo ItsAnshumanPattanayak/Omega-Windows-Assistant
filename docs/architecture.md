@@ -652,3 +652,13 @@ facility. Workflow-level and step-level confirmations have separate scopes.
 Migration 12 stores JSON-compatible definitions and redacted run summaries; it
 does not store secret runtime values or private domain bodies. See
 [workflows.md](workflows.md).
+
+## Phase 22 secure plugin boundary
+
+Plugin discovery reads static manifests from approved roots without importing code.
+Package validation and installation are separate from lazy loading. Fingerprint-bound
+permissions and lifecycle state are persisted as metadata; source and secrets are not
+stored in SQLite. Enabled reviewed plugins receive a narrow versioned context, and
+namespaced registrations cannot override built-in commands or bypass the safety
+gateway. Same-process plugins are trusted after review, not sandboxed. See
+[plugins.md](plugins.md).

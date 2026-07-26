@@ -166,6 +166,20 @@ _WORKFLOW_INTENTS = frozenset(
         IntentType.IMPORT_WORKFLOW,
     }
 )
+_PLUGIN_INTENTS = frozenset(
+    {
+        IntentType.SHOW_PLUGIN,
+        IntentType.VALIDATE_PLUGIN_PACKAGE,
+        IntentType.INSTALL_PLUGIN,
+        IntentType.ENABLE_PLUGIN,
+        IntentType.DISABLE_PLUGIN,
+        IntentType.REMOVE_PLUGIN,
+        IntentType.SHOW_PLUGIN_PERMISSIONS,
+        IntentType.GRANT_PLUGIN_PERMISSION,
+        IntentType.REVOKE_PLUGIN_PERMISSION,
+        IntentType.RELOAD_PLUGIN,
+    }
+)
 _KNOWLEDGE_INTENTS = frozenset(
     {
         IntentType.CREATE_KNOWLEDGE_COLLECTION,
@@ -209,7 +223,9 @@ class RuleBasedEntityExtractor:
 
     def extract(self, original: str, intent: IntentType) -> list[CommandEntity]:
         entities: list[CommandEntity] = []
-        if intent in _WORKFLOW_INTENTS:
+        if intent in _PLUGIN_INTENTS:
+            self._plugin(original, intent, entities)
+        elif intent in _WORKFLOW_INTENTS:
             self._workflow(original, intent, entities)
         elif intent in _DESKTOP_UTILITY_INTENTS:
             self._desktop_utility(original, intent, entities)
@@ -298,6 +314,61 @@ class RuleBasedEntityExtractor:
         }:
             self._folder_command(original, intent, entities)
         return entities
+
+    @staticmethod
+    def _plugin(
+        original: str, intent: IntentType, entities: list[CommandEntity]
+    ) -> None:
+        text = original.strip().rstrip("?!")
+        if intent in {IntentType.VALIDATE_PLUGIN_PACKAGE, IntentType.INSTALL_PLUGIN}:
+            match = re.search(r"(?:at|from)\s+(.+)$", text, re.IGNORECASE)
+            if match:
+                entities.append(
+                    _entity(
+                        EntityType.PATH,
+                        "plugin_package_path",
+                        match.group(1),
+                        match.group(1),
+                    )
+                )
+            return
+        if intent in {
+            IntentType.GRANT_PLUGIN_PERMISSION,
+            IntentType.REVOKE_PLUGIN_PERMISSION,
+        }:
+            match = re.match(
+                r"^(?:grant|revoke)\s+(.+?)\s+(?:to|from) plugin\s+(.+)$",
+                text,
+                re.IGNORECASE,
+            )
+            if match:
+                entities.extend(
+                    (
+                        _entity(
+                            EntityType.PLUGIN_PERMISSION,
+                            "plugin_permission",
+                            match.group(1),
+                            match.group(1),
+                        ),
+                        _entity(
+                            EntityType.PLUGIN,
+                            "plugin_reference",
+                            match.group(2),
+                            match.group(2),
+                        ),
+                    )
+                )
+            return
+        match = re.search(r"(?:plugin(?: details)?|for)\s+(.+)$", text, re.IGNORECASE)
+        if match:
+            entities.append(
+                _entity(
+                    EntityType.PLUGIN,
+                    "plugin_reference",
+                    match.group(1),
+                    match.group(1),
+                )
+            )
 
     @staticmethod
     def _workflow(

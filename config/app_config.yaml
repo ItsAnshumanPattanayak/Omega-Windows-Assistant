@@ -358,3 +358,31 @@ workflows:
   allow_shell_steps: false
   allow_code_execution_steps: false
   allow_network_request_steps: false
+
+# Phase 22 plugins are local, explicitly reviewed, and disabled until approved.
+plugins:
+  enabled: true
+  load_builtin_plugins: true
+  load_user_plugins: false
+  user_plugin_directory: null
+  development_plugin_directory: null
+  allow_development_plugins: false
+  maximum_plugins: 50
+  maximum_manifest_bytes: 65536
+  maximum_package_bytes: 52428800
+  maximum_package_files: 1000
+  maximum_plugin_storage_bytes: 10485760
+  maximum_plugin_configuration_bytes: 262144
+  plugin_call_timeout_seconds: 30
+  plugin_shutdown_timeout_seconds: 10
+  require_confirmation_for_install: true
+  require_confirmation_for_enable: true
+  require_confirmation_for_permission_grant: true
+  require_confirmation_for_remove: true
+  newly_installed_plugins_enabled: false
+  automatically_update_plugins: false
+  allow_remote_plugin_downloads: false
+  allow_shell_permissions: false
+  allow_arbitrary_network_permissions: false
+  allow_credential_permissions: false
+  allow_safety_bypass_permissions: false

@@ -61,6 +61,7 @@ from omega.execution import (
     FolderActionDispatcher,
     HistoryActionDispatcher,
     KnowledgeActionDispatcher,
+    PluginDispatcher,
     ProductivityActionDispatcher,
     SchedulingActionDispatcher,
     SystemActionDispatcher,
@@ -107,6 +108,17 @@ from omega.knowledge.extractors import (
 from omega.knowledge.semantic_search import UnavailableSemanticSearch
 from omega.knowledge.validation import KnowledgeFileValidator
 from omega.models._serialization import JsonValue
+from omega.plugins import (
+    PluginDiscovery,
+    PluginLifecycle,
+    PluginLoader,
+    PluginManager,
+    PluginPackageInstaller,
+    PluginPermissionService,
+    PluginRegistry,
+    PluginRepository,
+    PluginValidator,
+)
 from omega.productivity.export import ProductivityExportService
 from omega.productivity.importers import ProductivityImportService
 from omega.productivity.repositories import ProductivityRepository
@@ -483,6 +495,35 @@ class OmegaApplication:
             WorkflowPlanner(workflow_validator),
             workflow_executor,
         )
+        plugin_configuration = self.settings.plugin_configuration
+        plugin_root = (
+            database_path.parent / "plugins"
+            if database_path is not None
+            else data_dir() / "plugins"
+        )
+        plugin_validator = PluginValidator(plugin_configuration)
+        plugin_repository = PluginRepository(database_factory)
+        self.plugin_manager = PluginManager(
+            plugin_configuration,
+            PluginDiscovery(
+                plugin_configuration,
+                plugin_validator,
+                (plugin_root,),
+            ),
+            PluginPackageInstaller(
+                plugin_configuration,
+                plugin_validator,
+                plugin_root,
+            ),
+            plugin_validator,
+            plugin_repository,
+            PluginPermissionService(plugin_repository),
+            PluginLifecycle(
+                plugin_configuration,
+                PluginLoader(plugin_configuration, plugin_validator),
+            ),
+            PluginRegistry(),
+        )
         self.notifications = NotificationCenter(
             get_logger("scheduling"),
             speech_enabled=self.settings.scheduling_configuration.speak_notifications,
@@ -555,6 +596,10 @@ class OmegaApplication:
             ),
             workflow_dispatcher=WorkflowDispatcher(
                 self.workflow_service,
+                safety_gateway,
+            ),
+            plugin_dispatcher=PluginDispatcher(
+                self.plugin_manager,
                 safety_gateway,
             ),
             safety_gateway=safety_gateway,
@@ -651,6 +696,7 @@ class OmegaApplication:
 
         self.browser_manager.shutdown()
         self.scheduler.stop()
+        self.plugin_manager.shutdown()
 
     def create_voice_service(
         self,

@@ -74,7 +74,13 @@ All supported operations pass through the same command-processing and safety lif
 
 ## Current capabilities
 
-Omega currently includes functionality completed through **Phase 21**:
+Omega currently includes functionality completed through **Phase 22**:
+
+Phase 22 adds bounded JSON plugin manifests, manifest-only discovery, safe local
+package validation, disabled-by-default installation, fingerprint-bound permissions,
+version compatibility, namespaced extensions, and lazy reviewed loading. Omega never
+downloads or automatically updates plugins, invokes pip, or claims same-process
+Python is a secure sandbox.
 
 Phase 21 adds bounded, reviewable multi-step workflow definitions, static
 validation and preview, deterministic scalar variables and conditions, sequential

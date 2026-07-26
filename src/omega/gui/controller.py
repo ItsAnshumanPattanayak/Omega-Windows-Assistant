@@ -201,6 +201,20 @@ class GuiController:
     def preview_workflow(self, name: str) -> bool:
         return self.submit_command(f"preview workflow {name}")
 
+    def list_plugins(self) -> bool:
+        """List bounded plugin metadata without loading plugin code."""
+
+        return self.submit_command("list plugins")
+
+    def show_plugin(self, plugin_id: str) -> bool:
+        return self.submit_command(f"show plugin {plugin_id}")
+
+    def enable_plugin(self, plugin_id: str) -> bool:
+        return self.submit_command(f"enable plugin {plugin_id}")
+
+    def disable_plugin(self, plugin_id: str) -> bool:
+        return self.submit_command(f"disable plugin {plugin_id}")
+
     def request_undo(self) -> bool:
         return self.submit_command("undo last action")
 

@@ -14,7 +14,7 @@ def test_phase_19_migration_is_contiguous_metadata_only(tmp_path) -> None:
         DatabaseConfiguration(), database_path=tmp_path / "omega.db"
     )
     assert CALENDAR_SCHEMA_VERSION == 11
-    assert MigrationRunner(factory).migrate() == LATEST_SCHEMA_VERSION == 12
+    assert MigrationRunner(factory).migrate() == LATEST_SCHEMA_VERSION == 13
     connection = factory.connect()
     try:
         columns = {

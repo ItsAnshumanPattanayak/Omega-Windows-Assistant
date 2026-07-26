@@ -16,6 +16,7 @@ from omega.database.configuration import DatabaseConfiguration
 from omega.desktop_utilities.configuration import DesktopUtilitiesConfiguration
 from omega.email.configuration import EmailConfiguration
 from omega.knowledge.configuration import KnowledgeConfiguration
+from omega.plugins.configuration import PluginConfiguration
 from omega.productivity.configuration import ProductivityConfiguration
 from omega.scheduling.configuration import SchedulingConfiguration
 from omega.system.configuration import SystemConfiguration
@@ -85,6 +86,7 @@ class Settings:
     calendar: Mapping[str, Any] = field(default_factory=dict)
     desktop_utilities: Mapping[str, Any] = field(default_factory=dict)
     workflows: Mapping[str, Any] = field(default_factory=dict)
+    plugins: Mapping[str, Any] = field(default_factory=dict)
 
     @property
     def application_name(self) -> str:
@@ -174,6 +176,12 @@ class Settings:
     @property
     def workflow_configuration(self) -> WorkflowConfiguration:
         return WorkflowConfiguration.from_mapping(self.workflows)
+
+    @property
+    def plugin_configuration(self) -> PluginConfiguration:
+        """Return plugin policy without discovering or importing plugin code."""
+
+        return PluginConfiguration.from_mapping(self.plugins)
 
 
 def _defaults() -> dict[str, dict[str, Any]]:
@@ -323,6 +331,7 @@ def _defaults() -> dict[str, dict[str, Any]]:
         "calendar": {},
         "desktop_utilities": {},
         "workflows": {},
+        "plugins": {},
     }
 
 
@@ -555,6 +564,7 @@ def _merge_defaults(
                 "calendar",
                 "desktop_utilities",
                 "workflows",
+                "plugins",
             }
             else raw[section]
         )
@@ -630,5 +640,6 @@ def load_settings(
     CalendarConfiguration.from_mapping(values["calendar"])
     DesktopUtilitiesConfiguration.from_mapping(values["desktop_utilities"])
     WorkflowConfiguration.from_mapping(values["workflows"])
+    PluginConfiguration.from_mapping(values["plugins"])
 
     return Settings(**values)

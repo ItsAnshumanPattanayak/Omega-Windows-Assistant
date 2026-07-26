@@ -32,6 +32,7 @@ from omega.execution.knowledge_dispatcher import (
     KnowledgeActionDispatcher,
     KnowledgeDispatchResult,
 )
+from omega.execution.plugin_dispatcher import PluginDispatcher, PluginDispatchResult
 from omega.execution.productivity_dispatcher import (
     ProductivityActionDispatcher,
     ProductivityDispatchResult,
@@ -69,6 +70,8 @@ __all__ = [
     "HistoryActionDispatcher",
     "KnowledgeActionDispatcher",
     "KnowledgeDispatchResult",
+    "PluginDispatcher",
+    "PluginDispatchResult",
     "ProductivityActionDispatcher",
     "ProductivityDispatchResult",
     "SchedulingActionDispatcher",

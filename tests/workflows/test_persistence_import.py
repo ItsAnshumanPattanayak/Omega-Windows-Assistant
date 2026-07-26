@@ -29,7 +29,7 @@ def service(tmp_path: Path) -> tuple[WorkflowService, DatabaseConnectionFactory]
     factory = DatabaseConnectionFactory(
         DatabaseConfiguration(), database_path=tmp_path / "omega.db"
     )
-    assert MigrationRunner(factory).migrate() == 12
+    assert MigrationRunner(factory).migrate() == 13
     config = WorkflowConfiguration()
     validator = WorkflowValidator(config)
     repository = WorkflowRepository(factory)

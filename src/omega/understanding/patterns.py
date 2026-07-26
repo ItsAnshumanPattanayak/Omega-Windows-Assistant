@@ -21,6 +21,40 @@ def _rule(name: str, intent: IntentType, expression: str) -> IntentPattern:
 
 INTENT_PATTERNS = (
     _rule(
+        "list_plugins",
+        IntentType.LIST_PLUGINS,
+        r"^(?:show|list) (?:installed )?plugins$",
+    ),
+    _rule(
+        "show_failed_plugins", IntentType.SHOW_FAILED_PLUGINS, r"^show failed plugins$"
+    ),
+    _rule(
+        "plugin_permissions",
+        IntentType.SHOW_PLUGIN_PERMISSIONS,
+        r"^show plugin permissions(?: for .+)?$",
+    ),
+    _rule("show_plugin", IntentType.SHOW_PLUGIN, r"^show plugin (?:details )?.+$"),
+    _rule(
+        "validate_plugin",
+        IntentType.VALIDATE_PLUGIN_PACKAGE,
+        r"^validate plugin package at .+$",
+    ),
+    _rule("install_plugin", IntentType.INSTALL_PLUGIN, r"^install plugin from .+$"),
+    _rule("enable_plugin", IntentType.ENABLE_PLUGIN, r"^enable plugin .+$"),
+    _rule("disable_plugin", IntentType.DISABLE_PLUGIN, r"^disable plugin .+$"),
+    _rule("remove_plugin", IntentType.REMOVE_PLUGIN, r"^remove plugin .+$"),
+    _rule(
+        "grant_plugin_permission",
+        IntentType.GRANT_PLUGIN_PERMISSION,
+        r"^grant .+ to plugin .+$",
+    ),
+    _rule(
+        "revoke_plugin_permission",
+        IntentType.REVOKE_PLUGIN_PERMISSION,
+        r"^revoke .+ from plugin .+$",
+    ),
+    _rule("reload_plugin", IntentType.RELOAD_PLUGIN, r"^reload plugin .+$"),
+    _rule(
         "create_workflow",
         IntentType.CREATE_WORKFLOW,
         r"^create (?:a )?workflow(?: named .+)?$",

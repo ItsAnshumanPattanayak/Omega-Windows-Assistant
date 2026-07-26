@@ -154,6 +154,7 @@ class OmegaMainWindow(GuiView):
             ("Workflows", self.controller.list_workflows),
             ("New workflow", self._create_workflow),
             ("Preview workflow", self._preview_workflow),
+            ("Plugins", self.controller.list_plugins),
         )
         self.operation_buttons: list[ttk.Button] = []
         for toolbar_index, (label, command) in enumerate(actions):

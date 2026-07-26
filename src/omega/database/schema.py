@@ -19,7 +19,8 @@ KNOWLEDGE_SOURCE_INDEX_SCHEMA_VERSION = 9
 EMAIL_SCHEMA_VERSION = 10
 CALENDAR_SCHEMA_VERSION = 11
 WORKFLOW_SCHEMA_VERSION = 12
-LATEST_SCHEMA_VERSION = WORKFLOW_SCHEMA_VERSION
+PLUGIN_SCHEMA_VERSION = 13
+LATEST_SCHEMA_VERSION = PLUGIN_SCHEMA_VERSION
 
 BASELINE_MIGRATION_NAME = "phase_9a_database_foundation"
 COMMAND_MIGRATION_NAME = "phase_9b_command_repository"
@@ -33,6 +34,36 @@ KNOWLEDGE_SOURCE_INDEX_MIGRATION_NAME = "phase_17_source_index"
 EMAIL_MIGRATION_NAME = "phase_18_email_operation_receipts"
 CALENDAR_MIGRATION_NAME = "phase_19_calendar_operation_receipts"
 WORKFLOW_MIGRATION_NAME = "phase_21_workflows"
+PLUGIN_MIGRATION_NAME = "phase_22_plugins"
+
+CREATE_PLUGIN_INSTALLATIONS_TABLE = """
+CREATE TABLE IF NOT EXISTS plugin_installations (
+ plugin_id TEXT PRIMARY KEY, version TEXT NOT NULL, fingerprint TEXT NOT NULL,
+ display_name TEXT NOT NULL, status TEXT NOT NULL, source_path TEXT NOT NULL,
+ updated_at TEXT NOT NULL,
+ CHECK(length(trim(plugin_id)) > 0), CHECK(length(fingerprint) = 64),
+ CHECK(status IN ('discovered','invalid','incompatible','installed','disabled',
+ 'permission_pending','enabled','loading','active','failed','quarantined',
+ 'update_review_required','removed'))
+)
+"""
+CREATE_PLUGIN_PERMISSIONS_TABLE = """
+CREATE TABLE IF NOT EXISTS plugin_permissions (
+ plugin_id TEXT NOT NULL, version TEXT NOT NULL, fingerprint TEXT NOT NULL,
+ permission TEXT NOT NULL, approved_at TEXT NOT NULL,
+ PRIMARY KEY(plugin_id,permission),
+ FOREIGN KEY(plugin_id) REFERENCES plugin_installations(plugin_id) ON DELETE CASCADE,
+ CHECK(length(fingerprint) = 64)
+)
+"""
+CREATE_PLUGIN_FAILURES_TABLE = """
+CREATE TABLE IF NOT EXISTS plugin_failures (
+ failure_id INTEGER PRIMARY KEY AUTOINCREMENT, plugin_id TEXT NOT NULL,
+ category TEXT NOT NULL, occurred_at TEXT NOT NULL,
+ FOREIGN KEY(plugin_id) REFERENCES plugin_installations(plugin_id) ON DELETE CASCADE,
+ CHECK(length(category) BETWEEN 1 AND 80)
+)
+"""
 
 CREATE_WORKFLOW_DEFINITIONS_TABLE = """
 CREATE TABLE IF NOT EXISTS workflow_definitions (
@@ -709,6 +740,26 @@ def apply_workflow_schema(connection: sqlite3.Connection) -> None:
         ) from error
 
 
+def apply_plugin_schema(connection: sqlite3.Connection) -> None:
+    """Create metadata-only plugin state and fingerprint-bound approvals."""
+    try:
+        connection.execute(CREATE_PLUGIN_INSTALLATIONS_TABLE)
+        connection.execute(CREATE_PLUGIN_PERMISSIONS_TABLE)
+        connection.execute(CREATE_PLUGIN_FAILURES_TABLE)
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_plugins_status_updated "
+            "ON plugin_installations(status,updated_at DESC)"
+        )
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_plugin_failures_plugin_time "
+            "ON plugin_failures(plugin_id,occurred_at DESC)"
+        )
+    except sqlite3.Error as error:
+        raise DatabaseSchemaError(
+            "Omega could not create the plugin schema."
+        ) from error
+
+
 def _record_migration(
     connection: sqlite3.Connection,
     *,
@@ -817,6 +868,11 @@ def initialize_schema(
         apply_workflow_schema(connection)
         _record_migration(
             connection, version=WORKFLOW_SCHEMA_VERSION, name=WORKFLOW_MIGRATION_NAME
+        )
+
+        apply_plugin_schema(connection)
+        _record_migration(
+            connection, version=PLUGIN_SCHEMA_VERSION, name=PLUGIN_MIGRATION_NAME
         )
 
         connection.commit()
