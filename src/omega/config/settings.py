@@ -13,6 +13,7 @@ from omega.browser.configuration import BrowserConfiguration
 from omega.calendar.configuration import CalendarConfiguration
 from omega.core.exceptions import ConfigurationError
 from omega.database.configuration import DatabaseConfiguration
+from omega.desktop_utilities.configuration import DesktopUtilitiesConfiguration
 from omega.email.configuration import EmailConfiguration
 from omega.knowledge.configuration import KnowledgeConfiguration
 from omega.productivity.configuration import ProductivityConfiguration
@@ -81,6 +82,7 @@ class Settings:
     knowledge: Mapping[str, Any]
     email: Mapping[str, Any] = field(default_factory=dict)
     calendar: Mapping[str, Any] = field(default_factory=dict)
+    desktop_utilities: Mapping[str, Any] = field(default_factory=dict)
 
     @property
     def application_name(self) -> str:
@@ -160,6 +162,12 @@ class Settings:
         """Return credential-free calendar policy without contacting a provider."""
 
         return CalendarConfiguration.from_mapping(self.calendar)
+
+    @property
+    def desktop_utilities_configuration(self) -> DesktopUtilitiesConfiguration:
+        """Return bounded local desktop-utility policy without device access."""
+
+        return DesktopUtilitiesConfiguration.from_mapping(self.desktop_utilities)
 
 
 def _defaults() -> dict[str, dict[str, Any]]:
@@ -307,6 +315,7 @@ def _defaults() -> dict[str, dict[str, Any]]:
         "knowledge": {},
         "email": {},
         "calendar": {},
+        "desktop_utilities": {},
     }
 
 
@@ -537,6 +546,7 @@ def _merge_defaults(
                 "knowledge",
                 "email",
                 "calendar",
+                "desktop_utilities",
             }
             else raw[section]
         )
@@ -610,5 +620,6 @@ def load_settings(
     KnowledgeConfiguration.from_mapping(values["knowledge"])
     EmailConfiguration.from_mapping(values["email"])
     CalendarConfiguration.from_mapping(values["calendar"])
+    DesktopUtilitiesConfiguration.from_mapping(values["desktop_utilities"])
 
     return Settings(**values)

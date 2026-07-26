@@ -74,7 +74,20 @@ All supported operations pass through the same command-processing and safety lif
 
 ## Current capabilities
 
-Omega currently includes functionality completed through **Phase 19**:
+Omega currently includes functionality completed through **Phase 20**:
+
+Phase 20 provides explicit plain-text clipboard commands, bounded screenshot
+capture, display information, and visible-window metadata through the existing
+terminal, GUI, and offline voice command lifecycle. Clipboard clearing and
+screenshot deletion require exact confirmation, and deletion uses the Recycle
+Bin recovery path. Clipboard history, background monitoring, automatic screen
+capture, OCR, keylogging, cloud upload, and execution of clipboard content are
+not supported. Screenshot capture uses a lazy optional Pillow adapter and
+reports that the capability is unavailable when that dependency is absent.
+
+Examples include `read the clipboard`, `copy hello to clipboard`, `take a
+screenshot`, `show screen information`, and `list visible windows`. Every
+operation is explicit and bounded; Omega never watches the clipboard or screen.
 
 | Area | Status |
 |---|---|

@@ -612,3 +612,27 @@ Migration 11 adds only calendar operation receipts and leaves provider event
 content external. The unique account/operation/target key provides restart-safe
 duplicate protection. Session result IDs and proposals stay in memory and are
 cleared at lifecycle boundaries. See [calendar.md](calendar.md).
+
+## Phase 20 desktop utility boundary
+
+```text
+terminal / tkinter GUI / offline voice
+        ↓
+CommandParser (typed inert entities)
+        ↓
+DesktopUtilityActionDispatcher (privacy-redacted persistence)
+        ↓
+SafeExecutionGateway (policy and exact destructive confirmation)
+        ↓
+application-facing bounded service
+        ↓
+injected clipboard / screenshot / display / window adapter
+```
+
+Adapters are created only by the application composition root; imports do not
+read the clipboard, capture the screen, enumerate windows, or start workers.
+Clipboard and window content are not stored in persistent history. Screenshot
+files use the runtime data directory, while recent records and exact selections
+remain process-local. Existing file, productivity, and Recycle Bin services own
+file saving, note creation, and recoverable deletion respectively. No Phase 20
+schema migration is required. See [desktop_utilities.md](desktop_utilities.md).

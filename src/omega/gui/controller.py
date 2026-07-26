@@ -174,6 +174,24 @@ class GuiController:
     def show_history(self) -> bool:
         return self.submit_command("show history")
 
+    def read_clipboard(self) -> bool:
+        return self.submit_command("read the clipboard")
+
+    def clear_clipboard(self) -> bool:
+        return self.submit_command("clear the clipboard")
+
+    def capture_screenshot(self) -> bool:
+        return self.submit_command("take a screenshot")
+
+    def list_screenshots(self) -> bool:
+        return self.submit_command("list recent screenshots")
+
+    def show_display_information(self) -> bool:
+        return self.submit_command("show screen information")
+
+    def list_visible_windows(self) -> bool:
+        return self.submit_command("list visible windows")
+
     def request_undo(self) -> bool:
         return self.submit_command("undo last action")
 

@@ -98,6 +98,14 @@ _LOW = frozenset(
         IntentType.READ_CALENDAR_EVENT,
         IntentType.SHOW_CALENDAR_AVAILABILITY,
         IntentType.SHOW_CALENDAR_AGENDA,
+        IntentType.READ_CLIPBOARD,
+        IntentType.SEARCH_CLIPBOARD,
+        IntentType.LIST_SCREENSHOTS,
+        IntentType.OPEN_SCREENSHOT,
+        IntentType.SHOW_DISPLAY_INFORMATION,
+        IntentType.SHOW_ACTIVE_WINDOW,
+        IntentType.LIST_VISIBLE_WINDOWS,
+        IntentType.FIND_WINDOW,
     }
 )
 _MEDIUM = frozenset(
@@ -171,6 +179,11 @@ _MEDIUM = frozenset(
         IntentType.UPDATE_EMAIL_DRAFT,
         IntentType.CREATE_CALENDAR_EVENT,
         IntentType.UPDATE_CALENDAR_EVENT,
+        IntentType.COPY_TEXT_TO_CLIPBOARD,
+        IntentType.SAVE_CLIPBOARD_TO_FILE,
+        IntentType.CLIPBOARD_TO_NOTE,
+        IntentType.CAPTURE_SCREENSHOT,
+        IntentType.BRING_WINDOW_TO_FRONT,
     }
 )
 _HIGH = frozenset(
@@ -196,6 +209,8 @@ _HIGH = frozenset(
         IntentType.ARCHIVE_EMAIL,
         IntentType.DELETE_CALENDAR_EVENT,
         IntentType.RESPOND_CALENDAR_INVITATION,
+        IntentType.CLEAR_CLIPBOARD,
+        IntentType.DELETE_SCREENSHOT,
     }
 )
 _CRITICAL = frozenset(

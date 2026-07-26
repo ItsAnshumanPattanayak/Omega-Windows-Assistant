@@ -305,3 +305,28 @@ calendar:
   require_confirmation_for_update: true
   require_confirmation_for_delete: true
   require_confirmation_for_invitation_response: true
+
+# Phase 20 desktop utilities are explicit, local, bounded, and never monitored.
+desktop_utilities:
+  enabled: true
+  clipboard_enabled: true
+  screenshots_enabled: true
+  screen_information_enabled: true
+  window_information_enabled: true
+  clipboard_history_enabled: false
+  maximum_clipboard_characters: 50000
+  maximum_clipboard_display_characters: 5000
+  maximum_window_results: 25
+  maximum_window_title_characters: 300
+  screenshot_format: png
+  screenshot_directory: null
+  maximum_screenshot_width: 16384
+  maximum_screenshot_height: 16384
+  maximum_screenshot_pixels: 67108864
+  maximum_recent_screenshots: 50
+  allow_full_virtual_desktop_capture: true
+  allow_region_capture: true
+  require_confirmation_for_clear_clipboard: true
+  require_confirmation_for_delete_screenshot: true
+  allow_background_clipboard_monitoring: false
+  allow_background_screenshot_capture: false

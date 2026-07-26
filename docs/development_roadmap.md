@@ -47,6 +47,13 @@ The approved roadmap is intentionally incremental. Each phase should be designed
     metadata-only SQLite idempotency receipts, and shared terminal/GUI/voice
     safety routing backed by a zero-network fake provider.
 
-21. **Phase 20 — Next:** to be defined after Phase 19 review.
+21. **Phase 20 — Privacy-First Clipboard, Screenshot, and Desktop Utilities — Completed:**
+    explicit bounded plain-text clipboard operations, opt-in screenshot capture,
+    process-local screenshot selection, display metadata, and visible-window
+    metadata through shared terminal, GUI, and voice safety routing. Clipboard
+    history, background monitoring, OCR, cloud upload, and permanent deletion
+    remain unavailable.
+
+22. **Phase 21 — Next:** to be defined after Phase 20 review.
 
 Later phases may cover local AI-assisted intent suggestions, additional Windows integrations, accessibility, packaging, installer support, and release hardening.

@@ -145,6 +145,12 @@ class OmegaMainWindow(GuiView):
             ("Availability", self._calendar_availability),
             ("Calendar search", self._calendar_search),
             ("Add event", self._calendar_add),
+            ("Clipboard", self.controller.read_clipboard),
+            ("Clear clipboard", self.controller.clear_clipboard),
+            ("Screenshot", self.controller.capture_screenshot),
+            ("Screenshots", self.controller.list_screenshots),
+            ("Displays", self.controller.show_display_information),
+            ("Windows", self.controller.list_visible_windows),
         )
         self.operation_buttons: list[ttk.Button] = []
         for toolbar_index, (label, command) in enumerate(actions):

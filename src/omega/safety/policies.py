@@ -923,6 +923,46 @@ class CalendarMutationPolicy(_IntentPolicy):
     )
 
 
+class DesktopUtilityPolicy(_IntentPolicy):
+    """Allow explicit bounded local reads, captures, and reversible actions."""
+
+    policy_id, priority = "SAFETY-DESKTOP-UTILITY-001", 80
+    intents = frozenset(
+        {
+            IntentType.COPY_TEXT_TO_CLIPBOARD,
+            IntentType.READ_CLIPBOARD,
+            IntentType.SEARCH_CLIPBOARD,
+            IntentType.SAVE_CLIPBOARD_TO_FILE,
+            IntentType.CLIPBOARD_TO_NOTE,
+            IntentType.CAPTURE_SCREENSHOT,
+            IntentType.LIST_SCREENSHOTS,
+            IntentType.OPEN_SCREENSHOT,
+            IntentType.SHOW_DISPLAY_INFORMATION,
+            IntentType.SHOW_ACTIVE_WINDOW,
+            IntentType.LIST_VISIBLE_WINDOWS,
+            IntentType.FIND_WINDOW,
+            IntentType.BRING_WINDOW_TO_FRONT,
+        }
+    )
+    disposition, reason_code, message = (
+        PolicyDisposition.ALLOW,
+        "BOUNDED_DESKTOP_UTILITY_ALLOWED",
+        "Explicit bounded local desktop utilities are allowed.",
+    )
+
+
+class DesktopUtilityDestructivePolicy(_IntentPolicy):
+    """Require exact confirmation for transient or file-destructive actions."""
+
+    policy_id, priority = "SAFETY-DESKTOP-DESTRUCTIVE-001", 70
+    intents = frozenset({IntentType.CLEAR_CLIPBOARD, IntentType.DELETE_SCREENSHOT})
+    disposition, reason_code, message = (
+        PolicyDisposition.REQUIRE_CONFIRMATION,
+        "DESKTOP_UTILITY_DESTRUCTIVE_CONFIRMATION",
+        "Clearing clipboard text and deleting screenshots require confirmation.",
+    )
+
+
 DEFAULT_POLICIES = cast(
     tuple[SafetyPolicy, ...],
     (
@@ -946,6 +986,7 @@ DEFAULT_POLICIES = cast(
         KnowledgeDeletionPolicy(),
         EmailMutationPolicy(),
         CalendarMutationPolicy(),
+        DesktopUtilityDestructivePolicy(),
         ApplicationOpenPolicy(),
         ApplicationStatusPolicy(),
         FileReadPolicy(),
@@ -968,6 +1009,7 @@ DEFAULT_POLICIES = cast(
         KnowledgePolicy(),
         EmailPolicy(),
         CalendarPolicy(),
+        DesktopUtilityPolicy(),
     ),
 )
 

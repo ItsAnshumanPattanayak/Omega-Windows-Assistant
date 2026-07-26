@@ -114,6 +114,21 @@ _CALENDAR_NO_PARAMETER = frozenset(
         IntentType.RESPOND_CALENDAR_INVITATION,
     }
 )
+_DESKTOP_UTILITY_NO_PARAMETER = frozenset(
+    {
+        IntentType.READ_CLIPBOARD,
+        IntentType.CLEAR_CLIPBOARD,
+        IntentType.CLIPBOARD_TO_NOTE,
+        IntentType.CAPTURE_SCREENSHOT,
+        IntentType.LIST_SCREENSHOTS,
+        IntentType.OPEN_SCREENSHOT,
+        IntentType.DELETE_SCREENSHOT,
+        IntentType.SHOW_DISPLAY_INFORMATION,
+        IntentType.SHOW_ACTIVE_WINDOW,
+        IntentType.LIST_VISIBLE_WINDOWS,
+        IntentType.BRING_WINDOW_TO_FRONT,
+    }
+)
 
 
 class CommandParser:
@@ -282,6 +297,26 @@ class CommandParser:
             return [], None
         if intent in _CALENDAR_NO_PARAMETER:
             return [], None
+        if intent in _DESKTOP_UTILITY_NO_PARAMETER:
+            return [], None
+        if (
+            intent is IntentType.COPY_TEXT_TO_CLIPBOARD
+            and "clipboard_text" not in names
+        ):
+            return ["clipboard_text"], "What text should I copy to the clipboard?"
+        if intent is IntentType.SEARCH_CLIPBOARD and "clipboard_query" not in names:
+            return [
+                "clipboard_query"
+            ], "What should I search for in the clipboard text?"
+        if (
+            intent is IntentType.SAVE_CLIPBOARD_TO_FILE
+            and "clipboard_file" not in names
+        ):
+            return [
+                "clipboard_file"
+            ], "Which approved text file should receive the clipboard text?"
+        if intent is IntentType.FIND_WINDOW and "window_query" not in names:
+            return ["window_query"], "Which visible window title should I search for?"
         if (
             intent is IntentType.SEARCH_CALENDAR_EVENTS
             and "calendar_query" not in names

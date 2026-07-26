@@ -8,6 +8,10 @@ from omega.execution.calendar_dispatcher import (
     CalendarActionDispatcher,
     CalendarDispatchResult,
 )
+from omega.execution.desktop_utilities_dispatcher import (
+    DesktopUtilityActionDispatcher,
+    DesktopUtilityDispatchResult,
+)
 from omega.execution.dispatcher import (
     ApplicationActionDispatcher,
     ApplicationControlCommand,
@@ -49,6 +53,8 @@ __all__ = [
     "BrowserDispatchResult",
     "CalendarActionDispatcher",
     "CalendarDispatchResult",
+    "DesktopUtilityActionDispatcher",
+    "DesktopUtilityDispatchResult",
     "EmailActionDispatcher",
     "EmailDispatchResult",
     "FileActionDispatcher",

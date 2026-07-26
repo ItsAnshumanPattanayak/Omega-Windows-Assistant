@@ -21,6 +21,81 @@ def _rule(name: str, intent: IntentType, expression: str) -> IntentPattern:
 
 INTENT_PATTERNS = (
     _rule(
+        "copy_text_clipboard",
+        IntentType.COPY_TEXT_TO_CLIPBOARD,
+        r"^copy .+ to (?:the )?clipboard$",
+    ),
+    _rule(
+        "read_clipboard",
+        IntentType.READ_CLIPBOARD,
+        r"^(?:show my|read (?:the )?|show (?:the )?)clipboard$",
+    ),
+    _rule(
+        "clear_clipboard", IntentType.CLEAR_CLIPBOARD, r"^clear (?:the |my )?clipboard$"
+    ),
+    _rule(
+        "search_clipboard",
+        IntentType.SEARCH_CLIPBOARD,
+        r"^search (?:my |the )?clipboard(?: text)? for .+$",
+    ),
+    _rule(
+        "save_clipboard",
+        IntentType.SAVE_CLIPBOARD_TO_FILE,
+        r"^save (?:my |the )?clipboard(?: text)? to .+$",
+    ),
+    _rule(
+        "clipboard_note",
+        IntentType.CLIPBOARD_TO_NOTE,
+        r"^(?:paste|save) (?:my |the )?clipboard(?: text)? "
+        r"(?:into|as) (?:a )?new note(?: named .+)?$",
+    ),
+    _rule(
+        "capture_screenshot",
+        IntentType.CAPTURE_SCREENSHOT,
+        r"^(?:take (?:a )?screenshot|capture (?:the )?(?:current )?screen|"
+        r"capture (?:the )?virtual desktop|capture monitor \d+|"
+        r"capture (?:a )?region(?: \d+ \d+ \d+ \d+)?)$",
+    ),
+    _rule(
+        "list_screenshots",
+        IntentType.LIST_SCREENSHOTS,
+        r"^(?:show|list) (?:my )?(?:recent )?(?:omega )?screenshots$",
+    ),
+    _rule(
+        "open_screenshot",
+        IntentType.OPEN_SCREENSHOT,
+        r"^open (?:(?:the )?last screenshot|screenshot(?: number)? \d+)$",
+    ),
+    _rule(
+        "delete_screenshot",
+        IntentType.DELETE_SCREENSHOT,
+        r"^delete (?:(?:the )?last screenshot|screenshot(?: number)? \d+)$",
+    ),
+    _rule(
+        "display_info",
+        IntentType.SHOW_DISPLAY_INFORMATION,
+        r"^(?:show (?:my )?(?:screen|display|monitor) (?:information|details)|"
+        r"how many monitors are connected|what is my screen resolution|"
+        r"which monitor is primary)$",
+    ),
+    _rule(
+        "active_window",
+        IntentType.SHOW_ACTIVE_WINDOW,
+        r"^(?:show (?:the )?active window|what application is currently focused)$",
+    ),
+    _rule(
+        "list_windows",
+        IntentType.LIST_VISIBLE_WINDOWS,
+        r"^(?:show|list) (?:my )?visible windows$",
+    ),
+    _rule("find_window", IntentType.FIND_WINDOW, r"^find (?:a )?window named .+$"),
+    _rule(
+        "foreground_window",
+        IntentType.BRING_WINDOW_TO_FRONT,
+        r"^bring (?:(?:this|the selected) window|window(?: number)? \d+) "
+        r"to (?:the )?front$",
+    ),
+    _rule(
         "calendar_status",
         IntentType.CALENDAR_STATUS,
         r"^(?:show )?calendar (?:status|connection)$",

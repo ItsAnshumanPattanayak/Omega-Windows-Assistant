@@ -7,6 +7,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 from omega.applications import (
     ApplicationManager,
@@ -38,12 +39,23 @@ from omega.database import (
     RuntimeSettingsRepository,
     SqliteRecoveryRecordStore,
 )
+from omega.desktop_utilities import (
+    ClipboardService,
+    DesktopInformationService,
+    PillowScreenshotBackend,
+    ScreenshotService,
+    TkClipboardBackend,
+    TkScreenInformationProvider,
+    WindowsPathOpener,
+    WindowsWindowInformationProvider,
+)
 from omega.email import FakeEmailProvider, SqliteEmailOperationStore
 from omega.email.service import EmailService
 from omega.execution import (
     ApplicationActionDispatcher,
     BrowserActionDispatcher,
     CalendarActionDispatcher,
+    DesktopUtilityActionDispatcher,
     EmailActionDispatcher,
     FileActionDispatcher,
     FolderActionDispatcher,
@@ -102,6 +114,7 @@ from omega.recovery import (
     RecoveryRegistry,
     WindowsRecycleBinService,
 )
+from omega.recovery.windows_recycle_bin import WindowsShellRecycleBinBackend
 from omega.safety import (
     ConfirmationManager,
     PermissionConfiguration,
@@ -255,6 +268,7 @@ class OmegaApplication:
             recovery_registry=recovery_registry,
             logger=get_logger("files.manager"),
         )
+        self.file_manager = file_manager
 
         folder_settings = FolderOperationSettings.from_mapping(self.settings.folders)
         folder_validator = FolderPathValidator()
@@ -402,6 +416,34 @@ class OmegaApplication:
             calendar_provider,
             SqliteCalendarOperationStore(database_factory),
         )
+        desktop_configuration = self.settings.desktop_utilities_configuration
+        self.clipboard_service = ClipboardService(
+            desktop_configuration, TkClipboardBackend()
+        )
+        screenshot_root = (
+            database_path.parent / "screenshots"
+            if database_path is not None
+            else data_dir() / "screenshots"
+        )
+        recycle_backend = WindowsShellRecycleBinBackend()
+
+        def recycle_screenshot(path: Path) -> None:
+            outcome = recycle_backend.recycle(path)
+            if not outcome.success:
+                raise OSError(outcome.message)
+
+        self.screenshot_service = ScreenshotService(
+            desktop_configuration,
+            PillowScreenshotBackend(),
+            screenshot_root,
+            opener=WindowsPathOpener(),
+            deleter=recycle_screenshot,
+        )
+        self.desktop_information_service = DesktopInformationService(
+            desktop_configuration,
+            TkScreenInformationProvider(),
+            WindowsWindowInformationProvider(),
+        )
         self.notifications = NotificationCenter(
             get_logger("scheduling"),
             speech_enabled=self.settings.scheduling_configuration.speak_notifications,
@@ -464,6 +506,14 @@ class OmegaApplication:
                 self.calendar_service,
                 safety_gateway,
             ),
+            desktop_utility_dispatcher=DesktopUtilityActionDispatcher(
+                self.clipboard_service,
+                self.screenshot_service,
+                self.desktop_information_service,
+                safety_gateway,
+                save_text=self._save_clipboard_text,
+                create_note=self._create_clipboard_note,
+            ),
             safety_gateway=safety_gateway,
         )
         self.voice_configuration = self.settings.voice_configuration
@@ -476,6 +526,21 @@ class OmegaApplication:
                 "development",
             ),
         )
+
+    def _save_clipboard_text(self, name: str, text: str, command_id: UUID) -> str:
+        from uuid import uuid4
+
+        created = self.file_manager.create_file(name, None, uuid4(), command_id)
+        if not created.success:
+            return created.user_message
+        written = self.file_manager.write_text_file(
+            name, None, text, uuid4(), command_id
+        )
+        return written.user_message
+
+    def _create_clipboard_note(self, title: str, text: str, command_id: UUID) -> str:
+        note = self.productivity_service.create_note(title, text, command_id=command_id)
+        return f"Created note {note.title}."
 
     @staticmethod
     def _is_protected_path(

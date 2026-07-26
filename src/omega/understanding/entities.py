@@ -132,6 +132,25 @@ _CALENDAR_INTENTS = frozenset(
         IntentType.RESPOND_CALENDAR_INVITATION,
     }
 )
+_DESKTOP_UTILITY_INTENTS = frozenset(
+    {
+        IntentType.COPY_TEXT_TO_CLIPBOARD,
+        IntentType.READ_CLIPBOARD,
+        IntentType.CLEAR_CLIPBOARD,
+        IntentType.SEARCH_CLIPBOARD,
+        IntentType.SAVE_CLIPBOARD_TO_FILE,
+        IntentType.CLIPBOARD_TO_NOTE,
+        IntentType.CAPTURE_SCREENSHOT,
+        IntentType.LIST_SCREENSHOTS,
+        IntentType.OPEN_SCREENSHOT,
+        IntentType.DELETE_SCREENSHOT,
+        IntentType.SHOW_DISPLAY_INFORMATION,
+        IntentType.SHOW_ACTIVE_WINDOW,
+        IntentType.LIST_VISIBLE_WINDOWS,
+        IntentType.FIND_WINDOW,
+        IntentType.BRING_WINDOW_TO_FRONT,
+    }
+)
 _KNOWLEDGE_INTENTS = frozenset(
     {
         IntentType.CREATE_KNOWLEDGE_COLLECTION,
@@ -175,7 +194,9 @@ class RuleBasedEntityExtractor:
 
     def extract(self, original: str, intent: IntentType) -> list[CommandEntity]:
         entities: list[CommandEntity] = []
-        if intent in _CALENDAR_INTENTS:
+        if intent in _DESKTOP_UTILITY_INTENTS:
+            self._desktop_utility(original, intent, entities)
+        elif intent in _CALENDAR_INTENTS:
             self._calendar(original, intent, entities)
         elif intent in _EMAIL_INTENTS:
             self._email(original, intent, entities)
@@ -260,6 +281,114 @@ class RuleBasedEntityExtractor:
         }:
             self._folder_command(original, intent, entities)
         return entities
+
+    @staticmethod
+    def _desktop_utility(
+        original: str, intent: IntentType, entities: list[CommandEntity]
+    ) -> None:
+        text = original.strip().rstrip("?!")
+        if intent is IntentType.COPY_TEXT_TO_CLIPBOARD:
+            match = re.match(
+                r"^copy\s+(.+)\s+to (?:the )?clipboard$", text, re.IGNORECASE
+            )
+            if match:
+                entities.append(
+                    _entity(
+                        EntityType.TEXT_CONTENT,
+                        "clipboard_text",
+                        match.group(1),
+                        match.group(1),
+                    )
+                )
+        elif intent is IntentType.SEARCH_CLIPBOARD:
+            match = re.search(r"\bfor\s+(.+)$", text, re.IGNORECASE)
+            if match:
+                entities.append(
+                    _entity(
+                        EntityType.SEARCH_QUERY,
+                        "clipboard_query",
+                        match.group(1),
+                        match.group(1),
+                    )
+                )
+        elif intent is IntentType.SAVE_CLIPBOARD_TO_FILE:
+            match = re.search(r"\bto\s+(.+)$", text, re.IGNORECASE)
+            if match:
+                entities.append(
+                    _entity(
+                        EntityType.FILE_NAME,
+                        "clipboard_file",
+                        match.group(1),
+                        match.group(1),
+                    )
+                )
+        elif intent is IntentType.CLIPBOARD_TO_NOTE:
+            match = re.search(r"\bnamed\s+(.+)$", text, re.IGNORECASE)
+            if match:
+                entities.append(
+                    _entity(
+                        EntityType.TEXT_CONTENT,
+                        "note_title",
+                        match.group(1),
+                        match.group(1),
+                    )
+                )
+        elif intent is IntentType.CAPTURE_SCREENSHOT:
+            monitor = re.search(r"\bmonitor\s+(\d+)\b", text, re.IGNORECASE)
+            region = re.search(
+                r"\bregion\s+(-?\d+)\s+(-?\d+)\s+(\d+)\s+(\d+)$", text, re.IGNORECASE
+            )
+            if monitor:
+                entities.append(
+                    _entity(
+                        EntityType.DISPLAY,
+                        "display_reference",
+                        int(monitor.group(1)),
+                        monitor.group(1),
+                    )
+                )
+            if region:
+                for name, value in zip(
+                    ("region_x", "region_y", "region_width", "region_height"),
+                    region.groups(),
+                    strict=True,
+                ):
+                    entities.append(_entity(EntityType.NUMBER, name, int(value), value))
+        elif intent in {IntentType.OPEN_SCREENSHOT, IntentType.DELETE_SCREENSHOT}:
+            match = re.search(
+                r"\bscreenshot(?: number)?\s+(\d+)\b", text, re.IGNORECASE
+            )
+            if match:
+                entities.append(
+                    _entity(
+                        EntityType.SCREENSHOT,
+                        "screenshot_reference",
+                        int(match.group(1)),
+                        match.group(1),
+                    )
+                )
+        elif intent is IntentType.FIND_WINDOW:
+            match = re.search(r"\bnamed\s+(.+)$", text, re.IGNORECASE)
+            if match:
+                entities.append(
+                    _entity(
+                        EntityType.WINDOW,
+                        "window_query",
+                        match.group(1),
+                        match.group(1),
+                    )
+                )
+        elif intent is IntentType.BRING_WINDOW_TO_FRONT:
+            match = re.search(r"\bwindow(?: number)?\s+(\d+)\b", text, re.IGNORECASE)
+            if match:
+                entities.append(
+                    _entity(
+                        EntityType.WINDOW,
+                        "window_reference",
+                        int(match.group(1)),
+                        match.group(1),
+                    )
+                )
 
     @staticmethod
     def _calendar(

@@ -13,6 +13,7 @@ from uuid import UUID, uuid4
 from omega.core.exceptions import InvalidSessionTransitionError, ModelValidationError
 from omega.execution.browser_dispatcher import BrowserActionDispatcher
 from omega.execution.calendar_dispatcher import CalendarActionDispatcher
+from omega.execution.desktop_utilities_dispatcher import DesktopUtilityActionDispatcher
 from omega.execution.dispatcher import ApplicationActionDispatcher
 from omega.execution.email_dispatcher import EmailActionDispatcher
 from omega.execution.file_dispatcher import FileActionDispatcher
@@ -64,6 +65,7 @@ class OmegaSession:
         knowledge_dispatcher: KnowledgeActionDispatcher | None = None,
         email_dispatcher: EmailActionDispatcher | None = None,
         calendar_dispatcher: CalendarActionDispatcher | None = None,
+        desktop_utility_dispatcher: DesktopUtilityActionDispatcher | None = None,
         safety_gateway: SafeExecutionGateway | None = None,
     ) -> None:
         self.display_name = self._required_text(user_settings, "display_name")
@@ -89,6 +91,7 @@ class OmegaSession:
         self._knowledge_dispatcher = knowledge_dispatcher
         self._email_dispatcher = email_dispatcher
         self._calendar_dispatcher = calendar_dispatcher
+        self._desktop_utility_dispatcher = desktop_utility_dispatcher
         self._safety_gateway = (
             safety_gateway
             or getattr(application_dispatcher, "gateway", None)
@@ -314,6 +317,10 @@ class OmegaSession:
                 calendar_result = self._calendar_dispatcher.dispatch(result)
                 if calendar_result is not None:
                     return calendar_result.user_message
+            if self._desktop_utility_dispatcher is not None:
+                desktop_result = self._desktop_utility_dispatcher.dispatch(result)
+                if desktop_result is not None:
+                    return desktop_result.user_message
             if self._application_dispatcher is not None:
                 dispatched = self._application_dispatcher.dispatch(result)
                 if dispatched is not None:
@@ -352,3 +359,5 @@ class OmegaSession:
     def _clear_calendar_selection(self) -> None:
         if self._calendar_dispatcher is not None:
             self._calendar_dispatcher.clear_session(self.session_id)
+        if self._desktop_utility_dispatcher is not None:
+            self._desktop_utility_dispatcher.clear_session()

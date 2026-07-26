@@ -191,6 +191,21 @@ class IntentType(StrEnum):
     UPDATE_CALENDAR_EVENT = "update_calendar_event"
     DELETE_CALENDAR_EVENT = "delete_calendar_event"
     RESPOND_CALENDAR_INVITATION = "respond_calendar_invitation"
+    COPY_TEXT_TO_CLIPBOARD = "copy_text_to_clipboard"
+    READ_CLIPBOARD = "read_clipboard"
+    CLEAR_CLIPBOARD = "clear_clipboard"
+    SEARCH_CLIPBOARD = "search_clipboard"
+    SAVE_CLIPBOARD_TO_FILE = "save_clipboard_to_file"
+    CLIPBOARD_TO_NOTE = "clipboard_to_note"
+    CAPTURE_SCREENSHOT = "capture_screenshot"
+    LIST_SCREENSHOTS = "list_screenshots"
+    OPEN_SCREENSHOT = "open_screenshot"
+    DELETE_SCREENSHOT = "delete_screenshot"
+    SHOW_DISPLAY_INFORMATION = "show_display_information"
+    SHOW_ACTIVE_WINDOW = "show_active_window"
+    LIST_VISIBLE_WINDOWS = "list_visible_windows"
+    FIND_WINDOW = "find_window"
+    BRING_WINDOW_TO_FRONT = "bring_window_to_front"
 
 
 class ActionStatus(StrEnum):
@@ -274,6 +289,9 @@ class EntityType(StrEnum):
     EMAIL_MESSAGE = "email_message"
     EMAIL_DRAFT = "email_draft"
     CALENDAR_EVENT = "calendar_event"
+    SCREENSHOT = "screenshot"
+    DISPLAY = "display"
+    WINDOW = "window"
     UNKNOWN = "unknown"
 
 
