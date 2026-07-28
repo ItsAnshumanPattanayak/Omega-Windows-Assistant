@@ -9,6 +9,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from omega.accessibility import (
+    AccessibilityService,
+    LocaleFormatter,
+    create_default_aliases,
+    create_default_localization,
+)
 from omega.ai import (
     AiKnowledgeAssistant,
     AiModelCapability,
@@ -177,6 +183,7 @@ from omega.system import (
     WindowsPowerController,
     WindowsSettingsPageLauncher,
 )
+from omega.understanding.parser import CommandParser
 from omega.utils.constants import MINIMUM_PYTHON_VERSION
 from omega.utils.logger import configure_logging, get_logger
 from omega.utils.paths import data_dir, log_dir
@@ -208,6 +215,9 @@ class OmegaApplication:
     ) -> None:
         self.started_at = datetime.now(UTC)
         self.settings: Settings = load_settings(config_path)
+        self.accessibility_service = AccessibilityService(
+            self.settings.accessibility_configuration
+        )
         logging_settings = self.settings.logging
         self.logger = configure_logging(
             level=str(logging_settings["level"]),
@@ -242,8 +252,8 @@ class OmegaApplication:
                 protected_resources=protected_resources,
             ),
             confirmations=ConfirmationManager(
-                timeout_seconds=float(
-                    self.settings.safety["confirmation_timeout_seconds"]
+                timeout_seconds=self.accessibility_service.confirmation_timeout(
+                    float(self.settings.safety["confirmation_timeout_seconds"])
                 ),
                 maximum_attempts=int(
                     self.settings.safety["maximum_confirmation_attempts"]
@@ -315,6 +325,22 @@ class OmegaApplication:
             self.preference_service, personalization_configuration
         )
         self.personalization_context = PersonalizationContext(self.preference_resolver)
+        self.localization_service = create_default_localization(
+            self.settings.localization_configuration
+        )
+        preferred_language = self.preference_resolver.resolve("language").value
+        if isinstance(
+            preferred_language, str
+        ) and self.localization_service.registry.get(preferred_language):
+            self.localization_service.set_language(preferred_language)
+        preferred_locale = self.preference_resolver.resolve("locale").value
+        self.locale_formatter = LocaleFormatter(
+            str(preferred_locale),
+            time_format=str(self.preference_resolver.resolve("time_format").value),
+            date_format=str(self.preference_resolver.resolve("date_format").value),
+            time_zone=str(self.preference_resolver.resolve("time_zone").value),
+            unit_system=str(self.preference_resolver.resolve("unit_system").value),
+        )
         self.workflow_preference_access = WorkflowPreferenceAccess(
             self.preference_resolver, self.preference_service
         )
@@ -669,6 +695,12 @@ class OmegaApplication:
         self.session = OmegaSession(
             personalized_user,
             self.settings.assistant,
+            parser=CommandParser(
+                command_aliases=create_default_aliases(
+                    self.settings.localization_configuration
+                ),
+                language=self.localization_service.active_language,
+            ),
             greeting_builder=self.personalization_context.greeting,
             logger=get_logger("session"),
             application_dispatcher=ApplicationActionDispatcher(
@@ -803,6 +835,8 @@ class OmegaApplication:
             return TerminalInterface(
                 self.session,
                 notifications=self.notifications,
+                localization=self.localization_service,
+                accessibility=self.accessibility_service,
                 input_func=input_func,
                 output_func=output_func,
             ).run()

@@ -9,6 +9,7 @@ from typing import Any
 
 import yaml
 
+from omega.accessibility import AccessibilityConfiguration, LocalizationConfiguration
 from omega.ai.configuration import AiConfiguration
 from omega.browser.configuration import BrowserConfiguration
 from omega.calendar.configuration import CalendarConfiguration
@@ -91,6 +92,8 @@ class Settings:
     plugins: Mapping[str, Any] = field(default_factory=dict)
     local_ai: Mapping[str, Any] = field(default_factory=dict)
     personalization: Mapping[str, Any] = field(default_factory=dict)
+    accessibility: Mapping[str, Any] = field(default_factory=dict)
+    localization: Mapping[str, Any] = field(default_factory=dict)
 
     @property
     def application_name(self) -> str:
@@ -198,6 +201,18 @@ class Settings:
         """Return local privacy-first personalization policy."""
 
         return PersonalizationConfiguration.from_mapping(self.personalization)
+
+    @property
+    def accessibility_configuration(self) -> AccessibilityConfiguration:
+        """Return bounded Phase 25 accessibility presentation policy."""
+
+        return AccessibilityConfiguration.from_mapping(self.accessibility)
+
+    @property
+    def localization_configuration(self) -> LocalizationConfiguration:
+        """Return local-only Phase 25 catalog policy."""
+
+        return LocalizationConfiguration.from_mapping(self.localization)
 
 
 def _defaults() -> dict[str, dict[str, Any]]:
@@ -350,6 +365,8 @@ def _defaults() -> dict[str, dict[str, Any]]:
         "plugins": {},
         "local_ai": {},
         "personalization": {},
+        "accessibility": {},
+        "localization": {},
     }
 
 
@@ -585,6 +602,8 @@ def _merge_defaults(
                 "plugins",
                 "local_ai",
                 "personalization",
+                "accessibility",
+                "localization",
             }
             else raw[section]
         )
@@ -663,5 +682,7 @@ def load_settings(
     PluginConfiguration.from_mapping(values["plugins"])
     AiConfiguration.from_mapping(values["local_ai"])
     PersonalizationConfiguration.from_mapping(values["personalization"])
+    AccessibilityConfiguration.from_mapping(values["accessibility"])
+    LocalizationConfiguration.from_mapping(values["localization"])
 
     return Settings(**values)

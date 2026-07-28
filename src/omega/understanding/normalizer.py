@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import re
 
+from omega.accessibility.text import normalize_command_text
+
 
 class CommandNormalizer:
     """Normalize command matching text without changing the original input."""
@@ -12,7 +14,7 @@ class CommandNormalizer:
 
     def normalize(self, text: str) -> str:
         """Return deterministic, case-folded matching text."""
-        normalized = re.sub(r"\s+", " ", text.translate(self._SMART_QUOTES).strip())
+        normalized = normalize_command_text(text.translate(self._SMART_QUOTES)).text
         if normalized.endswith(("?", "!")):
             normalized = normalized[:-1].rstrip()
         elif normalized.endswith(".") and not re.search(

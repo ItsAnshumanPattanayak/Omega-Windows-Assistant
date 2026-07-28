@@ -397,6 +397,8 @@ class RuleBasedEntityExtractor:
         value: JsonValue | None = None
         if lowered.startswith("call me "):
             key, value = "display_name", text[8:].strip()
+        elif "concise spoken responses" in lowered:
+            key, value = "spoken_response_mode", "concise"
         elif "concise" in lowered:
             key, value = "response_verbosity", "concise"
         elif "detailed" in lowered:
@@ -411,6 +413,22 @@ class RuleBasedEntityExtractor:
             key, value = "speech_enabled", False
         elif "speak more slowly" in lowered:
             key, value = "speech_rate", 140
+        elif "change language to english" in lowered or "भाषा अंग्रेज़ी करें" in lowered:
+            key, value = "language", "en"
+        elif "change language to hindi" in lowered or "भाषा हिंदी करें" in lowered:
+            key, value = "language", "hi"
+        elif "high contrast" in lowered or "उच्च कंट्रास्ट" in lowered:
+            key, value = "high_contrast", True
+        elif "increase text size" in lowered or "टेक्स्ट का आकार बढ़ाएँ" in lowered:
+            key, value = "font_scaling", 1.25
+        elif "decrease text size" in lowered:
+            key, value = "font_scaling", 0.9
+        elif "screen-reader mode" in lowered:
+            key, value = "screen_reader_friendly_mode", True
+        elif "disable terminal colors" in lowered:
+            key, value = "terminal_color_enabled", False
+        elif "show keyboard shortcuts" in lowered:
+            key, value = "show_keyboard_hints", True
         else:
             match = re.match(
                 r"^(?:remember my|set my)\s+(.+?)\s+(?:is|to)\s+(.+)$",

@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from uuid import UUID
 
+from omega.accessibility import CommandAliasCatalog, create_default_aliases
+from omega.core.exceptions import UnicodeSafetyError
 from omega.models import CommandEntity, CommandSource, IntentType, UserCommand
 from omega.understanding.aliases import ApplicationAliasRegistry
 from omega.understanding.entities import RuleBasedEntityExtractor
@@ -173,11 +175,19 @@ _PERSONALIZATION_NO_PARAMETER = frozenset(
 class CommandParser:
     """Create structured command data and clarifications without side effects."""
 
-    def __init__(self, aliases: ApplicationAliasRegistry | None = None) -> None:
+    def __init__(
+        self,
+        aliases: ApplicationAliasRegistry | None = None,
+        *,
+        command_aliases: CommandAliasCatalog | None = None,
+        language: str = "en",
+    ) -> None:
         self.aliases = aliases or ApplicationAliasRegistry.from_file()
         self.normalizer = CommandNormalizer()
         self.detector = RuleBasedIntentDetector(self.aliases)
         self.extractor = RuleBasedEntityExtractor(self.aliases)
+        self.command_aliases = command_aliases or create_default_aliases()
+        self.language = language
 
     def parse(
         self,
@@ -186,7 +196,23 @@ class CommandParser:
         *,
         source: CommandSource = CommandSource.TEXT,
     ) -> CommandParseResult:
-        normalized = self.normalizer.normalize(original_text)
+        try:
+            normalized = self.normalizer.normalize(original_text)
+        except UnicodeSafetyError as error:
+            command = UserCommand(
+                original_text,
+                normalized_text=None,
+                confidence=0.0,
+                source=source,
+                session_id=session_id,
+            )
+            return CommandParseResult(
+                command,
+                False,
+                True,
+                str(error),
+                warnings=["unsafe_unicode"],
+            )
         if (
             self._multiple_actions(normalized)
             or " and " in self._outside_quotes(normalized)
@@ -223,14 +249,30 @@ class CommandParser:
                 warnings=["unsupported_or_dangerous"],
             )
 
-        intent, pattern = self.detector.detect(normalized)
+        alias_match = self.command_aliases.match(original_text, self.language)
+        if alias_match is not None:
+            intent = alias_match.intent
+            pattern: str | None = "localized_alias"
+        else:
+            intent, pattern = self.detector.detect(normalized)
         entities = self.extractor.extract(original_text.strip().rstrip("?!"), intent)
         ambiguity = self._ambiguity(normalized, intent, entities)
         missing, message = self._missing(intent, entities, normalized)
         matched = intent is not IntentType.UNKNOWN
-        clarification = bool(ambiguity or missing)
+        clarification = bool(
+            ambiguity
+            or missing
+            or alias_match is not None
+            and alias_match.requires_clarification
+        )
         confidence = (
-            0.0 if not matched else 0.5 if ambiguity else 0.65 if missing else 1.0
+            0.0
+            if not matched
+            else (
+                0.0
+                if alias_match is not None and alias_match.requires_clarification
+                else 0.5 if ambiguity else 0.65 if missing else 1.0
+            )
         )
         command = UserCommand(
             original_text,
@@ -246,6 +288,8 @@ class CommandParser:
                 "Do you want to open an application, file, or folder named "
                 f"{ambiguity[0]}?"
             )
+        elif alias_match is not None and alias_match.requires_clarification:
+            message = "Please restate that sensitive command without hidden characters."
         return CommandParseResult(
             command, matched, clarification, message, missing, ambiguity, pattern
         )

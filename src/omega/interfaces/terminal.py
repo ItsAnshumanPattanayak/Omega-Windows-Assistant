@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Protocol
 
+from omega.accessibility import AccessibilityService, LocalizationService
 from omega.scheduling import ScheduleNotification
 from omega.session.session import OmegaSession
 
@@ -21,18 +22,28 @@ class TerminalInterface:
         session: OmegaSession,
         *,
         notifications: NotificationSource | None = None,
+        localization: LocalizationService | None = None,
+        accessibility: AccessibilityService | None = None,
         input_func: Callable[[str], str] = input,
         output_func: Callable[[str], None] = print,
     ) -> None:
         self.session = session
         self._notifications = notifications
+        self._localization = localization
+        self._accessibility = accessibility
         self._input = input_func
         self._output = output_func
 
     def run(self) -> int:
         """Display startup instructions, process text, and exit cleanly."""
-        self._output("Omega is ready.")
-        self._output(f'Say "{self.session.activation_phrase}" to activate.')
+        self._output(self._message("app.ready", "Omega is ready."))
+        self._output(
+            self._message(
+                "app.activate",
+                f'Say "{self.session.activation_phrase}" to activate.',
+                activation_phrase=self.session.activation_phrase,
+            )
+        )
         while not self.session.is_terminated:
             self._drain_notifications()
             timeout_message = self.session.check_timeout()
@@ -46,6 +57,11 @@ class TerminalInterface:
             self._output(f"Omega: {self.session.handle_input(text)}")
             self._drain_notifications()
         return 0
+
+    def _message(self, key: str, fallback: str, **values: object) -> str:
+        if self._localization is None:
+            return fallback
+        return self._localization.message(key, **values).text
 
     def _drain_notifications(self) -> None:
         if self._notifications is None:

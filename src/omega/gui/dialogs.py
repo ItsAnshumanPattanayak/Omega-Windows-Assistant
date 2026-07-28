@@ -191,6 +191,11 @@ class SettingsDialog:
             window_width=self._preferences.window_width,
             window_height=self._preferences.window_height,
             maximized=self._preferences.maximized,
+            font_scale=self._preferences.font_scale,
+            high_contrast=self._preferences.high_contrast,
+            reduced_motion=self._preferences.reduced_motion,
+            keyboard_hints=self._preferences.keyboard_hints,
+            screen_reader_friendly=self._preferences.screen_reader_friendly,
         )
         self.window.destroy()
         self._on_save(current)

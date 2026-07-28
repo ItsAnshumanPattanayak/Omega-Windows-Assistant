@@ -74,7 +74,16 @@ All supported operations pass through the same command-processing and safety lif
 
 ## Current capabilities
 
-Omega currently includes functionality completed through **Phase 24**:
+Omega currently includes functionality completed through **Phase 25**:
+
+Phase 25 adds offline accessibility and localization foundations: keyboard focus
+shortcuts, visible textual status, bounded font scaling, high contrast, reduced-motion
+preferences, screen-reader-friendly terminal output, accessible confirmation policy,
+Unicode command defenses, locale-aware formatting, a complete English catalog, and an
+explicitly partial Hindi preview with English fallback. Translation catalogs are
+bounded data only; Omega makes no external translation request and does not download
+language packs. See [docs/accessibility.md](docs/accessibility.md) and
+[docs/localization.md](docs/localization.md).
 
 Phase 24 adds explicit local profiles, validated persisted and session-only
 preferences, deterministic safety-first precedence, bounded JSON export/import,

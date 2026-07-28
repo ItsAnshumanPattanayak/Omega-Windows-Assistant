@@ -41,6 +41,7 @@ class OmegaMainWindow(GuiView):
         self._undo_available = False
         self._closing = False
         self._theme = ThemeManager(root)
+        self.command_input: tk.Text
 
         self.root.title(
             f"{application.settings.application_name} "
@@ -53,6 +54,8 @@ class OmegaMainWindow(GuiView):
         self.root.protocol("WM_DELETE_WINDOW", self.close)
 
         self._build()
+        self.root.bind("<Control-l>", lambda _event: self.command_input.focus_set())
+        self.root.bind("<F1>", lambda _event: self._help())
         runner = GuiTaskRunner(maximum_workers=2)
         self._runner = runner
         self.controller = GuiController(
@@ -360,18 +363,22 @@ class OmegaMainWindow(GuiView):
 
     def apply_preferences(self, preferences: GuiPreferences) -> None:
         self.preferences = preferences
-        colors = self._theme.apply(preferences.theme, preferences.font_size)
+        font_size = max(
+            9, min(48, round(preferences.font_size * preferences.font_scale))
+        )
+        theme = "high-contrast" if preferences.high_contrast else preferences.theme
+        colors = self._theme.apply(theme, font_size)
         self.conversation.configure(
             background=colors["surface"],
             foreground=colors["foreground"],
             insertbackground=colors["foreground"],
-            font=("Segoe UI", preferences.font_size),
+            font=("Segoe UI", font_size),
         )
         self.command_input.configure(
             background=colors["surface"],
             foreground=colors["foreground"],
             insertbackground=colors["foreground"],
-            font=("Segoe UI", preferences.font_size),
+            font=("Segoe UI", font_size),
         )
         self.conversation.tag_configure("user", foreground=colors["accent"])
         self.conversation.tag_configure("assistant", foreground=colors["foreground"])
@@ -379,9 +386,7 @@ class OmegaMainWindow(GuiView):
         self.conversation.tag_configure("success", foreground="#137333")
         self.conversation.tag_configure("warning", foreground="#b06000")
         self.conversation.tag_configure("error", foreground="#b3261e")
-        self.conversation.tag_configure(
-            "sender", font=("Segoe UI Semibold", preferences.font_size)
-        )
+        self.conversation.tag_configure("sender", font=("Segoe UI Semibold", font_size))
         self.root.geometry(f"{preferences.window_width}x{preferences.window_height}")
         if preferences.maximized:
             self.root.state("zoomed")

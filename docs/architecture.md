@@ -736,3 +736,43 @@ access uses Phase 22 version- and fingerprint-bound permissions and namespace
 isolation. Local AI receives only an explicitly requested minimal preference.
 Formatting never shortens safety warnings or confirmation details. See
 [personalization.md](personalization.md).
+
+## Phase 25 accessibility and localization
+
+Phase 25 adds a data-first `omega.accessibility` boundary. `AccessibilityService`
+resolves bounded presentation settings without changing permission decisions.
+`TranslationCatalog`, `LanguagePackValidator`, `LanguagePackRegistry`, and
+`LocalizationService` load only plain JSON-compatible text and enforce catalog size,
+entry count, stable keys, simple named placeholders, control-character rejection,
+API compatibility, fingerprints, and English fallback. No catalog contains an entry
+point or callback, and loading a module never reads a catalog, contacts a provider, or
+starts work.
+
+```text
+explicit user preference -> PreferenceResolver (mandatory safety first)
+                         -> AccessibilityService / LocalizationService
+                         -> terminal, tkinter, or offline voice presentation
+
+localized input -> Unicode safety normalization -> CommandAliasCatalog
+                -> existing IntentType -> existing parser / dispatcher / gateway
+```
+
+Internal IDs, enums, paths, timestamps, and database values remain locale-neutral.
+`LocaleFormatter` formats aware datetimes, zones, numbers, percentages, file sizes,
+durations, and lists only at presentation time. Command normalization uses NFKC for
+matching, rejects null bytes and bidi overrides, records zero-width removal, and
+preserves the exact `UserCommand` text. It is not applied to secrets, hashes, provider
+IDs, or authoritative paths.
+
+Keyboard shortcuts focus the command field or open help; they are blocked while a
+confirmation is pending and never approve an action. Destructive dialogs retain
+Cancel as the default focus. GUI status includes textual state, labels are text based,
+and high contrast does not use color as the only signal. Reduced motion suppresses
+future decorative motion; Omega currently has no essential animation.
+
+English is the complete authoritative catalog. Hindi is a partial preview, explicitly
+marked with coverage metadata, and missing or critical confirmation text falls back to
+English. Plugin translations require explicit permissions and remain under
+`plugin.<id>.*`; core confirmations cannot be overwritten. Optional local-AI
+translations are unverified drafts and cannot replace critical strings. See
+[accessibility.md](accessibility.md) and [localization.md](localization.md).

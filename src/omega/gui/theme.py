@@ -15,8 +15,17 @@ class ThemeManager:
     def apply(self, theme: str, font_size: int) -> dict[str, str]:
         """Apply one validated theme and return text-widget colors."""
 
-        selected = theme if theme in {"system", "light", "dark"} else "system"
-        if selected == "dark":
+        selected = (
+            theme if theme in {"system", "light", "dark", "high-contrast"} else "system"
+        )
+        if selected == "high-contrast":
+            background = "#000000"
+            surface = "#000000"
+            foreground = "#ffffff"
+            accent = "#ffff00"
+            muted = "#ffffff"
+            self.style.theme_use("clam")
+        elif selected == "dark":
             background = "#202124"
             surface = "#292a2d"
             foreground = "#f1f3f4"

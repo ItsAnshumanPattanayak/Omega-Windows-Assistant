@@ -243,3 +243,23 @@ class SpeechSynthesisError(VoiceError):
 
 class VoiceStateError(VoiceError):
     """Raised for an invalid voice lifecycle transition."""
+
+
+class AccessibilityError(OmegaError):
+    """Base exception for accessibility and localization failures."""
+
+
+class AccessibilityConfigurationError(ConfigurationError, AccessibilityError):
+    """Raised when accessibility policy is invalid or unsafe."""
+
+
+class LocalizationError(AccessibilityError):
+    """Raised when localization data cannot be used safely."""
+
+
+class LanguagePackValidationError(LocalizationError):
+    """Raised when a data-only language pack fails validation."""
+
+
+class UnicodeSafetyError(AccessibilityError):
+    """Raised when command text contains unsafe Unicode controls."""

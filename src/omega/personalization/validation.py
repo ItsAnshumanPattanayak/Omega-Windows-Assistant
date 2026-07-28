@@ -121,13 +121,17 @@ class PreferenceValidator:
         ):
             raise PreferenceValidationError("The display name is too long.")
         if (
-            key == "language"
+            key in {"language", "voice_language"}
             and isinstance(value, str)
             and not _LANGUAGE.fullmatch(value)
         ):
             raise PreferenceValidationError("The language code is invalid.")
         if key == "locale" and isinstance(value, str) and not _LOCALE.fullmatch(value):
             raise PreferenceValidationError("The locale identifier is invalid.")
+        if key == "wake_word_aliases" and isinstance(value, str):
+            aliases = tuple(part.strip() for part in value.split(",") if part.strip())
+            if len(aliases) > 10 or any(len(alias) > 80 for alias in aliases):
+                raise PreferenceValidationError("Wake-word aliases exceed safe bounds.")
         if key == "time_zone" and value != "system":
             try:
                 ZoneInfo(str(value))

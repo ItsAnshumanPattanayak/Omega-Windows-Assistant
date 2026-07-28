@@ -48,6 +48,9 @@ class PluginPermission(StrEnum):
     READ_NON_SENSITIVE_PREFERENCES = "read_non_sensitive_preferences"
     REGISTER_PLUGIN_PREFERENCES = "register_plugin_preferences"
     WRITE_PLUGIN_PREFERENCES = "write_plugin_preferences"
+    REGISTER_LOCALIZATION_CATALOG = "register_localization_catalog"
+    REGISTER_COMMAND_ALIASES = "register_command_aliases"
+    REGISTER_ACCESSIBILITY_PANEL = "register_accessibility_panel"
 
 
 class PluginCapability(StrEnum):

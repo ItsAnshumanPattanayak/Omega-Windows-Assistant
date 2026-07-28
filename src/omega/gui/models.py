@@ -89,6 +89,11 @@ class GuiPreferences:
     window_width: int = 1100
     window_height: int = 720
     maximized: bool = False
+    font_scale: float = 1.0
+    high_contrast: bool = False
+    reduced_motion: bool = False
+    keyboard_hints: bool = True
+    screen_reader_friendly: bool = False
 
     @classmethod
     def from_values(cls, values: dict[str, object]) -> GuiPreferences:
@@ -96,7 +101,7 @@ class GuiPreferences:
 
         defaults = cls()
         theme = values.get("theme", defaults.theme)
-        if theme not in {"system", "light", "dark"}:
+        if theme not in {"system", "light", "dark", "high-contrast"}:
             theme = defaults.theme
         font_size = cls._bounded_int(values.get("font_size"), defaults.font_size, 9, 24)
         history_limit = cls._bounded_int(
@@ -124,6 +129,21 @@ class GuiPreferences:
             window_width=width,
             window_height=height,
             maximized=cls._boolean(values.get("maximized"), defaults.maximized),
+            font_scale=cls._bounded_float(
+                values.get("font_scale"), defaults.font_scale, 0.8, 2.0
+            ),
+            high_contrast=cls._boolean(
+                values.get("high_contrast"), defaults.high_contrast
+            ),
+            reduced_motion=cls._boolean(
+                values.get("reduced_motion"), defaults.reduced_motion
+            ),
+            keyboard_hints=cls._boolean(
+                values.get("keyboard_hints"), defaults.keyboard_hints
+            ),
+            screen_reader_friendly=cls._boolean(
+                values.get("screen_reader_friendly"), defaults.screen_reader_friendly
+            ),
         )
 
     @staticmethod
@@ -135,3 +155,12 @@ class GuiPreferences:
     @staticmethod
     def _boolean(value: object, default: bool) -> bool:
         return value if isinstance(value, bool) else default
+
+    @staticmethod
+    def _bounded_float(
+        value: object, default: float, minimum: float, maximum: float
+    ) -> float:
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return default
+        numeric = float(value)
+        return numeric if minimum <= numeric <= maximum else default

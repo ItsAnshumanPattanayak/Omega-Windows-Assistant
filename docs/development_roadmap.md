@@ -80,8 +80,15 @@ The approved roadmap is intentionally incremental. Each phase should be designed
     shared command/GUI/voice routing, and no telemetry, cloud sync, behavioral
     inference, or hidden profiling.
 
-26. **Phase 25 — Next:** to be defined after Phase 24 review.
+26. **Phase 25 — Accessibility and Multilingual Support — Completed:** bounded
+    accessibility preferences, keyboard and focus behavior, textual status output,
+    high contrast and font scaling, offline validated translation catalogs, complete
+    English fallback, partial Hindi preview, deterministic localized aliases,
+    Unicode command defenses, locale-aware formatting, and explicit plugin/AI/voice
+    boundaries.
 
-Later phases may cover additional Windows integrations, accessibility, packaging,
+27. **Phase 26 — Next:** to be defined after Phase 25 review.
+
+Later phases may cover additional Windows integrations, packaging,
 installer support, and release hardening. AI-assisted intent fallback remains disabled
 unless a future reviewed phase enables it under strict schema and confirmation rules.

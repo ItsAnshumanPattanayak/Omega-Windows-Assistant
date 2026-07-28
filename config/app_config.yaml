@@ -447,3 +447,36 @@ personalization:
   collect_usage_statistics: false
   enable_cloud_sync: false
   enable_behavioral_inference: false
+
+# Phase 25 accessibility presentation is local, bounded, and never weakens safety.
+accessibility:
+  enabled: true
+  screen_reader_friendly_mode: false
+  keyboard_navigation_enabled: true
+  show_keyboard_hints: true
+  high_contrast_enabled: false
+  reduced_motion_enabled: false
+  font_scale: 1.0
+  minimum_font_scale: 0.8
+  maximum_font_scale: 2.0
+  confirmation_timeout_multiplier: 1.0
+  maximum_confirmation_timeout_multiplier: 3.0
+  terminal_color_enabled: true
+  terminal_unicode_symbols_enabled: true
+  terminal_screen_reader_mode: false
+  spoken_response_mode: standard
+
+# Catalogs are data-only and offline. Hindi is an explicitly partial preview.
+localization:
+  enabled: true
+  default_language: en
+  default_locale: en_US
+  fallback_language: en
+  allow_partial_language_packs: false
+  maximum_catalog_bytes: 1048576
+  maximum_catalog_entries: 10000
+  maximum_message_characters: 10000
+  maximum_command_aliases_per_intent: 50
+  allow_external_translation_services: false
+  automatically_download_language_packs: false
+  allow_ai_translation_drafts: false
