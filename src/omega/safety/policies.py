@@ -1091,6 +1091,47 @@ class LocalAiPolicy(_IntentPolicy):
     )
 
 
+class PersonalizationReadWritePolicy(_IntentPolicy):
+    policy_id, priority = "SAFETY-PERSONALIZATION-001", 80
+    intents = frozenset(
+        {
+            IntentType.SHOW_PROFILE,
+            IntentType.SHOW_PREFERENCES,
+            IntentType.SHOW_PRIVACY_PREFERENCES,
+            IntentType.SHOW_REMEMBERED_PREFERENCES,
+            IntentType.SET_PREFERENCE,
+            IntentType.SET_SESSION_PREFERENCE,
+            IntentType.RESET_SESSION_PREFERENCES,
+            IntentType.RESET_PREFERENCE_CATEGORY,
+            IntentType.EXPORT_PROFILE,
+            IntentType.CREATE_PROFILE,
+            IntentType.SWITCH_PROFILE,
+            IntentType.LIST_PROFILES,
+        }
+    )
+    disposition, reason_code, message = (
+        PolicyDisposition.ALLOW,
+        "BOUNDED_PERSONALIZATION_ALLOWED",
+        "Explicit bounded local preference operations are allowed.",
+    )
+
+
+class PersonalizationBroadChangePolicy(_IntentPolicy):
+    policy_id, priority = "SAFETY-PERSONALIZATION-CONFIRM-001", 70
+    intents = frozenset(
+        {
+            IntentType.RESET_ALL_PREFERENCES,
+            IntentType.IMPORT_PROFILE,
+            IntentType.DELETE_PROFILE,
+        }
+    )
+    disposition, reason_code, message = (
+        PolicyDisposition.REQUIRE_CONFIRMATION,
+        "PERSONALIZATION_BROAD_CHANGE_CONFIRMATION",
+        "Profile import, deletion, and broad reset require exact confirmation.",
+    )
+
+
 DEFAULT_POLICIES = cast(
     tuple[SafetyPolicy, ...],
     (
@@ -1118,6 +1159,7 @@ DEFAULT_POLICIES = cast(
         WorkflowDeletionPolicy(),
         WorkflowConfirmationPolicy(),
         PluginMutationPolicy(),
+        PersonalizationBroadChangePolicy(),
         ApplicationOpenPolicy(),
         ApplicationStatusPolicy(),
         FileReadPolicy(),
@@ -1145,6 +1187,7 @@ DEFAULT_POLICIES = cast(
         PluginReadPolicy(),
         PluginControlPolicy(),
         LocalAiPolicy(),
+        PersonalizationReadWritePolicy(),
     ),
 )
 

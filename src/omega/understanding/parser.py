@@ -156,6 +156,18 @@ _AI_NO_PARAMETER = frozenset(
         IntentType.START_AI_CONVERSATION,
     }
 )
+_PERSONALIZATION_NO_PARAMETER = frozenset(
+    {
+        IntentType.SHOW_PROFILE,
+        IntentType.SHOW_PREFERENCES,
+        IntentType.SHOW_PRIVACY_PREFERENCES,
+        IntentType.SHOW_REMEMBERED_PREFERENCES,
+        IntentType.RESET_SESSION_PREFERENCES,
+        IntentType.RESET_ALL_PREFERENCES,
+        IntentType.EXPORT_PROFILE,
+        IntentType.LIST_PROFILES,
+    }
+)
 
 
 class CommandParser:
@@ -332,6 +344,15 @@ class CommandParser:
             return [], None
         if intent in _AI_NO_PARAMETER:
             return [], None
+        if intent in _PERSONALIZATION_NO_PARAMETER:
+            return [], None
+        if intent in {
+            IntentType.SET_PREFERENCE,
+            IntentType.SET_SESSION_PREFERENCE,
+        } and not {"preference_key", "preference_value"}.issubset(names):
+            return [
+                "preference_value"
+            ], "Which supported preference and value should I use?"
         if intent is IntentType.LOAD_LOCAL_AI_MODEL and "ai_model" not in names:
             return ["ai_model"], "Which configured local AI model should I load?"
         if intent is IntentType.ASK_LOCAL_AI and "ai_request" not in names:

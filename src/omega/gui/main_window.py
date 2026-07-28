@@ -159,6 +159,11 @@ class OmegaMainWindow(GuiView):
             ("AI models", self.controller.list_local_ai_models),
             ("Cancel AI", self.controller.cancel_ai_generation),
             ("Clear AI context", self.controller.clear_ai_conversation),
+            ("My profile", self.controller.show_profile),
+            ("Preferences", self.controller.show_preferences),
+            ("Privacy settings", self.controller.show_privacy_preferences),
+            ("Export profile", self.controller.export_profile),
+            ("Reset session prefs", self.controller.reset_session_preferences),
         )
         self.operation_buttons: list[ttk.Button] = []
         for toolbar_index, (label, command) in enumerate(actions):

@@ -422,3 +422,28 @@ local_ai:
   expose_model_debug_output: false
   log_prompts: false
   log_responses: false
+
+# Phase 24 personalization stores only explicit, local, validated preferences.
+personalization:
+  enabled: true
+  multiple_profiles_enabled: false
+  maximum_profiles: 5
+  maximum_preference_value_characters: 10000
+  maximum_profile_name_characters: 80
+  maximum_display_name_characters: 120
+  maximum_export_bytes: 1048576
+  default_response_verbosity: standard
+  default_language: en
+  default_time_format: system
+  default_date_format: system
+  default_unit_system: system
+  persist_session_preferences: false
+  enable_personalized_greetings: true
+  allow_sensitive_preference_storage: false
+  require_confirmation_for_profile_reset: true
+  require_confirmation_for_profile_import: true
+  require_confirmation_for_profile_delete: true
+  expose_preference_resolution_debug: false
+  collect_usage_statistics: false
+  enable_cloud_sync: false
+  enable_behavioral_inference: false

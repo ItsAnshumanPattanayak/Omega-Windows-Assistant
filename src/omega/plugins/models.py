@@ -45,6 +45,9 @@ class PluginPermission(StrEnum):
     PUBLISH_NOTIFICATION = "publish_notification"
     USE_LOCAL_AI_GENERATION = "use_local_ai_generation"
     USE_LOCAL_AI_EMBEDDINGS = "use_local_ai_embeddings"
+    READ_NON_SENSITIVE_PREFERENCES = "read_non_sensitive_preferences"
+    REGISTER_PLUGIN_PREFERENCES = "register_plugin_preferences"
+    WRITE_PLUGIN_PREFERENCES = "write_plugin_preferences"
 
 
 class PluginCapability(StrEnum):

@@ -24,7 +24,7 @@ def repository(tmp_path: Path) -> tuple[PluginRepository, DatabaseConnectionFact
     factory = DatabaseConnectionFactory(
         DatabaseConfiguration(), database_path=tmp_path / "omega.db"
     )
-    assert MigrationRunner(factory).migrate() == 13
+    assert MigrationRunner(factory).migrate() == 14
     return PluginRepository(factory), factory
 
 

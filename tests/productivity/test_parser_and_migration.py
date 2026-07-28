@@ -5,7 +5,7 @@ from omega.understanding import CommandParser
 
 def test_phase16_is_contiguous_schema_version() -> None:
     assert PRODUCTIVITY_SCHEMA_VERSION == 7
-    assert LATEST_SCHEMA_VERSION == 13
+    assert LATEST_SCHEMA_VERSION == 14
 
 
 def test_productivity_commands_use_the_existing_parser() -> None:

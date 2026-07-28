@@ -706,3 +706,33 @@ operation type and content-omission markers. Conversation context is bounded,
 session-local, and explicitly clearable. Existing keyword search, extractive answers,
 deterministic email summaries, calendar logic, notes, tasks, workflows, GUI, voice,
 and command parsing continue when AI is unavailable. See [local_ai.md](local_ai.md).
+
+## Phase 24 privacy-first personalization
+
+```text
+terminal / tkinter GUI / offline voice
+        -> deterministic CommandParser
+        -> PreferenceDispatcher
+        -> SafeExecutionGateway (mandatory policy wins)
+        -> PreferenceService
+             -> PreferenceValidator / PreferenceResolver
+             -> SqlitePreferenceRepository (migration 14)
+        -> explicit formatted result with private values omitted from history
+```
+
+Definitions, validation, persistence, deterministic resolution, transfer, command
+dispatch, and presentation adapters are separate. Precedence is mandatory safety,
+session override, active profile, persisted value, application configuration, then
+built-in default. The default profile is protected; session overrides are held only
+in memory and cleared on session end or profile switch.
+
+Migration 14 adds user profiles, bounded preference values, one active-profile row,
+and plugin-owned namespaces. It does not store credentials, private domain bodies,
+clipboard/screenshot/document content, AI prompts/responses, or inferred traits.
+Import is JSON-only with size/schema/value validation, preview, and confirmation.
+
+Workflow access uses an allowlist and revalidates application/folder values. Plugin
+access uses Phase 22 version- and fingerprint-bound permissions and namespace
+isolation. Local AI receives only an explicitly requested minimal preference.
+Formatting never shortens safety warnings or confirmation details. See
+[personalization.md](personalization.md).

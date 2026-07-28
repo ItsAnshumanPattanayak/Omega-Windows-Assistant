@@ -334,6 +334,21 @@
     "cancel_ai_generation": {"enabled": true, "maximum_risk": "low"},
     "clear_ai_conversation": {"enabled": true, "maximum_risk": "low"},
     "show_ai_context_status": {"enabled": true, "maximum_risk": "low"},
-    "start_ai_conversation": {"enabled": true, "maximum_risk": "low"}
+    "start_ai_conversation": {"enabled": true, "maximum_risk": "low"},
+    "show_profile": {"enabled": true, "maximum_risk": "low"},
+    "show_preferences": {"enabled": true, "maximum_risk": "low"},
+    "show_privacy_preferences": {"enabled": true, "maximum_risk": "low"},
+    "show_remembered_preferences": {"enabled": true, "maximum_risk": "low"},
+    "set_preference": {"enabled": true, "maximum_risk": "low"},
+    "set_session_preference": {"enabled": true, "maximum_risk": "low"},
+    "reset_session_preferences": {"enabled": true, "maximum_risk": "low"},
+    "reset_preference_category": {"enabled": true, "maximum_risk": "low"},
+    "reset_all_preferences": {"enabled": true, "maximum_risk": "medium", "requires_confirmation": true},
+    "export_profile": {"enabled": true, "maximum_risk": "low"},
+    "import_profile": {"enabled": true, "maximum_risk": "medium", "requires_confirmation": true},
+    "create_profile": {"enabled": true, "maximum_risk": "low"},
+    "switch_profile": {"enabled": true, "maximum_risk": "low"},
+    "list_profiles": {"enabled": true, "maximum_risk": "low"},
+    "delete_profile": {"enabled": true, "maximum_risk": "medium", "requires_confirmation": true}
   }
 }

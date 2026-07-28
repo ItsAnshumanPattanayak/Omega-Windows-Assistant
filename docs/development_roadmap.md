@@ -73,7 +73,14 @@ The approved roadmap is intentionally incremental. Each phase should be designed
     adapters, fingerprint-bound plugin permission enforcement, shared
     command/GUI/voice routing, privacy-minimized receipts, and deterministic fallback.
 
-25. **Phase 24 — Next:** to be defined after Phase 23 review.
+25. **Phase 24 — Privacy-First Personalization — Completed:** explicit local
+    profiles, allowlisted validated preferences, session overrides, deterministic
+    safety-dominant precedence, SQLite migration 14, bounded JSON export/import,
+    registered application and folder aliases, narrow workflow/plugin/AI access,
+    shared command/GUI/voice routing, and no telemetry, cloud sync, behavioral
+    inference, or hidden profiling.
+
+26. **Phase 25 — Next:** to be defined after Phase 24 review.
 
 Later phases may cover additional Windows integrations, accessibility, packaging,
 installer support, and release hardening. AI-assisted intent fallback remains disabled

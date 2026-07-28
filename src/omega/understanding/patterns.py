@@ -20,6 +20,59 @@ def _rule(name: str, intent: IntentType, expression: str) -> IntentPattern:
 
 
 INTENT_PATTERNS = (
+    _rule("show_profile", IntentType.SHOW_PROFILE, r"^(?:show|display) my profile$"),
+    _rule(
+        "show_preferences",
+        IntentType.SHOW_PREFERENCES,
+        r"^(?:show|list|display) my preferences$",
+    ),
+    _rule(
+        "show_privacy_preferences",
+        IntentType.SHOW_PRIVACY_PREFERENCES,
+        r"^show my privacy preferences$",
+    ),
+    _rule(
+        "show_remembered_preferences",
+        IntentType.SHOW_REMEMBERED_PREFERENCES,
+        r"^show what omega remembers about (?:me|my preferences)$",
+    ),
+    _rule(
+        "reset_session_preferences",
+        IntentType.RESET_SESSION_PREFERENCES,
+        r"^(?:reset|clear) session preferences$",
+    ),
+    _rule(
+        "reset_preference_category",
+        IntentType.RESET_PREFERENCE_CATEGORY,
+        r"^reset (?:my )?(?:voice|gui|notification|email|calendar|workflow|"
+        r"local ai|accessibility|privacy|application|folder) preferences$",
+    ),
+    _rule(
+        "reset_all_preferences",
+        IntentType.RESET_ALL_PREFERENCES,
+        r"^(?:reset all preferences|clear personalization data)$",
+    ),
+    _rule("export_profile", IntentType.EXPORT_PROFILE, r"^export my profile$"),
+    _rule("import_profile", IntentType.IMPORT_PROFILE, r"^import profile from .+$"),
+    _rule("create_profile", IntentType.CREATE_PROFILE, r"^create profile .+$"),
+    _rule("switch_profile", IntentType.SWITCH_PROFILE, r"^switch to profile .+$"),
+    _rule("list_profiles", IntentType.LIST_PROFILES, r"^(?:show|list) profiles$"),
+    _rule("delete_profile", IntentType.DELETE_PROFILE, r"^delete profile .+$"),
+    _rule(
+        "session_preference",
+        IntentType.SET_SESSION_PREFERENCE,
+        r"^(?:be concise|use detailed explanations|speak more slowly|"
+        r"do not speak responses|use (?:12|24)-hour time|use dark mode) "
+        r"for this session$",
+    ),
+    _rule(
+        "set_preference",
+        IntentType.SET_PREFERENCE,
+        r"^(?:remember my .+|set my .+|call me .+|keep responses "
+        r"(?:concise|standard|detailed)|use (?:concise|standard|detailed) "
+        r"responses|use (?:12|24)-hour time|enable quiet hours from .+ to .+|"
+        r"disable spoken responses|speak more slowly)$",
+    ),
     _rule(
         "show_local_ai_status",
         IntentType.SHOW_LOCAL_AI_STATUS,

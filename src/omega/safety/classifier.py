@@ -124,6 +124,18 @@ _LOW = frozenset(
         IntentType.CLEAR_AI_CONVERSATION,
         IntentType.SHOW_AI_CONTEXT_STATUS,
         IntentType.START_AI_CONVERSATION,
+        IntentType.SHOW_PROFILE,
+        IntentType.SHOW_PREFERENCES,
+        IntentType.SHOW_PRIVACY_PREFERENCES,
+        IntentType.SHOW_REMEMBERED_PREFERENCES,
+        IntentType.SET_PREFERENCE,
+        IntentType.SET_SESSION_PREFERENCE,
+        IntentType.RESET_SESSION_PREFERENCES,
+        IntentType.RESET_PREFERENCE_CATEGORY,
+        IntentType.EXPORT_PROFILE,
+        IntentType.CREATE_PROFILE,
+        IntentType.SWITCH_PROFILE,
+        IntentType.LIST_PROFILES,
     }
 )
 _MEDIUM = frozenset(
@@ -221,6 +233,9 @@ _MEDIUM = frozenset(
         IntentType.RELOAD_PLUGIN,
         IntentType.LOAD_LOCAL_AI_MODEL,
         IntentType.UNLOAD_LOCAL_AI_MODEL,
+        IntentType.RESET_ALL_PREFERENCES,
+        IntentType.IMPORT_PROFILE,
+        IntentType.DELETE_PROFILE,
     }
 )
 _HIGH = frozenset(

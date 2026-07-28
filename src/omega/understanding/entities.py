@@ -194,6 +194,17 @@ _AI_INTENTS = frozenset(
         IntentType.START_AI_CONVERSATION,
     }
 )
+_PERSONALIZATION_INTENTS = frozenset(
+    {
+        IntentType.SET_PREFERENCE,
+        IntentType.SET_SESSION_PREFERENCE,
+        IntentType.RESET_PREFERENCE_CATEGORY,
+        IntentType.IMPORT_PROFILE,
+        IntentType.CREATE_PROFILE,
+        IntentType.SWITCH_PROFILE,
+        IntentType.DELETE_PROFILE,
+    }
+)
 _KNOWLEDGE_INTENTS = frozenset(
     {
         IntentType.CREATE_KNOWLEDGE_COLLECTION,
@@ -237,7 +248,9 @@ class RuleBasedEntityExtractor:
 
     def extract(self, original: str, intent: IntentType) -> list[CommandEntity]:
         entities: list[CommandEntity] = []
-        if intent in _AI_INTENTS:
+        if intent in _PERSONALIZATION_INTENTS:
+            self._personalization(original, intent, entities)
+        elif intent in _AI_INTENTS:
             self._ai(original, intent, entities)
         elif intent in _PLUGIN_INTENTS:
             self._plugin(original, intent, entities)
@@ -330,6 +343,121 @@ class RuleBasedEntityExtractor:
         }:
             self._folder_command(original, intent, entities)
         return entities
+
+    @staticmethod
+    def _personalization(
+        original: str, intent: IntentType, entities: list[CommandEntity]
+    ) -> None:
+        text = original.strip()
+        if intent in {
+            IntentType.CREATE_PROFILE,
+            IntentType.SWITCH_PROFILE,
+            IntentType.DELETE_PROFILE,
+        }:
+            name = re.sub(
+                r"^(?:create profile|switch to profile|delete profile)\s+",
+                "",
+                text,
+                flags=re.IGNORECASE,
+            ).strip()
+            entities.append(_entity(EntityType.PROFILE, "profile_name", name, name))
+            return
+        if intent is IntentType.IMPORT_PROFILE:
+            path = re.sub(
+                r"^import profile from\s+", "", text, flags=re.IGNORECASE
+            ).strip()
+            entities.append(_entity(EntityType.PATH, "import_path", path, path))
+            return
+        if intent is IntentType.RESET_PREFERENCE_CATEGORY:
+            match = re.search(
+                r"(voice|gui|notification|email|calendar|workflow|local ai|"
+                r"accessibility|privacy|application|folder)",
+                text,
+                re.IGNORECASE,
+            )
+            if match:
+                category = match.group(1).casefold().replace(" ", "_")
+                category = {
+                    "notification": "notifications",
+                    "workflow": "workflows",
+                    "application": "applications",
+                    "folder": "files_folders",
+                }.get(category, category)
+                entities.append(
+                    _entity(
+                        EntityType.PREFERENCE,
+                        "preference_category",
+                        category,
+                        match.group(1),
+                    )
+                )
+            return
+        lowered = text.casefold()
+        key: str | None = None
+        value: JsonValue | None = None
+        if lowered.startswith("call me "):
+            key, value = "display_name", text[8:].strip()
+        elif "concise" in lowered:
+            key, value = "response_verbosity", "concise"
+        elif "detailed" in lowered:
+            key, value = "response_verbosity", "detailed"
+        elif "24-hour time" in lowered:
+            key, value = "time_format", "24-hour"
+        elif "12-hour time" in lowered:
+            key, value = "time_format", "12-hour"
+        elif "dark mode" in lowered:
+            key, value = "theme", "dark"
+        elif "do not speak" in lowered or "disable spoken" in lowered:
+            key, value = "speech_enabled", False
+        elif "speak more slowly" in lowered:
+            key, value = "speech_rate", 140
+        else:
+            match = re.match(
+                r"^(?:remember my|set my)\s+(.+?)\s+(?:is|to)\s+(.+)$",
+                text,
+                re.IGNORECASE,
+            )
+            if match:
+                label = match.group(1).casefold().replace("preferred ", "default ")
+                key = {
+                    "default browser": "default_browser",
+                    "default editor": "default_editor",
+                    "time zone": "time_zone",
+                }.get(label, label.replace(" ", "_"))
+                value = match.group(2).strip()
+        quiet = re.match(
+            r"^enable quiet hours from\s+(.+)\s+to\s+(.+)$", text, re.IGNORECASE
+        )
+        if quiet:
+            key = "quiet_hours"
+            start = RuleBasedEntityExtractor._clock_time(quiet.group(1))
+            end = RuleBasedEntityExtractor._clock_time(quiet.group(2))
+            value = f"{start}-{end}"
+        if key is not None:
+            entities.append(_entity(EntityType.PREFERENCE, "preference_key", key, key))
+            entities.append(
+                _entity(
+                    EntityType.PREFERENCE_VALUE, "preference_value", value, str(value)
+                )
+            )
+
+    @staticmethod
+    def _clock_time(value: str) -> str:
+        match = re.fullmatch(
+            r"\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*", value, re.IGNORECASE
+        )
+        if match is None:
+            return value.strip()
+        hour, minute, suffix = (
+            int(match.group(1)),
+            int(match.group(2) or 0),
+            match.group(3),
+        )
+        if suffix:
+            hour %= 12
+            if suffix.casefold() == "pm":
+                hour += 12
+        return f"{hour:02d}:{minute:02d}"
 
     @staticmethod
     def _ai(original: str, intent: IntentType, entities: list[CommandEntity]) -> None:

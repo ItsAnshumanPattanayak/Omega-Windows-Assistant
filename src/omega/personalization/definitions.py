@@ -1,0 +1,184 @@
+"""Allowlisted preference definitions and mandatory safety values."""
+
+from omega.personalization.models import PreferenceCategory as C
+from omega.personalization.models import PreferenceDefinition
+
+
+def _d(
+    key: str,
+    category: C,
+    kind: str,
+    default: object,
+    *,
+    choices: tuple[object, ...] = (),
+    workflow: bool = False,
+    plugin: bool = False,
+) -> PreferenceDefinition:
+    return PreferenceDefinition(
+        key,
+        category,
+        kind,
+        default,  # type: ignore[arg-type]
+        choices,  # type: ignore[arg-type]
+        workflow_accessible=workflow,
+        plugin_readable=plugin,
+    )
+
+
+DEFINITIONS = tuple(
+    {
+        item.key: item
+        for item in (
+            _d("display_name", C.GENERAL, "string", ""),
+            _d("form_of_address", C.GENERAL, "string", ""),
+            _d("language", C.GENERAL, "string", "en", plugin=True),
+            _d("locale", C.GENERAL, "string", "en-US"),
+            _d("time_zone", C.GENERAL, "string", "system", plugin=True),
+            _d(
+                "date_format",
+                C.GENERAL,
+                "string",
+                "system",
+                choices=("system", "iso", "day-first", "month-first"),
+                workflow=True,
+            ),
+            _d(
+                "time_format",
+                C.GENERAL,
+                "string",
+                "system",
+                choices=("system", "12-hour", "24-hour"),
+                workflow=True,
+                plugin=True,
+            ),
+            _d(
+                "unit_system",
+                C.GENERAL,
+                "string",
+                "system",
+                choices=("system", "metric", "imperial"),
+            ),
+            _d("greeting_enabled", C.GENERAL, "boolean", True),
+            _d(
+                "greeting_style",
+                C.GENERAL,
+                "string",
+                "standard",
+                choices=("brief", "standard", "warm"),
+            ),
+            _d(
+                "response_verbosity",
+                C.GENERAL,
+                "string",
+                "standard",
+                choices=("concise", "standard", "detailed"),
+                plugin=True,
+            ),
+            _d(
+                "default_browser",
+                C.APPLICATIONS,
+                "string",
+                "",
+                workflow=True,
+                plugin=True,
+            ),
+            _d(
+                "default_editor",
+                C.APPLICATIONS,
+                "string",
+                "",
+                workflow=True,
+                plugin=True,
+            ),
+            _d("preferred_terminal", C.APPLICATIONS, "string", ""),
+            _d("preferred_media_player", C.APPLICATIONS, "string", ""),
+            _d("workspace_alias", C.FILES_FOLDERS, "string", "", workflow=True),
+            _d("screenshot_folder_alias", C.FILES_FOLDERS, "string", ""),
+            _d("export_folder_alias", C.FILES_FOLDERS, "string", "", workflow=True),
+            _d(
+                "note_export_format",
+                C.FILES_FOLDERS,
+                "string",
+                "markdown",
+                choices=("markdown", "json", "text"),
+            ),
+            _d("speech_enabled", C.VOICE, "boolean", False),
+            _d("speech_rate", C.VOICE, "integer", 180),
+            _d("speech_volume", C.VOICE, "number", 1.0),
+            _d(
+                "spoken_response_length",
+                C.VOICE,
+                "string",
+                "concise",
+                choices=("concise", "standard"),
+            ),
+            _d("startup_tab", C.GUI, "string", "assistant"),
+            _d(
+                "theme",
+                C.GUI,
+                "string",
+                "system",
+                choices=("system", "light", "dark", "high-contrast"),
+            ),
+            _d("font_scaling", C.ACCESSIBILITY, "number", 1.0),
+            _d("high_contrast", C.ACCESSIBILITY, "boolean", False),
+            _d("reduced_motion", C.ACCESSIBILITY, "boolean", False),
+            _d("keyboard_navigation", C.ACCESSIBILITY, "boolean", True),
+            _d("confirmation_timeout_seconds", C.ACCESSIBILITY, "integer", 30),
+            _d("notifications_enabled", C.NOTIFICATIONS, "boolean", True),
+            _d("quiet_hours", C.NOTIFICATIONS, "time_range", ""),
+            _d("maximum_notifications", C.NOTIFICATIONS, "integer", 20),
+            _d("working_hours", C.CALENDAR, "time_range", ""),
+            _d("default_event_duration_minutes", C.CALENDAR, "integer", 30),
+            _d("calendar_reminder_minutes", C.CALENDAR, "integer", 15),
+            _d(
+                "email_drafting_tone",
+                C.EMAIL,
+                "string",
+                "neutral",
+                choices=("concise", "neutral", "formal", "friendly"),
+            ),
+            _d("email_signature_included", C.EMAIL, "boolean", False),
+            _d(
+                "email_summary_length",
+                C.EMAIL,
+                "string",
+                "standard",
+                choices=("concise", "standard", "detailed"),
+            ),
+            _d("ai_preferred_model", C.LOCAL_AI, "string", ""),
+            _d(
+                "ai_response_length",
+                C.LOCAL_AI,
+                "string",
+                "standard",
+                choices=("concise", "standard", "detailed"),
+            ),
+            _d("ai_grounded_answers", C.LOCAL_AI, "boolean", True),
+            _d("ai_deterministic_fallback", C.LOCAL_AI, "boolean", True),
+            _d("ai_conversation_context", C.LOCAL_AI, "boolean", False),
+            _d("ai_maximum_context_turns", C.LOCAL_AI, "integer", 5),
+            _d("workflow_stop_on_failure", C.WORKFLOWS, "boolean", True),
+            _d("workflow_preview_required", C.WORKFLOWS, "boolean", True),
+            _d("workflow_run_confirmation", C.WORKFLOWS, "boolean", True),
+            _d("workflow_history_length", C.WORKFLOWS, "integer", 20),
+            _d("workflow_timeout_seconds", C.WORKFLOWS, "integer", 300),
+            _d("ai_conversation_history", C.PRIVACY, "boolean", False),
+            _d("clipboard_history", C.PRIVACY, "boolean", False),
+            _d("notification_history", C.PRIVACY, "boolean", False),
+            _d("generated_text_history", C.PRIVACY, "boolean", False),
+            _d("usage_statistics", C.PRIVACY, "boolean", False),
+            _d("mandatory_confirmations", C.PRIVACY, "boolean", True),
+            _d("cloud_sync", C.PRIVACY, "boolean", False),
+            _d("behavioral_inference", C.PRIVACY, "boolean", False),
+        )
+    }.values()
+)
+DEFINITION_MAP = {item.key: item for item in DEFINITIONS}
+SAFETY_VALUES = {
+    "mandatory_confirmations": True,
+    "cloud_sync": False,
+    "behavioral_inference": False,
+    "usage_statistics": False,
+    "workflow_run_confirmation": True,
+}

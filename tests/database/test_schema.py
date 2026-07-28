@@ -35,7 +35,7 @@ def test_schema_initialization_creates_all_version_records(
         ).fetchall()
 
         assert version == LATEST_SCHEMA_VERSION
-        assert [int(row["version"]) for row in rows] == list(range(1, 14))
+        assert [int(row["version"]) for row in rows] == list(range(1, 15))
 
         assert [str(row["name"]) for row in rows] == [
             "phase_9a_database_foundation",
@@ -51,6 +51,7 @@ def test_schema_initialization_creates_all_version_records(
             "phase_19_calendar_operation_receipts",
             "phase_21_workflows",
             "phase_22_plugins",
+            "phase_24_personalization",
         ]
 
         assert all(row["applied_at"] for row in rows)
@@ -181,10 +182,10 @@ def test_schema_initialization_is_idempotent(
             """
         ).fetchone()
 
-        assert first == 13
-        assert second == 13
+        assert first == 14
+        assert second == 14
         assert count is not None
-        assert int(count[0]) == 13
+        assert int(count[0]) == 14
     finally:
         connection.close()
 

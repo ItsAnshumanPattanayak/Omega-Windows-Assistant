@@ -20,7 +20,8 @@ EMAIL_SCHEMA_VERSION = 10
 CALENDAR_SCHEMA_VERSION = 11
 WORKFLOW_SCHEMA_VERSION = 12
 PLUGIN_SCHEMA_VERSION = 13
-LATEST_SCHEMA_VERSION = PLUGIN_SCHEMA_VERSION
+PERSONALIZATION_SCHEMA_VERSION = 14
+LATEST_SCHEMA_VERSION = PERSONALIZATION_SCHEMA_VERSION
 
 BASELINE_MIGRATION_NAME = "phase_9a_database_foundation"
 COMMAND_MIGRATION_NAME = "phase_9b_command_repository"
@@ -35,6 +36,42 @@ EMAIL_MIGRATION_NAME = "phase_18_email_operation_receipts"
 CALENDAR_MIGRATION_NAME = "phase_19_calendar_operation_receipts"
 WORKFLOW_MIGRATION_NAME = "phase_21_workflows"
 PLUGIN_MIGRATION_NAME = "phase_22_plugins"
+PERSONALIZATION_MIGRATION_NAME = "phase_24_personalization"
+
+CREATE_USER_PROFILES_TABLE = """
+CREATE TABLE IF NOT EXISTS user_profiles (
+ profile_id TEXT PRIMARY KEY, name TEXT NOT NULL COLLATE NOCASE,
+ is_default INTEGER NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+ UNIQUE(name), CHECK(length(trim(name)) BETWEEN 1 AND 120),
+ CHECK(is_default IN (0,1))
+)
+"""
+CREATE_PREFERENCE_VALUES_TABLE = """
+CREATE TABLE IF NOT EXISTS preference_values (
+ profile_id TEXT NOT NULL, preference_key TEXT NOT NULL,
+ category TEXT NOT NULL, value_json TEXT NOT NULL, updated_at TEXT NOT NULL,
+ PRIMARY KEY(profile_id,preference_key),
+ FOREIGN KEY(profile_id) REFERENCES user_profiles(profile_id) ON DELETE CASCADE,
+ CHECK(length(preference_key) BETWEEN 1 AND 100),
+ CHECK(length(value_json) <= 50000)
+)
+"""
+CREATE_PROFILE_ACTIVATION_TABLE = """
+CREATE TABLE IF NOT EXISTS profile_activation (
+ singleton INTEGER PRIMARY KEY CHECK(singleton=1), profile_id TEXT,
+ updated_at TEXT NOT NULL,
+ FOREIGN KEY(profile_id) REFERENCES user_profiles(profile_id) ON DELETE SET NULL
+)
+"""
+CREATE_PLUGIN_PREFERENCE_VALUES_TABLE = """
+CREATE TABLE IF NOT EXISTS plugin_preference_values (
+ plugin_id TEXT NOT NULL, preference_key TEXT NOT NULL,
+ value_json TEXT NOT NULL, updated_at TEXT NOT NULL,
+ PRIMARY KEY(plugin_id,preference_key),
+ FOREIGN KEY(plugin_id) REFERENCES plugin_installations(plugin_id) ON DELETE CASCADE,
+ CHECK(length(preference_key) BETWEEN 1 AND 200), CHECK(length(value_json) <= 50000)
+)
+"""
 
 CREATE_PLUGIN_INSTALLATIONS_TABLE = """
 CREATE TABLE IF NOT EXISTS plugin_installations (
@@ -760,6 +797,33 @@ def apply_plugin_schema(connection: sqlite3.Connection) -> None:
         ) from error
 
 
+def apply_personalization_schema(connection: sqlite3.Connection) -> None:
+    """Create explicit local profiles and bounded preference values."""
+    try:
+        for statement in (
+            CREATE_USER_PROFILES_TABLE,
+            CREATE_PREFERENCE_VALUES_TABLE,
+            CREATE_PROFILE_ACTIVATION_TABLE,
+            CREATE_PLUGIN_PREFERENCE_VALUES_TABLE,
+            "CREATE INDEX IF NOT EXISTS idx_profiles_updated "
+            "ON user_profiles(updated_at DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_preferences_category "
+            "ON preference_values(profile_id,category)",
+            "CREATE INDEX IF NOT EXISTS idx_plugin_preferences_plugin "
+            "ON plugin_preference_values(plugin_id)",
+        ):
+            connection.execute(statement)
+        connection.execute(
+            "INSERT OR IGNORE INTO profile_activation"
+            "(singleton,profile_id,updated_at) VALUES (1,NULL,?)",
+            (utc_timestamp(),),
+        )
+    except sqlite3.Error as error:
+        raise DatabaseSchemaError(
+            "Omega could not create the personalization schema."
+        ) from error
+
+
 def _record_migration(
     connection: sqlite3.Connection,
     *,
@@ -873,6 +937,13 @@ def initialize_schema(
         apply_plugin_schema(connection)
         _record_migration(
             connection, version=PLUGIN_SCHEMA_VERSION, name=PLUGIN_MIGRATION_NAME
+        )
+
+        apply_personalization_schema(connection)
+        _record_migration(
+            connection,
+            version=PERSONALIZATION_SCHEMA_VERSION,
+            name=PERSONALIZATION_MIGRATION_NAME,
         )
 
         connection.commit()

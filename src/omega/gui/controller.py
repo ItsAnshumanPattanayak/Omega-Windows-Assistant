@@ -218,6 +218,21 @@ class GuiController:
     def clear_ai_conversation(self) -> bool:
         return self.submit_command("clear ai conversation")
 
+    def show_profile(self) -> bool:
+        return self.submit_command("show my profile")
+
+    def show_preferences(self) -> bool:
+        return self.submit_command("show my preferences")
+
+    def show_privacy_preferences(self) -> bool:
+        return self.submit_command("show my privacy preferences")
+
+    def export_profile(self) -> bool:
+        return self.submit_command("export my profile")
+
+    def reset_session_preferences(self) -> bool:
+        return self.submit_command("reset session preferences")
+
     def show_plugin(self, plugin_id: str) -> bool:
         return self.submit_command(f"show plugin {plugin_id}")
 

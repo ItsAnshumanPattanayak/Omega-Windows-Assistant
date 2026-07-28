@@ -74,7 +74,15 @@ All supported operations pass through the same command-processing and safety lif
 
 ## Current capabilities
 
-Omega currently includes functionality completed through **Phase 23**:
+Omega currently includes functionality completed through **Phase 24**:
+
+Phase 24 adds explicit local profiles, validated persisted and session-only
+preferences, deterministic safety-first precedence, bounded JSON export/import,
+registered application and approved folder aliases, quiet/working hours,
+accessibility settings, and narrow workflow, plugin, GUI, voice, and local-AI
+integration. It performs no telemetry, cloud sync, behavioral inference, or hidden
+profiling, and preferences cannot remove mandatory confirmations. See
+[docs/personalization.md](docs/personalization.md).
 
 Phase 23 adds an optional, disabled-by-default local-AI boundary for bounded text
 generation, summarization, citation-checked grounded answers, embeddings, and

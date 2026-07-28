@@ -17,6 +17,7 @@ from omega.database.configuration import DatabaseConfiguration
 from omega.desktop_utilities.configuration import DesktopUtilitiesConfiguration
 from omega.email.configuration import EmailConfiguration
 from omega.knowledge.configuration import KnowledgeConfiguration
+from omega.personalization.configuration import PersonalizationConfiguration
 from omega.plugins.configuration import PluginConfiguration
 from omega.productivity.configuration import ProductivityConfiguration
 from omega.scheduling.configuration import SchedulingConfiguration
@@ -89,6 +90,7 @@ class Settings:
     workflows: Mapping[str, Any] = field(default_factory=dict)
     plugins: Mapping[str, Any] = field(default_factory=dict)
     local_ai: Mapping[str, Any] = field(default_factory=dict)
+    personalization: Mapping[str, Any] = field(default_factory=dict)
 
     @property
     def application_name(self) -> str:
@@ -190,6 +192,12 @@ class Settings:
         """Return local-only AI policy without loading a provider or model."""
 
         return AiConfiguration.from_mapping(self.local_ai)
+
+    @property
+    def personalization_configuration(self) -> PersonalizationConfiguration:
+        """Return local privacy-first personalization policy."""
+
+        return PersonalizationConfiguration.from_mapping(self.personalization)
 
 
 def _defaults() -> dict[str, dict[str, Any]]:
@@ -341,6 +349,7 @@ def _defaults() -> dict[str, dict[str, Any]]:
         "workflows": {},
         "plugins": {},
         "local_ai": {},
+        "personalization": {},
     }
 
 
@@ -575,6 +584,7 @@ def _merge_defaults(
                 "workflows",
                 "plugins",
                 "local_ai",
+                "personalization",
             }
             else raw[section]
         )
@@ -652,5 +662,6 @@ def load_settings(
     WorkflowConfiguration.from_mapping(values["workflows"])
     PluginConfiguration.from_mapping(values["plugins"])
     AiConfiguration.from_mapping(values["local_ai"])
+    PersonalizationConfiguration.from_mapping(values["personalization"])
 
     return Settings(**values)

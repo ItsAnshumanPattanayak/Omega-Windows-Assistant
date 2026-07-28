@@ -23,6 +23,8 @@ from omega.database.schema import (
     KNOWLEDGE_SCHEMA_VERSION,
     KNOWLEDGE_SOURCE_INDEX_MIGRATION_NAME,
     KNOWLEDGE_SOURCE_INDEX_SCHEMA_VERSION,
+    PERSONALIZATION_MIGRATION_NAME,
+    PERSONALIZATION_SCHEMA_VERSION,
     PLUGIN_MIGRATION_NAME,
     PLUGIN_SCHEMA_VERSION,
     PRODUCTIVITY_MIGRATION_NAME,
@@ -42,6 +44,7 @@ from omega.database.schema import (
     apply_email_schema,
     apply_knowledge_schema,
     apply_knowledge_source_index_schema,
+    apply_personalization_schema,
     apply_plugin_schema,
     apply_productivity_schema,
     apply_recovery_schema,
@@ -135,6 +138,11 @@ WORKFLOW_MIGRATION = Migration(
 PLUGIN_MIGRATION = Migration(
     PLUGIN_SCHEMA_VERSION, PLUGIN_MIGRATION_NAME, apply_plugin_schema
 )
+PERSONALIZATION_MIGRATION = Migration(
+    PERSONALIZATION_SCHEMA_VERSION,
+    PERSONALIZATION_MIGRATION_NAME,
+    apply_personalization_schema,
+)
 
 DEFAULT_MIGRATIONS = (
     BASELINE_MIGRATION,
@@ -150,6 +158,7 @@ DEFAULT_MIGRATIONS = (
     CALENDAR_MIGRATION,
     WORKFLOW_MIGRATION,
     PLUGIN_MIGRATION,
+    PERSONALIZATION_MIGRATION,
 )
 
 

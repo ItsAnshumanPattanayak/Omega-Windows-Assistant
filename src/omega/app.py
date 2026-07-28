@@ -75,6 +75,7 @@ from omega.execution import (
     HistoryActionDispatcher,
     KnowledgeActionDispatcher,
     PluginDispatcher,
+    PreferenceDispatcher,
     ProductivityActionDispatcher,
     SchedulingActionDispatcher,
     SystemActionDispatcher,
@@ -121,6 +122,17 @@ from omega.knowledge.extractors import (
 from omega.knowledge.semantic_search import UnavailableSemanticSearch
 from omega.knowledge.validation import KnowledgeFileValidator
 from omega.models._serialization import JsonValue
+from omega.personalization import (
+    PersonalizationContext,
+    PluginPreferenceAccess,
+    PreferenceResolver,
+    PreferenceService,
+    PreferenceValidator,
+    ProfileExportService,
+    ProfileImportService,
+    SqlitePreferenceRepository,
+    WorkflowPreferenceAccess,
+)
 from omega.plugins import (
     PluginDiscovery,
     PluginLifecycle,
@@ -268,6 +280,44 @@ class OmegaApplication:
         )
 
         registry = ApplicationRegistry.from_file()
+        personalization_configuration = self.settings.personalization_configuration
+        application_aliases = {
+            alias
+            for definition in registry.definitions
+            for alias in (definition.application_id, *definition.aliases)
+        }
+        self.preference_repository = SqlitePreferenceRepository(database_factory)
+        self.preference_resolver = PreferenceResolver(
+            self.preference_repository,
+            {
+                "response_verbosity": (
+                    personalization_configuration.default_response_verbosity
+                ),
+                "language": personalization_configuration.default_language,
+                "time_format": personalization_configuration.default_time_format,
+                "date_format": personalization_configuration.default_date_format,
+                "unit_system": personalization_configuration.default_unit_system,
+            },
+        )
+        self.preference_service = PreferenceService(
+            personalization_configuration,
+            self.preference_repository,
+            PreferenceValidator(
+                personalization_configuration,
+                application_aliases=application_aliases,
+            ),
+            self.preference_resolver,
+        )
+        self.profile_export_service = ProfileExportService(
+            self.preference_service, personalization_configuration
+        )
+        self.profile_import_service = ProfileImportService(
+            self.preference_service, personalization_configuration
+        )
+        self.personalization_context = PersonalizationContext(self.preference_resolver)
+        self.workflow_preference_access = WorkflowPreferenceAccess(
+            self.preference_resolver, self.preference_service
+        )
         application_manager = ApplicationManager(
             registry,
             WindowsApplicationDiscovery(logger=get_logger("applications.discovery")),
@@ -539,6 +589,17 @@ class OmegaApplication:
             ),
             PluginRegistry(),
         )
+        self.plugin_preference_access = PluginPreferenceAccess(
+            self.preference_resolver,
+            lambda plugin_id, version, fingerprint, permission: (
+                plugin_permissions.require(
+                    plugin_id,
+                    version,
+                    fingerprint,
+                    PluginPermission(permission),
+                )
+            ),
+        )
         ai_configuration = self.settings.ai_configuration
         ai_providers = AiProviderRegistry()
         if (
@@ -601,9 +662,14 @@ class OmegaApplication:
             self.notifications,
         )
 
+        personalized_user = dict(self.settings.user)
+        preferred_name = self.preference_resolver.resolve("display_name").value
+        if isinstance(preferred_name, str) and preferred_name.strip():
+            personalized_user["display_name"] = preferred_name
         self.session = OmegaSession(
-            self.settings.user,
+            personalized_user,
             self.settings.assistant,
+            greeting_builder=self.personalization_context.greeting,
             logger=get_logger("session"),
             application_dispatcher=ApplicationActionDispatcher(
                 application_manager,
@@ -670,6 +736,12 @@ class OmegaApplication:
                 safety_gateway,
             ),
             ai_dispatcher=AiDispatcher(self.ai_service, safety_gateway),
+            preference_dispatcher=PreferenceDispatcher(
+                self.preference_service,
+                self.profile_export_service,
+                self.profile_import_service,
+                safety_gateway,
+            ),
             safety_gateway=safety_gateway,
         )
         self.voice_configuration = self.settings.voice_configuration

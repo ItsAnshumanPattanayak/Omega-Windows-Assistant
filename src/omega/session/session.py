@@ -22,6 +22,7 @@ from omega.execution.folder_dispatcher import FolderActionDispatcher
 from omega.execution.history_dispatcher import HistoryActionDispatcher
 from omega.execution.knowledge_dispatcher import KnowledgeActionDispatcher
 from omega.execution.plugin_dispatcher import PluginDispatcher
+from omega.execution.preference_dispatcher import PreferenceDispatcher
 from omega.execution.productivity_dispatcher import ProductivityActionDispatcher
 from omega.execution.scheduling_dispatcher import SchedulingActionDispatcher
 from omega.execution.system_dispatcher import SystemActionDispatcher
@@ -55,6 +56,7 @@ class OmegaSession:
         *,
         monotonic_clock: Callable[[], float] = monotonic,
         now_provider: Callable[[], datetime] = datetime.now,
+        greeting_builder: Callable[[str, datetime], str] = greeting_for,
         logger: logging.Logger | None = None,
         parser: CommandParser | None = None,
         application_dispatcher: ApplicationActionDispatcher | None = None,
@@ -72,6 +74,7 @@ class OmegaSession:
         workflow_dispatcher: WorkflowDispatcher | None = None,
         plugin_dispatcher: PluginDispatcher | None = None,
         ai_dispatcher: AiDispatcher | None = None,
+        preference_dispatcher: PreferenceDispatcher | None = None,
         safety_gateway: SafeExecutionGateway | None = None,
     ) -> None:
         self.display_name = self._required_text(user_settings, "display_name")
@@ -84,6 +87,7 @@ class OmegaSession:
         self.timeout_seconds = self._timeout(assistant_settings)
         self._clock = monotonic_clock
         self._now_provider = now_provider
+        self._greeting_builder = greeting_builder
         self._logger = logger or logging.getLogger("omega.session")
         self._parser = parser or CommandParser()
         self._application_dispatcher = application_dispatcher
@@ -101,6 +105,7 @@ class OmegaSession:
         self._workflow_dispatcher = workflow_dispatcher
         self._plugin_dispatcher = plugin_dispatcher
         self._ai_dispatcher = ai_dispatcher
+        self._preference_dispatcher = preference_dispatcher
         self._safety_gateway = (
             safety_gateway
             or getattr(application_dispatcher, "gateway", None)
@@ -169,7 +174,7 @@ class OmegaSession:
         self.activated_at = now
         self.last_activity_at = now
         self._logger.info("Omega text session activated.")
-        return greeting_for(self.display_name, self._now_provider())
+        return self._greeting_builder(self.display_name, self._now_provider())
 
     def shutdown(self) -> str:
         """Safely terminate this terminal session."""
@@ -342,6 +347,10 @@ class OmegaSession:
                 ai_result = self._ai_dispatcher.dispatch(result)
                 if ai_result is not None:
                     return ai_result.user_message
+            if self._preference_dispatcher is not None:
+                preference_result = self._preference_dispatcher.dispatch(result)
+                if preference_result is not None:
+                    return preference_result.user_message
             if self._application_dispatcher is not None:
                 dispatched = self._application_dispatcher.dispatch(result)
                 if dispatched is not None:
@@ -388,3 +397,5 @@ class OmegaSession:
             self._plugin_dispatcher.clear_session()
         if self._ai_dispatcher is not None:
             self._ai_dispatcher.clear_session(self.session_id)
+        if self._preference_dispatcher is not None:
+            self._preference_dispatcher.clear_session(self.session_id)
