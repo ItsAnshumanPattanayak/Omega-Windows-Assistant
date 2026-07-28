@@ -13,7 +13,8 @@ from typing import Any
 
 from omega.accessibility.configuration import LocalizationConfiguration
 from omega.accessibility.models import LanguagePackDescriptor, MessageKey
-from omega.core.exceptions import LanguagePackValidationError
+from omega.core.exceptions import LanguagePackValidationError, SecurityValidationError
+from omega.security import JsonSecurityLimits, load_bounded_json
 
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 _EXECUTABLE = re.compile(
@@ -145,10 +146,17 @@ class LanguagePackValidator:
             size = resolved.stat().st_size
             if size > self.configuration.maximum_catalog_bytes:
                 raise LanguagePackValidationError("Translation catalog is too large.")
-            raw: Any = json.loads(resolved.read_text(encoding="utf-8"))
+            raw: Any = load_bounded_json(
+                resolved.read_bytes(),
+                JsonSecurityLimits(
+                    self.configuration.maximum_catalog_bytes,
+                    maximum_depth=3,
+                    maximum_items=self.configuration.maximum_catalog_entries * 2,
+                ),
+            )
         except LanguagePackValidationError:
             raise
-        except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        except (OSError, SecurityValidationError) as error:
             raise LanguagePackValidationError(
                 "Translation catalog could not be read safely."
             ) from error

@@ -44,3 +44,9 @@ workflow Morning Setup`, `validate workflow Morning Setup`, and `run Morning
 Setup`. The GUI exposes workflow listing, draft creation, and preview through the
 existing non-blocking controller. Optional providers may cause their associated
 step to fail safely without affecting workflow inspection.
+## Phase 26 import boundary
+
+Workflow JSON import now rejects duplicate keys, non-finite values, excessive bytes,
+nesting, and item counts before the existing allowlisted step/schema validation.
+Imported text and variables remain data and cannot create shell or dynamic-code
+steps. See [security.md](security.md).

@@ -6,8 +6,9 @@ import re
 from uuid import UUID
 
 from omega.accessibility import CommandAliasCatalog, create_default_aliases
-from omega.core.exceptions import UnicodeSafetyError
+from omega.core.exceptions import SecurityValidationError, UnicodeSafetyError
 from omega.models import CommandEntity, CommandSource, IntentType, UserCommand
+from omega.security import SecurityConfiguration, SecurityInputValidator
 from omega.understanding.aliases import ApplicationAliasRegistry
 from omega.understanding.entities import RuleBasedEntityExtractor
 from omega.understanding.intents import RuleBasedIntentDetector
@@ -181,6 +182,7 @@ class CommandParser:
         *,
         command_aliases: CommandAliasCatalog | None = None,
         language: str = "en",
+        security_configuration: SecurityConfiguration | None = None,
     ) -> None:
         self.aliases = aliases or ApplicationAliasRegistry.from_file()
         self.normalizer = CommandNormalizer()
@@ -188,6 +190,9 @@ class CommandParser:
         self.extractor = RuleBasedEntityExtractor(self.aliases)
         self.command_aliases = command_aliases or create_default_aliases()
         self.language = language
+        self.security_validator = SecurityInputValidator(
+            security_configuration or SecurityConfiguration()
+        )
 
     def parse(
         self,
@@ -196,6 +201,41 @@ class CommandParser:
         *,
         source: CommandSource = CommandSource.TEXT,
     ) -> CommandParseResult:
+        try:
+            security_input = self.security_validator.validate_command(original_text)
+        except SecurityValidationError as error:
+            command = UserCommand(
+                original_text,
+                normalized_text=None,
+                confidence=0.0,
+                source=source,
+                session_id=session_id,
+            )
+            return CommandParseResult(
+                command,
+                False,
+                True,
+                str(error),
+                warnings=["security_input_rejected"],
+            )
+        if security_input.high_risk_ambiguous:
+            command = UserCommand(
+                original_text,
+                normalized_text=None,
+                confidence=0.0,
+                source=source,
+                session_id=session_id,
+            )
+            return CommandParseResult(
+                command,
+                False,
+                True,
+                (
+                    "That sensitive input uses ambiguous mixed-script text and "
+                    "cannot be executed."
+                ),
+                warnings=["security_ambiguous_mixed_script"],
+            )
         try:
             normalized = self.normalizer.normalize(original_text)
         except UnicodeSafetyError as error:

@@ -10,6 +10,7 @@ from pathlib import Path
 from threading import RLock
 from uuid import UUID
 
+from omega.core.exceptions import SecurityValidationError
 from omega.database.lifecycle import ExecutionPersistence
 from omega.models import (
     Action,
@@ -37,6 +38,7 @@ from omega.safety.confirmations import (
 from omega.safety.messages import EXPIRED_CONFIRMATION, RESOURCE_CHANGED
 from omega.safety.models import ResourceFingerprint, SafetyContext, SafetyEvaluation
 from omega.safety.permissions import PermissionPolicyEngine
+from omega.security.invariants import require_dispatchable
 
 
 @dataclass(frozen=True)
@@ -91,6 +93,23 @@ class SafeExecutionGateway:
         fingerprint: ResourceFingerprint | None = None,
     ) -> GatewayDispatchResult:
         """Evaluate one typed proposal and never dispatch a denied action."""
+        try:
+            require_dispatchable(context)
+        except SecurityValidationError as error:
+            self._set_denied(context.action)
+            return GatewayDispatchResult(
+                context.command,
+                context.action,
+                self._failure(
+                    context.action,
+                    context.command,
+                    "SECURITY_INVARIANT_REJECTED",
+                    type(error).__name__,
+                    "Omega rejected that operation because it violated a mandatory "
+                    "security invariant. Nothing was changed.",
+                    ErrorCategory.SAFETY,
+                ),
+            )
         if self.persistence is not None:
             try:
                 self.persistence.record_proposal(context.command, context.action)
@@ -420,7 +439,10 @@ class SafeExecutionGateway:
             action=action,
             session_id=session_id,
             destination_path=Path(path_match.group(0)) if path_match else None,
-            additional_context={"shell_like": shell_like},
+            additional_context={
+                "shell_like": shell_like,
+                "unrecognized_guard": True,
+            },
         )
         return self.submit(
             context,

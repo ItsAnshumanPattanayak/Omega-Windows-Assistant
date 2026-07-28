@@ -14,3 +14,11 @@ must remain `false`. Catalogs default to 1 MiB, 10,000 entries, 10,000 character
 message, and 50 aliases per intent. Unknown settings or unsafe limits prevent startup
 with a safe configuration error. Tracked configuration contains no personal values,
 credentials, tokens, model paths, or machine-specific locations.
+## Phase 26 security configuration
+
+The `security` section defines bounded command, JSON, diagnostic, log, and archive
+limits. It is validated as an immutable `SecurityConfiguration`; unknown keys and
+out-of-range values fail startup. Mandatory protections—including log redaction and
+the prohibition of shell/dynamic execution, confirmation bypass, automatic remote
+acquisition, background capture, telemetry, and cloud sync—cannot be disabled by
+configuration. See [security.md](security.md).

@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 from uuid import UUID
 
+from omega.core.exceptions import SecurityValidationError
 from omega.productivity.configuration import ProductivityConfiguration
 from omega.productivity.exceptions import ProductivityImportError
 from omega.productivity.models import Note, ProductivityImportResult, Task, TaskList
 from omega.productivity.service import ProductivityService
+from omega.security import JsonSecurityLimits, load_bounded_json
 
 
 class ProductivityImportService:
@@ -37,8 +38,20 @@ class ProductivityImportService:
             size = path.stat().st_size
             if size > self.configuration.maximum_export_bytes:
                 raise ProductivityImportError("The import exceeds its size limit.")
-            raw = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, UnicodeError, json.JSONDecodeError) as error:
+            raw = load_bounded_json(
+                path.read_bytes(),
+                JsonSecurityLimits(
+                    self.configuration.maximum_export_bytes,
+                    maximum_depth=12,
+                    maximum_items=(
+                        self.configuration.maximum_notes
+                        + self.configuration.maximum_task_lists
+                        + self.configuration.maximum_tasks
+                    )
+                    * 20,
+                ),
+            )
+        except (OSError, SecurityValidationError) as error:
             raise ProductivityImportError(
                 "The productivity JSON file is invalid."
             ) from error

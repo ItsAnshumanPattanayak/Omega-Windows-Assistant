@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from omega.core.exceptions import SecurityValidationError
 from omega.personalization.configuration import PersonalizationConfiguration
 from omega.personalization.definitions import DEFINITION_MAP
 from omega.personalization.exceptions import (
@@ -13,6 +14,7 @@ from omega.personalization.exceptions import (
 )
 from omega.personalization.models import ProfileImportPreview
 from omega.personalization.service import PreferenceService
+from omega.security import JsonSecurityLimits, load_bounded_json
 
 PROFILE_SCHEMA_VERSION = 1
 _PROHIBITED_FIELDS = {
@@ -71,8 +73,15 @@ class ProfileImportService:
         if len(data) > self.configuration.maximum_export_bytes:
             raise ProfileTransferError("The profile import is too large.")
         try:
-            value = json.loads(data.decode("utf-8"))
-        except (UnicodeError, json.JSONDecodeError) as error:
+            value = load_bounded_json(
+                data,
+                JsonSecurityLimits(
+                    self.configuration.maximum_export_bytes,
+                    maximum_depth=8,
+                    maximum_items=len(DEFINITION_MAP) * 4,
+                ),
+            )
+        except SecurityValidationError as error:
             raise ProfileTransferError(
                 "The profile import is not valid JSON."
             ) from error

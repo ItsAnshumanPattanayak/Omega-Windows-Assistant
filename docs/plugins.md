@@ -34,3 +34,10 @@ removal. Installation, enablement, grants, and removal require exact confirmatio
 
 Omega never downloads, automatically updates, invokes pip, runs `setup.py`, or scans
 arbitrary directories. Plugin-local JSON storage is isolated and quota-bound.
+## Phase 26 archive defenses
+
+Local plugin ZIP inspection rejects traversal, links and special files, ambiguous or
+reserved Windows names, case-colliding members, nested archives, executable/install
+hooks, encrypted entries, excessive expansion, and excessive compression ratios.
+Validation remains inert and installation remains explicit and atomic. These checks
+do not make same-process plugin code a sandbox. See [security.md](security.md).

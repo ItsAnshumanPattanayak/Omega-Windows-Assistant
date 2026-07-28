@@ -19,6 +19,7 @@ from omega.models._serialization import (
     validate_utc_timestamp,
 )
 from omega.models.enums import ErrorCategory
+from omega.security.redaction import redact_text
 
 _SENSITIVE_DETAIL_KEYS = frozenset(
     {
@@ -82,6 +83,10 @@ class OmegaErrorDetails:
             raise ModelValidationError("user_message must be a non-empty safe string.")
         if not isinstance(self.recoverable, bool):
             raise ModelValidationError("recoverable must be a boolean.")
+        self.message = redact_text(self.message, maximum_characters=2_000)
+        self.user_message = redact_text(
+            self.user_message, maximum_characters=2_000, redact_paths=True
+        )
         if self.action_id is not None and not isinstance(self.action_id, UUID):
             raise ModelValidationError("action_id must be a UUID or None.")
         if self.command_id is not None and not isinstance(self.command_id, UUID):

@@ -29,6 +29,7 @@ from omega.execution.system_dispatcher import SystemActionDispatcher
 from omega.execution.workflow_dispatcher import WorkflowDispatcher
 from omega.models import CommandSource, UserCommand
 from omega.safety import SafeExecutionGateway
+from omega.security import SecurityConfiguration, SlidingWindowRateLimiter
 from omega.session.greeting import greeting_for
 from omega.session.state import SessionState
 from omega.understanding.parser import CommandParser
@@ -76,6 +77,8 @@ class OmegaSession:
         ai_dispatcher: AiDispatcher | None = None,
         preference_dispatcher: PreferenceDispatcher | None = None,
         safety_gateway: SafeExecutionGateway | None = None,
+        security_configuration: SecurityConfiguration | None = None,
+        command_rate_limiter: SlidingWindowRateLimiter | None = None,
     ) -> None:
         self.display_name = self._required_text(user_settings, "display_name")
         self.activation_phrase = self._required_text(
@@ -111,6 +114,11 @@ class OmegaSession:
             or getattr(application_dispatcher, "gateway", None)
             or getattr(file_dispatcher, "gateway", None)
             or getattr(folder_dispatcher, "gateway", None)
+        )
+        selected_security = security_configuration or SecurityConfiguration()
+        self._command_rate_limiter = command_rate_limiter or SlidingWindowRateLimiter(
+            selected_security.command_rate_limit,
+            selected_security.command_rate_window_seconds,
         )
         self.state = SessionState.INACTIVE
         self.session_id: UUID | None = None
@@ -251,6 +259,12 @@ class OmegaSession:
         """Handle terminal text, creating command records only while active."""
 
         with self._input_lock:
+            decision = self._command_rate_limiter.acquire()
+            if not decision.allowed:
+                return (
+                    "Omega is busy because commands arrived too quickly. "
+                    f"Retry in {decision.retry_after_seconds:.1f} seconds."
+                )
             return self._handle_input(text, source=source)
 
     def _handle_input(self, text: str, *, source: CommandSource) -> str:

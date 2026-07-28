@@ -74,7 +74,14 @@ All supported operations pass through the same command-processing and safety lif
 
 ## Current capabilities
 
-Omega currently includes functionality completed through **Phase 25**:
+Omega currently includes functionality completed through **Phase 26**:
+
+Phase 26 adds defense-in-depth security controls across every existing feature:
+strict bounded input and JSON validation, universal pre-dispatch invariants,
+credential-safe logging, command rate limiting, hardened plugin archive inspection,
+fail-closed configuration, and a bounded read-only `--security-check`. It does not
+add remote scanning, telemetry, shell execution, or a new execution path. See
+[docs/security.md](docs/security.md).
 
 Phase 25 adds offline accessibility and localization foundations: keyboard focus
 shortcuts, visible textual status, bounded font scaling, high contrast, reduced-motion

@@ -22,6 +22,7 @@ from omega.personalization.configuration import PersonalizationConfiguration
 from omega.plugins.configuration import PluginConfiguration
 from omega.productivity.configuration import ProductivityConfiguration
 from omega.scheduling.configuration import SchedulingConfiguration
+from omega.security.configuration import SecurityConfiguration
 from omega.system.configuration import SystemConfiguration
 from omega.utils.constants import (
     APP_CONFIG_FILENAME,
@@ -94,6 +95,7 @@ class Settings:
     personalization: Mapping[str, Any] = field(default_factory=dict)
     accessibility: Mapping[str, Any] = field(default_factory=dict)
     localization: Mapping[str, Any] = field(default_factory=dict)
+    security: Mapping[str, Any] = field(default_factory=dict)
 
     @property
     def application_name(self) -> str:
@@ -213,6 +215,12 @@ class Settings:
         """Return local-only Phase 25 catalog policy."""
 
         return LocalizationConfiguration.from_mapping(self.localization)
+
+    @property
+    def security_configuration(self) -> SecurityConfiguration:
+        """Return mandatory Phase 26 defense-in-depth policy."""
+
+        return SecurityConfiguration.from_mapping(self.security)
 
 
 def _defaults() -> dict[str, dict[str, Any]]:
@@ -367,6 +375,7 @@ def _defaults() -> dict[str, dict[str, Any]]:
         "personalization": {},
         "accessibility": {},
         "localization": {},
+        "security": {},
     }
 
 
@@ -604,6 +613,7 @@ def _merge_defaults(
                 "personalization",
                 "accessibility",
                 "localization",
+                "security",
             }
             else raw[section]
         )
@@ -684,5 +694,6 @@ def load_settings(
     PersonalizationConfiguration.from_mapping(values["personalization"])
     AccessibilityConfiguration.from_mapping(values["accessibility"])
     LocalizationConfiguration.from_mapping(values["localization"])
+    SecurityConfiguration.from_mapping(values["security"])
 
     return Settings(**values)

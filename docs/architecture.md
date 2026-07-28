@@ -776,3 +776,25 @@ English. Plugin translations require explicit permissions and remain under
 `plugin.<id>.*`; core confirmations cannot be overwritten. Optional local-AI
 translations are unverified drafts and cannot replace critical strings. See
 [accessibility.md](accessibility.md) and [localization.md](localization.md).
+
+## Phase 26 cross-cutting security hardening
+
+Phase 26 adds a small `omega.security` layer around, not in place of, the Phase 7
+safety gateway. Untrusted inputs first pass bounded validation and typed parsing.
+Universal invariants then reject unknown intent, identity mismatch, model authority,
+safety-bypass metadata, and shell-shaped execution before normal permission policy.
+Every supported side effect continues through `SafeExecutionGateway` and the existing
+domain validator and service.
+
+Bounded duplicate-key-safe JSON parsing is shared by plugin, workflow,
+personalization, productivity, and localization imports. Plugin package inspection
+adds Windows path ambiguity, case collision, special-file, nested-archive, and
+compression-ratio defenses while retaining atomic reviewed installation. A shared
+redactor minimizes secrets in logs, exception text, and serialized error records.
+Command input limits and a thread-safe sliding-window limiter bound local abuse.
+
+The optional `--security-check` loads validated settings, verifies mandatory
+fail-closed options, and statically inspects source syntax for prohibited execution
+primitives. It is bounded, local, read-only, and does not initialize the application,
+database, providers, plugins, scheduler, GUI, microphone, or network. The complete
+threat model and operational guidance are in [security.md](security.md).

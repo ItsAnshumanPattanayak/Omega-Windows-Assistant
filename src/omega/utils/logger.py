@@ -6,8 +6,24 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+from omega.security.redaction import redact_text
+
 LOG_FORMAT = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
+class RedactingFormatter(logging.Formatter):
+    """Redact the final formatted record, including exception text."""
+
+    maximum_characters = 10_000
+
+    def format(self, record: logging.LogRecord) -> str:
+        rendered = super().format(record)
+        return redact_text(
+            rendered,
+            maximum_characters=self.maximum_characters,
+            redact_paths=True,
+        )
 
 
 def _parse_level(level: str) -> int:
@@ -27,6 +43,7 @@ def configure_logging(
     log_directory: Path | None = None,
     max_file_size_mb: int = 5,
     backup_count: int = 3,
+    maximum_message_characters: int = 10_000,
 ) -> logging.Logger:
     """Configure the Omega logger once and return it.
 
@@ -36,7 +53,11 @@ def configure_logging(
     logger = logging.getLogger("omega")
     logger.setLevel(_parse_level(level))
     logger.propagate = False
-    formatter = logging.Formatter(LOG_FORMAT, datefmt=DATE_FORMAT)
+    formatter = RedactingFormatter(
+        LOG_FORMAT,
+        datefmt=DATE_FORMAT,
+    )
+    formatter.maximum_characters = maximum_message_characters
 
     if console_enabled and not _has_handler(logger, "omega-console"):
         console_handler = logging.StreamHandler()

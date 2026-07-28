@@ -87,7 +87,13 @@ The approved roadmap is intentionally incremental. Each phase should be designed
     Unicode command defenses, locale-aware formatting, and explicit plugin/AI/voice
     boundaries.
 
-27. **Phase 26 — Next:** to be defined after Phase 25 review.
+27. **Phase 26 — Comprehensive Security Hardening — Completed:** centralized
+    fail-closed invariants, bounded command and JSON validation, credential-safe
+    diagnostics and logging, rate limiting, hardened archive inspection, static
+    execution-primitive checks, adversarial tests, and cross-domain threat-model
+    documentation without adding a new execution path.
+
+28. **Phase 27 — Next:** to be defined after Phase 26 review.
 
 Later phases may cover additional Windows integrations, packaging,
 installer support, and release hardening. AI-assisted intent fallback remains disabled

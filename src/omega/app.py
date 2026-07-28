@@ -226,6 +226,9 @@ class OmegaApplication:
             log_directory=log_dir(),
             max_file_size_mb=int(logging_settings["max_file_size_mb"]),
             backup_count=int(logging_settings["backup_count"]),
+            maximum_message_characters=(
+                self.settings.security_configuration.maximum_log_message_characters
+            ),
         )
         self._validate_python_version()
         self.logger = get_logger("app")
@@ -605,6 +608,9 @@ class OmegaApplication:
                 plugin_configuration,
                 plugin_validator,
                 plugin_root,
+                maximum_compression_ratio=(
+                    self.settings.security_configuration.maximum_archive_compression_ratio
+                ),
             ),
             plugin_validator,
             plugin_repository,
@@ -700,7 +706,9 @@ class OmegaApplication:
                     self.settings.localization_configuration
                 ),
                 language=self.localization_service.active_language,
+                security_configuration=self.settings.security_configuration,
             ),
+            security_configuration=self.settings.security_configuration,
             greeting_builder=self.personalization_context.greeting,
             logger=get_logger("session"),
             application_dispatcher=ApplicationActionDispatcher(

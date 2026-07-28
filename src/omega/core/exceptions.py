@@ -263,3 +263,15 @@ class LanguagePackValidationError(LocalizationError):
 
 class UnicodeSafetyError(AccessibilityError):
     """Raised when command text contains unsafe Unicode controls."""
+
+
+class SecurityError(OmegaError):
+    """Base exception for Phase 26 security policy failures."""
+
+
+class SecurityConfigurationError(ConfigurationError, SecurityError):
+    """Raised when security configuration weakens a mandatory invariant."""
+
+
+class SecurityValidationError(SecurityError):
+    """Raised when untrusted input violates a fail-closed security boundary."""

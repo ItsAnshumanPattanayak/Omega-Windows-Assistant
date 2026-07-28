@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import platform
 import sys
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from omega.core.exceptions import SecurityValidationError
 from omega.plugins.configuration import PluginConfiguration
 from omega.plugins.exceptions import PluginCompatibilityError, PluginValidationError
 from omega.plugins.models import (
@@ -21,6 +21,7 @@ from omega.plugins.models import (
     PluginValidationResult,
     PluginVersion,
 )
+from omega.security import JsonSecurityLimits, load_bounded_json
 
 PLUGIN_API_VERSION = PluginApiVersion(1, 0, 0)
 _FIELDS = {
@@ -57,8 +58,15 @@ class PluginValidator:
         if len(payload) > self.configuration.maximum_manifest_bytes:
             raise PluginValidationError("Plugin manifest exceeds the size limit.")
         try:
-            raw = json.loads(payload)
-        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raw = load_bounded_json(
+                payload,
+                JsonSecurityLimits(
+                    self.configuration.maximum_manifest_bytes,
+                    maximum_depth=10,
+                    maximum_items=2_000,
+                ),
+            )
+        except SecurityValidationError as error:
             raise PluginValidationError("Plugin manifest is not valid JSON.") from error
         if not isinstance(raw, dict) or set(raw) - _FIELDS:
             raise PluginValidationError("Plugin manifest contains unknown fields.")

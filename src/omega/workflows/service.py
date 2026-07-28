@@ -4,6 +4,8 @@ import json
 from dataclasses import replace
 from datetime import UTC, datetime
 
+from omega.core.exceptions import SecurityValidationError
+from omega.security import JsonSecurityLimits, load_bounded_json
 from omega.workflows.configuration import WorkflowConfiguration
 from omega.workflows.exceptions import WorkflowImportError, WorkflowValidationError
 from omega.workflows.execution import WorkflowExecutor
@@ -128,8 +130,15 @@ class WorkflowService:
         if len(payload) > self.configuration.maximum_serialized_definition_bytes:
             raise WorkflowImportError("Workflow import exceeds the size limit.")
         try:
-            value = json.loads(payload)
-        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            value = load_bounded_json(
+                payload,
+                JsonSecurityLimits(
+                    self.configuration.maximum_serialized_definition_bytes,
+                    maximum_depth=self.configuration.maximum_condition_depth + 8,
+                    maximum_items=self.configuration.maximum_steps_per_workflow * 50,
+                ),
+            )
+        except SecurityValidationError as error:
             raise WorkflowImportError("Workflow import is not valid JSON.") from error
         if (
             not isinstance(value, dict)

@@ -24,6 +24,11 @@ _BLOCKED_SUFFIXES = {
     ".cmd",
     ".ps1",
     ".sh",
+    ".zip",
+    ".tar",
+    ".gz",
+    ".7z",
+    ".rar",
 }
 _BLOCKED_NAMES = {
     "setup.py",
@@ -31,6 +36,9 @@ _BLOCKED_NAMES = {
     "requirements.txt",
     ".pth",
     "autorun.inf",
+    "sitecustomize.py",
+    "usercustomize.py",
+    "desktop.ini",
 }
 _CREDENTIAL_WORDS = ("credential", "password", "secret", "private_key", "access_token")
 _WINDOWS_RESERVED = {
@@ -49,10 +57,17 @@ class PluginPackageInstaller:
         configuration: PluginConfiguration,
         validator: PluginValidator,
         install_root: Path,
+        *,
+        maximum_compression_ratio: float = 200.0,
     ) -> None:
+        if not 1.0 <= maximum_compression_ratio <= 1_000.0:
+            raise PluginValidationError(
+                "Plugin compression-ratio limit must be between 1 and 1000."
+            )
         self.configuration = configuration
         self.validator = validator
         self.install_root = install_root.resolve(strict=False)
+        self.maximum_compression_ratio = maximum_compression_ratio
 
     def validate(self, package: Path) -> PluginManifest:
         if (
@@ -73,8 +88,20 @@ class PluginPackageInstaller:
                         "Plugin package contains too many files."
                     )
                 total = 0
+                canonical_names: set[str] = set()
                 for info in files:
                     self._validate_member(info)
+                    canonical_name = "/".join(
+                        part.rstrip(" .").casefold()
+                        for part in PurePosixPath(
+                            info.filename.replace("\\", "/")
+                        ).parts
+                    )
+                    if canonical_name in canonical_names:
+                        raise PluginValidationError(
+                            "Plugin package contains case-colliding paths."
+                        )
+                    canonical_names.add(canonical_name)
                     total += info.file_size
                     if total > self.configuration.maximum_package_bytes:
                         raise PluginValidationError(
@@ -122,8 +149,7 @@ class PluginPackageInstaller:
             os.replace(staging, destination)
             return manifest, destination
 
-    @staticmethod
-    def _validate_member(info: zipfile.ZipInfo) -> None:
+    def _validate_member(self, info: zipfile.ZipInfo) -> None:
         name = info.filename.replace("\\", "/")
         path = PurePosixPath(name)
         if path.is_absolute() or ".." in path.parts or not path.parts:
@@ -131,11 +157,28 @@ class PluginPackageInstaller:
         if name.startswith(("/", "\\")) or (len(name) > 1 and name[1] == ":"):
             raise PluginValidationError("Plugin package contains an absolute path.")
         mode = info.external_attr >> 16
-        if stat.S_ISLNK(mode):
-            raise PluginValidationError("Plugin package contains a symbolic link.")
+        file_type = stat.S_IFMT(mode)
+        if file_type and not (stat.S_ISREG(mode) or stat.S_ISDIR(mode)):
+            raise PluginValidationError(
+                "Plugin package contains a special file or symbolic link."
+            )
+        if info.flag_bits & 0x1:
+            raise PluginValidationError("Encrypted plugin packages are not accepted.")
+        compressed_size = max(info.compress_size, 1)
+        if info.file_size / compressed_size > self.maximum_compression_ratio:
+            raise PluginValidationError(
+                "Plugin package contains an excessive compression ratio."
+            )
+        if len(name) > 240:
+            raise PluginValidationError("Plugin package path is too long.")
         for part in path.parts:
             stem = part.split(".", 1)[0].casefold()
-            if stem in _WINDOWS_RESERVED or "\x00" in part:
+            if (
+                stem in _WINDOWS_RESERVED
+                or "\x00" in part
+                or ":" in part
+                or part.endswith((" ", "."))
+            ):
                 raise PluginValidationError(
                     "Plugin package contains an unsafe Windows name."
                 )

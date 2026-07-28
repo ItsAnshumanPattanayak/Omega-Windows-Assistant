@@ -37,6 +37,11 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="check tkinter availability without starting Omega",
     )
+    parser.add_argument(
+        "--security-check",
+        action="store_true",
+        help="run bounded, read-only local security diagnostics and exit",
+    )
     return parser
 
 
@@ -54,6 +59,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         for value in (
             options.gui,
             options.gui_check,
+            options.security_check,
             options.voice,
             options.list_audio_devices,
         )
@@ -64,6 +70,21 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.print_usage(sys.stderr)
         return 2
     try:
+        if options.security_check:
+            from omega.config import load_settings
+            from omega.security.diagnostics import (
+                SecurityDiagnostics,
+                format_security_report,
+            )
+            from omega.utils.paths import project_root
+
+            settings = load_settings()
+            report = SecurityDiagnostics(
+                settings.security_configuration,
+                repository_root=project_root(),
+            ).run(settings)
+            print(format_security_report(report))
+            return 0 if report.passed else 1
         if options.gui_check:
             from omega.gui.application import OmegaGuiApplication
 
