@@ -386,3 +386,39 @@ plugins:
   allow_arbitrary_network_permissions: false
   allow_credential_permissions: false
   allow_safety_bypass_permissions: false
+
+# Phase 23 local AI is optional, local-only, bounded, and disabled by default.
+# Models and dependencies are never downloaded automatically.
+local_ai:
+  enabled: false
+  provider: null
+  default_generation_model: null
+  default_embedding_model: null
+  approved_model_directory: null
+  automatically_download_models: false
+  allow_remote_endpoints: false
+  allow_only_loopback_endpoints: true
+  endpoint: null
+  maximum_prompt_characters: 50000
+  maximum_response_characters: 10000
+  maximum_context_turns: 10
+  maximum_context_characters: 30000
+  maximum_grounding_chunks: 10
+  maximum_grounding_characters: 30000
+  maximum_concurrent_requests: 1
+  maximum_queued_requests: 5
+  generation_timeout_seconds: 120
+  model_load_timeout_seconds: 180
+  idle_unload_seconds: 600
+  unload_model_when_idle: true
+  enable_grounded_answers: true
+  enable_email_assistance: true
+  enable_calendar_assistance: true
+  enable_note_assistance: true
+  enable_workflow_suggestions: true
+  enable_ai_command_fallback: false
+  enable_conversation_persistence: false
+  require_confirmation_before_applying_generated_changes: true
+  expose_model_debug_output: false
+  log_prompts: false
+  log_responses: false

@@ -43,6 +43,8 @@ class PluginPermission(StrEnum):
     CREATE_CALENDAR_PROPOSAL = "create_calendar_proposal"
     REGISTER_WORKFLOW_STEP = "register_workflow_step"
     PUBLISH_NOTIFICATION = "publish_notification"
+    USE_LOCAL_AI_GENERATION = "use_local_ai_generation"
+    USE_LOCAL_AI_EMBEDDINGS = "use_local_ai_embeddings"
 
 
 class PluginCapability(StrEnum):

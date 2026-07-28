@@ -155,6 +155,10 @@ class OmegaMainWindow(GuiView):
             ("New workflow", self._create_workflow),
             ("Preview workflow", self._preview_workflow),
             ("Plugins", self.controller.list_plugins),
+            ("Local AI status", self.controller.show_local_ai_status),
+            ("AI models", self.controller.list_local_ai_models),
+            ("Cancel AI", self.controller.cancel_ai_generation),
+            ("Clear AI context", self.controller.clear_ai_conversation),
         )
         self.operation_buttons: list[ttk.Button] = []
         for toolbar_index, (label, command) in enumerate(actions):

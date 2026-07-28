@@ -662,3 +662,47 @@ stored in SQLite. Enabled reviewed plugins receive a narrow versioned context, a
 namespaced registrations cannot override built-in commands or bypass the safety
 gateway. Same-process plugins are trusted after review, not sandboxed. See
 [plugins.md](plugins.md).
+
+## Phase 23 privacy-first local AI boundary
+
+```text
+terminal / tkinter GUI / offline voice
+        -> deterministic CommandParser
+        -> typed AI intent and inert text entity
+        -> AiDispatcher
+        -> SafeExecutionGateway
+        -> AiService (the only controlled AI boundary)
+             -> AiPromptBuilder / AiResponseValidator
+             -> AiResourceManager
+             -> explicit AiProvider + AiModelRegistry
+        -> labeled draft or deterministic fallback
+```
+
+Provider interfaces, explicit model descriptors, prompt construction, response
+validation, lifecycle control, and application-facing proposal adapters are separate.
+No provider starts and no model loads during import or normal startup. The resource
+manager lazily loads an explicitly registered model, bounds concurrency and queues,
+applies timeouts, supports cooperative cancellation, and unloads owned resources on
+shutdown. The default configuration is disabled and registers no provider.
+
+Untrusted documents, email, calendar text, clipboard data, plugin output, workflow
+content, and tool results are labeled in bounded data blocks. Those blocks cannot
+change system instructions or authorize a side effect. Provider output is untrusted:
+text, citations, JSON schemas, intent names, workflow step types, lengths, and control
+characters are validated before presentation. Generated paths, recipients, attendees,
+or workflow values must still pass their existing domain validators and confirmation
+flows. Omega does not redispatch generated text.
+
+`AiKnowledgeAssistant` retrieves bounded Phase 17 chunks before generation and
+validates every returned citation. `AiProposalService` produces inert email,
+calendar, note, and task drafts without receiving mutation services. Workflow output
+is accepted only through a strict allowlisted JSON schema and is neither saved nor
+executed. `PluginAiAccess` obtains permission from Phase 22's version- and
+fingerprint-bound permission service and applies a per-session quota.
+
+No Phase 23 migration is needed. Models, binaries, prompts, responses, source bodies,
+and conversation turns are not persisted. Gateway receipts contain only the AI
+operation type and content-omission markers. Conversation context is bounded,
+session-local, and explicitly clearable. Existing keyword search, extractive answers,
+deterministic email summaries, calendar logic, notes, tasks, workflows, GUI, voice,
+and command parsing continue when AI is unavailable. See [local_ai.md](local_ai.md).

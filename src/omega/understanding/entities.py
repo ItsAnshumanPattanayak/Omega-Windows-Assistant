@@ -180,6 +180,20 @@ _PLUGIN_INTENTS = frozenset(
         IntentType.RELOAD_PLUGIN,
     }
 )
+_AI_INTENTS = frozenset(
+    {
+        IntentType.SHOW_LOCAL_AI_STATUS,
+        IntentType.LIST_LOCAL_AI_MODELS,
+        IntentType.LOAD_LOCAL_AI_MODEL,
+        IntentType.UNLOAD_LOCAL_AI_MODEL,
+        IntentType.ASK_LOCAL_AI,
+        IntentType.SUMMARIZE_TEXT_WITH_AI,
+        IntentType.CANCEL_AI_GENERATION,
+        IntentType.CLEAR_AI_CONVERSATION,
+        IntentType.SHOW_AI_CONTEXT_STATUS,
+        IntentType.START_AI_CONVERSATION,
+    }
+)
 _KNOWLEDGE_INTENTS = frozenset(
     {
         IntentType.CREATE_KNOWLEDGE_COLLECTION,
@@ -223,7 +237,9 @@ class RuleBasedEntityExtractor:
 
     def extract(self, original: str, intent: IntentType) -> list[CommandEntity]:
         entities: list[CommandEntity] = []
-        if intent in _PLUGIN_INTENTS:
+        if intent in _AI_INTENTS:
+            self._ai(original, intent, entities)
+        elif intent in _PLUGIN_INTENTS:
             self._plugin(original, intent, entities)
         elif intent in _WORKFLOW_INTENTS:
             self._workflow(original, intent, entities)
@@ -314,6 +330,47 @@ class RuleBasedEntityExtractor:
         }:
             self._folder_command(original, intent, entities)
         return entities
+
+    @staticmethod
+    def _ai(original: str, intent: IntentType, entities: list[CommandEntity]) -> None:
+        text = original.strip().rstrip("?!")
+        if intent is IntentType.LOAD_LOCAL_AI_MODEL:
+            match = re.match(r"^load (?:local ai )?model\s+(.+)$", text, re.IGNORECASE)
+            if match:
+                entities.append(
+                    _entity(
+                        EntityType.AI_MODEL, "ai_model", match.group(1), match.group(1)
+                    )
+                )
+        elif intent is IntentType.UNLOAD_LOCAL_AI_MODEL:
+            match = re.match(
+                r"^unload (?:the )?(?:local ai )?model(?:\s+(.+))?$",
+                text,
+                re.IGNORECASE,
+            )
+            if match and match.group(1):
+                entities.append(
+                    _entity(
+                        EntityType.AI_MODEL, "ai_model", match.group(1), match.group(1)
+                    )
+                )
+        elif intent is IntentType.ASK_LOCAL_AI:
+            value = re.sub(r"^ask local ai\s+", "", text, flags=re.IGNORECASE)
+            if value:
+                entities.append(
+                    _entity(EntityType.AI_REQUEST, "ai_request", value, value)
+                )
+        elif intent is IntentType.SUMMARIZE_TEXT_WITH_AI:
+            value = re.sub(
+                r"^summarize (?:this text:?\s*|text:?\s*)",
+                "",
+                text,
+                flags=re.IGNORECASE,
+            )
+            if value:
+                entities.append(
+                    _entity(EntityType.TEXT_CONTENT, "ai_text", value, value)
+                )
 
     @staticmethod
     def _plugin(

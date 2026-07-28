@@ -145,6 +145,17 @@ _WORKFLOW_NO_PARAMETER = frozenset(
 _PLUGIN_NO_PARAMETER = frozenset(
     {IntentType.LIST_PLUGINS, IntentType.SHOW_FAILED_PLUGINS}
 )
+_AI_NO_PARAMETER = frozenset(
+    {
+        IntentType.SHOW_LOCAL_AI_STATUS,
+        IntentType.LIST_LOCAL_AI_MODELS,
+        IntentType.UNLOAD_LOCAL_AI_MODEL,
+        IntentType.CANCEL_AI_GENERATION,
+        IntentType.CLEAR_AI_CONVERSATION,
+        IntentType.SHOW_AI_CONTEXT_STATUS,
+        IntentType.START_AI_CONVERSATION,
+    }
+)
 
 
 class CommandParser:
@@ -319,6 +330,14 @@ class CommandParser:
             return [], None
         if intent in _PLUGIN_NO_PARAMETER:
             return [], None
+        if intent in _AI_NO_PARAMETER:
+            return [], None
+        if intent is IntentType.LOAD_LOCAL_AI_MODEL and "ai_model" not in names:
+            return ["ai_model"], "Which configured local AI model should I load?"
+        if intent is IntentType.ASK_LOCAL_AI and "ai_request" not in names:
+            return ["ai_request"], "What would you like to ask the local AI?"
+        if intent is IntentType.SUMMARIZE_TEXT_WITH_AI and "ai_text" not in names:
+            return ["ai_text"], "Which text should I summarize?"
         if (
             intent
             in {

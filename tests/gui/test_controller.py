@@ -185,6 +185,22 @@ def test_valid_command_is_submitted_and_displayed_once():
     assert view.busy == [True, False]
 
 
+def test_local_ai_gui_controls_use_normal_background_command_path():
+    controller, session, _, _, _ = _controller()
+
+    assert controller.show_local_ai_status()
+    assert controller.list_local_ai_models()
+    assert controller.cancel_ai_generation()
+    assert controller.clear_ai_conversation()
+
+    assert session.calls == [
+        "show local ai status",
+        "list local ai models",
+        "cancel ai generation",
+        "clear ai conversation",
+    ]
+
+
 def test_whitespace_and_overlong_commands_are_rejected():
     controller, session, _, _, view = _controller()
 

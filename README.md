@@ -74,7 +74,14 @@ All supported operations pass through the same command-processing and safety lif
 
 ## Current capabilities
 
-Omega currently includes functionality completed through **Phase 22**:
+Omega currently includes functionality completed through **Phase 23**:
+
+Phase 23 adds an optional, disabled-by-default local-AI boundary for bounded text
+generation, summarization, citation-checked grounded answers, embeddings, and
+reviewable draft proposals. It includes a zero-network fake provider and an optional
+loopback-only HTTP adapter, but no model, runtime, cloud provider, or heavyweight ML
+dependency is bundled or downloaded. Deterministic Omega features remain available
+when AI is disabled or unavailable. See [docs/local_ai.md](docs/local_ai.md).
 
 Phase 22 adds bounded JSON plugin manifests, manifest-only discovery, safe local
 package validation, disabled-by-default installation, fingerprint-bound permissions,
@@ -128,6 +135,21 @@ operation is explicit and bounded; Omega never watches the clipboard or screen.
 | Knowledge-base document search | ✅ Implemented |
 | Privacy-first email assistance | ✅ Implemented (live adapter not bundled) |
 | Privacy-first calendar assistance | ✅ Implemented (live adapter not bundled) |
+| Privacy-first local AI | ✅ Implemented (optional; no real model bundled) |
+
+### Privacy-first local AI
+
+Local AI is disabled by default. When explicitly configured, Omega can generate
+bounded text, summarize provided text, maintain bounded session-local context, and
+produce reviewable email, calendar, note, task, and workflow suggestions. Generated
+text is labeled, unverified, omitted from normal persistent history, and never
+treated as authorization or redispatched as a command.
+
+Omega does not download models, install inference packages, contact cloud AI,
+expose credentials, execute model-generated code, or give a model direct access to
+files, email, calendars, workflows, plugins, or the shell. Grounded answers validate
+citations against retrieved local chunks. Prompt-injection defenses are layered but
+cannot eliminate every model risk; a same-machine runtime must be trusted separately.
 
 ### Privacy-first email assistance
 
@@ -1465,7 +1487,8 @@ Save all work before testing power operations.
 
 # Development status
 
-Omega is currently paused for manual testing and stabilization after completing the major implementation through Phase 16.
+Omega has completed the reviewed implementation sequence through Phase 23 and remains
+under active testing and stabilization.
 
 ## Completed
 
@@ -1490,15 +1513,15 @@ Phase 16 — Notes, tasks, and productivity
 Phase 17 — Local knowledge base and document search
 Phase 18 — Privacy-first email assistance
 Phase 19 — Privacy-first calendar integration
+Phase 20 — Clipboard, screenshots, and desktop utilities
+Phase 21 — Safe workflow automation
+Phase 22 — Secure plugin architecture
+Phase 23 — Privacy-first local AI integration
 ```
 
 ## Paused / planned
 
 ```text
-Phase 20 — Clipboard, screenshots, and desktop utilities
-Phase 21 — Workflow automation
-Phase 22 — Plugin and skill architecture
-Phase 23 — Local AI and advanced language intelligence
 Phase 24 — User profiles and personalization
 Phase 25 — Accessibility and multilingual support
 Phase 26 — Security hardening and privacy controls

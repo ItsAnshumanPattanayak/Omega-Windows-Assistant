@@ -116,6 +116,14 @@ _LOW = frozenset(
         IntentType.VALIDATE_PLUGIN_PACKAGE,
         IntentType.SHOW_PLUGIN_PERMISSIONS,
         IntentType.SHOW_FAILED_PLUGINS,
+        IntentType.SHOW_LOCAL_AI_STATUS,
+        IntentType.LIST_LOCAL_AI_MODELS,
+        IntentType.ASK_LOCAL_AI,
+        IntentType.SUMMARIZE_TEXT_WITH_AI,
+        IntentType.CANCEL_AI_GENERATION,
+        IntentType.CLEAR_AI_CONVERSATION,
+        IntentType.SHOW_AI_CONTEXT_STATUS,
+        IntentType.START_AI_CONVERSATION,
     }
 )
 _MEDIUM = frozenset(
@@ -211,6 +219,8 @@ _MEDIUM = frozenset(
         IntentType.GRANT_PLUGIN_PERMISSION,
         IntentType.REVOKE_PLUGIN_PERMISSION,
         IntentType.RELOAD_PLUGIN,
+        IntentType.LOAD_LOCAL_AI_MODEL,
+        IntentType.UNLOAD_LOCAL_AI_MODEL,
     }
 )
 _HIGH = frozenset(

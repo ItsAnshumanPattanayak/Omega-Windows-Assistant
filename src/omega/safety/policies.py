@@ -1066,6 +1066,31 @@ class PluginControlPolicy(_IntentPolicy):
     )
 
 
+class LocalAiPolicy(_IntentPolicy):
+    """Allow bounded text generation and explicit local resource control only."""
+
+    policy_id, priority = "SAFETY-LOCAL-AI-001", 80
+    intents = frozenset(
+        {
+            IntentType.SHOW_LOCAL_AI_STATUS,
+            IntentType.LIST_LOCAL_AI_MODELS,
+            IntentType.LOAD_LOCAL_AI_MODEL,
+            IntentType.UNLOAD_LOCAL_AI_MODEL,
+            IntentType.ASK_LOCAL_AI,
+            IntentType.SUMMARIZE_TEXT_WITH_AI,
+            IntentType.CANCEL_AI_GENERATION,
+            IntentType.CLEAR_AI_CONVERSATION,
+            IntentType.SHOW_AI_CONTEXT_STATUS,
+            IntentType.START_AI_CONVERSATION,
+        }
+    )
+    disposition, reason_code, message = (
+        PolicyDisposition.ALLOW,
+        "BOUNDED_LOCAL_AI_OPERATION_ALLOWED",
+        "Bounded local-AI text and resource operations are allowed.",
+    )
+
+
 DEFAULT_POLICIES = cast(
     tuple[SafetyPolicy, ...],
     (
@@ -1119,6 +1144,7 @@ DEFAULT_POLICIES = cast(
         WorkflowPolicy(),
         PluginReadPolicy(),
         PluginControlPolicy(),
+        LocalAiPolicy(),
     ),
 )
 

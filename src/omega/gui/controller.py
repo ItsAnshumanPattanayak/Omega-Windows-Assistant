@@ -206,6 +206,18 @@ class GuiController:
 
         return self.submit_command("list plugins")
 
+    def show_local_ai_status(self) -> bool:
+        return self.submit_command("show local ai status")
+
+    def list_local_ai_models(self) -> bool:
+        return self.submit_command("list local ai models")
+
+    def cancel_ai_generation(self) -> bool:
+        return self.submit_command("cancel ai generation")
+
+    def clear_ai_conversation(self) -> bool:
+        return self.submit_command("clear ai conversation")
+
     def show_plugin(self, plugin_id: str) -> bool:
         return self.submit_command(f"show plugin {plugin_id}")
 

@@ -9,6 +9,18 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from omega.ai import (
+    AiKnowledgeAssistant,
+    AiModelCapability,
+    AiModelDescriptor,
+    AiModelRegistry,
+    AiProposalService,
+    AiProviderRegistry,
+    AiResourceManager,
+    AiService,
+    LoopbackHttpAiProvider,
+    PluginAiAccess,
+)
 from omega.applications import (
     ApplicationManager,
     ApplicationOperationSettings,
@@ -52,6 +64,7 @@ from omega.desktop_utilities import (
 from omega.email import FakeEmailProvider, SqliteEmailOperationStore
 from omega.email.service import EmailService
 from omega.execution import (
+    AiDispatcher,
     ApplicationActionDispatcher,
     BrowserActionDispatcher,
     CalendarActionDispatcher,
@@ -114,6 +127,7 @@ from omega.plugins import (
     PluginLoader,
     PluginManager,
     PluginPackageInstaller,
+    PluginPermission,
     PluginPermissionService,
     PluginRegistry,
     PluginRepository,
@@ -503,6 +517,7 @@ class OmegaApplication:
         )
         plugin_validator = PluginValidator(plugin_configuration)
         plugin_repository = PluginRepository(database_factory)
+        plugin_permissions = PluginPermissionService(plugin_repository)
         self.plugin_manager = PluginManager(
             plugin_configuration,
             PluginDiscovery(
@@ -517,12 +532,64 @@ class OmegaApplication:
             ),
             plugin_validator,
             plugin_repository,
-            PluginPermissionService(plugin_repository),
+            plugin_permissions,
             PluginLifecycle(
                 plugin_configuration,
                 PluginLoader(plugin_configuration, plugin_validator),
             ),
             PluginRegistry(),
+        )
+        ai_configuration = self.settings.ai_configuration
+        ai_providers = AiProviderRegistry()
+        if (
+            ai_configuration.provider == "loopback-http"
+            and ai_configuration.endpoint is not None
+        ):
+            ai_providers.register(
+                LoopbackHttpAiProvider(
+                    ai_configuration.endpoint,
+                    timeout_seconds=ai_configuration.generation_timeout_seconds,
+                    maximum_response_bytes=(
+                        ai_configuration.maximum_response_characters * 4
+                    ),
+                )
+            )
+        ai_models = AiModelRegistry(ai_configuration, ai_providers)
+        if (
+            ai_configuration.provider == "loopback-http"
+            and ai_configuration.default_generation_model is not None
+        ):
+            ai_models.register(
+                AiModelDescriptor(
+                    ai_configuration.default_generation_model,
+                    ai_configuration.default_generation_model,
+                    "loopback-http",
+                    frozenset({AiModelCapability.GENERATION}),
+                    provider_model_name=ai_configuration.default_generation_model,
+                    maximum_output_length=(
+                        ai_configuration.maximum_response_characters
+                    ),
+                )
+            )
+        self.ai_service = AiService(
+            ai_configuration,
+            ai_models,
+            AiResourceManager(ai_configuration, ai_providers, ai_models),
+        )
+        self.ai_knowledge_assistant = AiKnowledgeAssistant(
+            self.ai_service, self.knowledge_service
+        )
+        self.ai_proposal_service = AiProposalService(self.ai_service)
+        self.plugin_ai_access = PluginAiAccess(
+            self.ai_service,
+            lambda plugin_id, version, fingerprint, permission: (
+                plugin_permissions.require(
+                    plugin_id,
+                    version,
+                    fingerprint,
+                    PluginPermission(permission),
+                )
+            ),
         )
         self.notifications = NotificationCenter(
             get_logger("scheduling"),
@@ -602,6 +669,7 @@ class OmegaApplication:
                 self.plugin_manager,
                 safety_gateway,
             ),
+            ai_dispatcher=AiDispatcher(self.ai_service, safety_gateway),
             safety_gateway=safety_gateway,
         )
         self.voice_configuration = self.settings.voice_configuration
@@ -671,8 +739,7 @@ class OmegaApplication:
                 "Omega could not complete startup logging."
             ) from error
         finally:
-            self.browser_manager.shutdown()
-            self.scheduler.stop()
+            self.shutdown()
 
     def run_gui(self) -> int:
         """Run the optional desktop presentation over this composition root."""
@@ -697,6 +764,7 @@ class OmegaApplication:
         self.browser_manager.shutdown()
         self.scheduler.stop()
         self.plugin_manager.shutdown()
+        self.ai_service.shutdown()
 
     def create_voice_service(
         self,

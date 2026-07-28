@@ -21,6 +21,52 @@ def _rule(name: str, intent: IntentType, expression: str) -> IntentPattern:
 
 INTENT_PATTERNS = (
     _rule(
+        "show_local_ai_status",
+        IntentType.SHOW_LOCAL_AI_STATUS,
+        r"^show local ai status$",
+    ),
+    _rule(
+        "list_local_ai_models",
+        IntentType.LIST_LOCAL_AI_MODELS,
+        r"^(?:show|list) (?:available )?local ai models$",
+    ),
+    _rule(
+        "load_local_ai_model",
+        IntentType.LOAD_LOCAL_AI_MODEL,
+        r"^load (?:local ai )?model .+$",
+    ),
+    _rule(
+        "unload_local_ai_model",
+        IntentType.UNLOAD_LOCAL_AI_MODEL,
+        r"^unload (?:the )?(?:local ai )?model(?: .+)?$",
+    ),
+    _rule("ask_local_ai", IntentType.ASK_LOCAL_AI, r"^ask local ai .+$"),
+    _rule(
+        "summarize_text_with_ai",
+        IntentType.SUMMARIZE_TEXT_WITH_AI,
+        r"^summarize (?:this text:?\s*|text:?\s*).+$",
+    ),
+    _rule(
+        "cancel_ai_generation",
+        IntentType.CANCEL_AI_GENERATION,
+        r"^cancel (?:local )?ai generation$",
+    ),
+    _rule(
+        "clear_ai_conversation",
+        IntentType.CLEAR_AI_CONVERSATION,
+        r"^clear ai conversation$",
+    ),
+    _rule(
+        "show_ai_context_status",
+        IntentType.SHOW_AI_CONTEXT_STATUS,
+        r"^show ai context status$",
+    ),
+    _rule(
+        "start_ai_conversation",
+        IntentType.START_AI_CONVERSATION,
+        r"^start (?:a )?new ai conversation$",
+    ),
+    _rule(
         "list_plugins",
         IntentType.LIST_PLUGINS,
         r"^(?:show|list) (?:installed )?plugins$",

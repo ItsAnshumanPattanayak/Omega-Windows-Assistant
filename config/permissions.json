@@ -324,6 +324,16 @@
     "search_knowledge": {"enabled": true, "maximum_risk": "low"},
     "ask_knowledge": {"enabled": true, "maximum_risk": "low"},
     "show_knowledge_sources": {"enabled": true, "maximum_risk": "low"},
-    "export_knowledge_results": {"enabled": true, "maximum_risk": "medium"}
+    "export_knowledge_results": {"enabled": true, "maximum_risk": "medium"},
+    "show_local_ai_status": {"enabled": true, "maximum_risk": "low"},
+    "list_local_ai_models": {"enabled": true, "maximum_risk": "low"},
+    "load_local_ai_model": {"enabled": true, "maximum_risk": "medium"},
+    "unload_local_ai_model": {"enabled": true, "maximum_risk": "medium"},
+    "ask_local_ai": {"enabled": true, "maximum_risk": "low"},
+    "summarize_text_with_ai": {"enabled": true, "maximum_risk": "low"},
+    "cancel_ai_generation": {"enabled": true, "maximum_risk": "low"},
+    "clear_ai_conversation": {"enabled": true, "maximum_risk": "low"},
+    "show_ai_context_status": {"enabled": true, "maximum_risk": "low"},
+    "start_ai_conversation": {"enabled": true, "maximum_risk": "low"}
   }
 }

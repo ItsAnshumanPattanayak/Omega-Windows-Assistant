@@ -11,6 +11,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from omega.core.exceptions import InvalidSessionTransitionError, ModelValidationError
+from omega.execution.ai_dispatcher import AiDispatcher
 from omega.execution.browser_dispatcher import BrowserActionDispatcher
 from omega.execution.calendar_dispatcher import CalendarActionDispatcher
 from omega.execution.desktop_utilities_dispatcher import DesktopUtilityActionDispatcher
@@ -70,6 +71,7 @@ class OmegaSession:
         desktop_utility_dispatcher: DesktopUtilityActionDispatcher | None = None,
         workflow_dispatcher: WorkflowDispatcher | None = None,
         plugin_dispatcher: PluginDispatcher | None = None,
+        ai_dispatcher: AiDispatcher | None = None,
         safety_gateway: SafeExecutionGateway | None = None,
     ) -> None:
         self.display_name = self._required_text(user_settings, "display_name")
@@ -98,6 +100,7 @@ class OmegaSession:
         self._desktop_utility_dispatcher = desktop_utility_dispatcher
         self._workflow_dispatcher = workflow_dispatcher
         self._plugin_dispatcher = plugin_dispatcher
+        self._ai_dispatcher = ai_dispatcher
         self._safety_gateway = (
             safety_gateway
             or getattr(application_dispatcher, "gateway", None)
@@ -335,6 +338,10 @@ class OmegaSession:
                 plugin_result = self._plugin_dispatcher.dispatch(result)
                 if plugin_result is not None:
                     return plugin_result.user_message
+            if self._ai_dispatcher is not None:
+                ai_result = self._ai_dispatcher.dispatch(result)
+                if ai_result is not None:
+                    return ai_result.user_message
             if self._application_dispatcher is not None:
                 dispatched = self._application_dispatcher.dispatch(result)
                 if dispatched is not None:
@@ -379,3 +386,5 @@ class OmegaSession:
             self._workflow_dispatcher.clear_session()
         if self._plugin_dispatcher is not None:
             self._plugin_dispatcher.clear_session()
+        if self._ai_dispatcher is not None:
+            self._ai_dispatcher.clear_session(self.session_id)

@@ -67,6 +67,11 @@ data/knowledge/
 data/knowledge_documents/
 data/knowledge_indexes/
 data/knowledge_models/
+data/local_ai/
+data/ai_models/
+*.gguf
+*.safetensors
+*.onnx
 data/knowledge_extraction_cache/
 data/knowledge_exports/
 *.knowledge-export.json

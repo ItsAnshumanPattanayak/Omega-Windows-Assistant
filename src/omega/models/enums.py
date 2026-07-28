@@ -235,6 +235,16 @@ class IntentType(StrEnum):
     REVOKE_PLUGIN_PERMISSION = "revoke_plugin_permission"
     RELOAD_PLUGIN = "reload_plugin"
     SHOW_FAILED_PLUGINS = "show_failed_plugins"
+    SHOW_LOCAL_AI_STATUS = "show_local_ai_status"
+    LIST_LOCAL_AI_MODELS = "list_local_ai_models"
+    LOAD_LOCAL_AI_MODEL = "load_local_ai_model"
+    UNLOAD_LOCAL_AI_MODEL = "unload_local_ai_model"
+    ASK_LOCAL_AI = "ask_local_ai"
+    SUMMARIZE_TEXT_WITH_AI = "summarize_text_with_ai"
+    CANCEL_AI_GENERATION = "cancel_ai_generation"
+    CLEAR_AI_CONVERSATION = "clear_ai_conversation"
+    SHOW_AI_CONTEXT_STATUS = "show_ai_context_status"
+    START_AI_CONVERSATION = "start_ai_conversation"
 
 
 class ActionStatus(StrEnum):
@@ -325,6 +335,8 @@ class EntityType(StrEnum):
     WORKFLOW_STEP = "workflow_step"
     PLUGIN = "plugin"
     PLUGIN_PERMISSION = "plugin_permission"
+    AI_MODEL = "ai_model"
+    AI_REQUEST = "ai_request"
     UNKNOWN = "unknown"
 
 

@@ -66,6 +66,15 @@ The approved roadmap is intentionally incremental. Each phase should be designed
     namespaced extension registration, isolated local storage, lifecycle containment,
     SQLite metadata, and shared command/GUI safety routing.
 
-24. **Phase 23 — Next:** to be defined after Phase 22 review.
+24. **Phase 23 — Privacy-First Local AI Integration — Completed:** optional
+    disabled-by-default local generation and embeddings protocols, explicit model
+    registry, lazy bounded resource management, cancellation, structured prompt and
+    output validation, citation-checked grounded answers, proposal-only domain
+    adapters, fingerprint-bound plugin permission enforcement, shared
+    command/GUI/voice routing, privacy-minimized receipts, and deterministic fallback.
 
-Later phases may cover local AI-assisted intent suggestions, additional Windows integrations, accessibility, packaging, installer support, and release hardening.
+25. **Phase 24 — Next:** to be defined after Phase 23 review.
+
+Later phases may cover additional Windows integrations, accessibility, packaging,
+installer support, and release hardening. AI-assisted intent fallback remains disabled
+unless a future reviewed phase enables it under strict schema and confirmation rules.

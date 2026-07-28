@@ -9,6 +9,7 @@ from typing import Any
 
 import yaml
 
+from omega.ai.configuration import AiConfiguration
 from omega.browser.configuration import BrowserConfiguration
 from omega.calendar.configuration import CalendarConfiguration
 from omega.core.exceptions import ConfigurationError
@@ -87,6 +88,7 @@ class Settings:
     desktop_utilities: Mapping[str, Any] = field(default_factory=dict)
     workflows: Mapping[str, Any] = field(default_factory=dict)
     plugins: Mapping[str, Any] = field(default_factory=dict)
+    local_ai: Mapping[str, Any] = field(default_factory=dict)
 
     @property
     def application_name(self) -> str:
@@ -182,6 +184,12 @@ class Settings:
         """Return plugin policy without discovering or importing plugin code."""
 
         return PluginConfiguration.from_mapping(self.plugins)
+
+    @property
+    def ai_configuration(self) -> AiConfiguration:
+        """Return local-only AI policy without loading a provider or model."""
+
+        return AiConfiguration.from_mapping(self.local_ai)
 
 
 def _defaults() -> dict[str, dict[str, Any]]:
@@ -332,6 +340,7 @@ def _defaults() -> dict[str, dict[str, Any]]:
         "desktop_utilities": {},
         "workflows": {},
         "plugins": {},
+        "local_ai": {},
     }
 
 
@@ -565,6 +574,7 @@ def _merge_defaults(
                 "desktop_utilities",
                 "workflows",
                 "plugins",
+                "local_ai",
             }
             else raw[section]
         )
@@ -641,5 +651,6 @@ def load_settings(
     DesktopUtilitiesConfiguration.from_mapping(values["desktop_utilities"])
     WorkflowConfiguration.from_mapping(values["workflows"])
     PluginConfiguration.from_mapping(values["plugins"])
+    AiConfiguration.from_mapping(values["local_ai"])
 
     return Settings(**values)

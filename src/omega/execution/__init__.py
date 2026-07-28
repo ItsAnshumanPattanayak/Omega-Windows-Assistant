@@ -1,5 +1,6 @@
 """Narrow execution dispatchers for approved Omega domains."""
 
+from omega.execution.ai_dispatcher import AiDispatcher, AiDispatchResult
 from omega.execution.browser_dispatcher import (
     BrowserActionDispatcher,
     BrowserDispatchResult,
@@ -51,6 +52,8 @@ from omega.execution.workflow_dispatcher import (
 )
 
 __all__ = [
+    "AiDispatcher",
+    "AiDispatchResult",
     "ApplicationActionDispatcher",
     "ApplicationControlCommand",
     "ApplicationDispatchResult",
