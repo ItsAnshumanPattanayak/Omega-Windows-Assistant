@@ -275,3 +275,7 @@ class SecurityConfigurationError(ConfigurationError, SecurityError):
 
 class SecurityValidationError(SecurityError):
     """Raised when untrusted input violates a fail-closed security boundary."""
+
+
+class PerformanceConfigurationError(ConfigurationError):
+    """Raised when performance settings are invalid or weaken privacy."""

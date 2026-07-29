@@ -50,3 +50,10 @@ Workflow JSON import now rejects duplicate keys, non-finite values, excessive by
 nesting, and item counts before the existing allowlisted step/schema validation.
 Imported text and variables remain data and cannot create shell or dynamic-code
 steps. See [security.md](security.md).
+
+## Phase 27 plan reuse
+
+Planning may reuse an inert plan only for the exact immutable workflow object, within
+a bounded process-local LRU. A changed or reloaded definition is a different object
+and is fully revalidated. Confirmations, permissions, selected resources, and
+execution results are never cached.

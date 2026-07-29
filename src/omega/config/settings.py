@@ -18,6 +18,7 @@ from omega.database.configuration import DatabaseConfiguration
 from omega.desktop_utilities.configuration import DesktopUtilitiesConfiguration
 from omega.email.configuration import EmailConfiguration
 from omega.knowledge.configuration import KnowledgeConfiguration
+from omega.performance.configuration import PerformanceConfiguration
 from omega.personalization.configuration import PersonalizationConfiguration
 from omega.plugins.configuration import PluginConfiguration
 from omega.productivity.configuration import ProductivityConfiguration
@@ -96,6 +97,7 @@ class Settings:
     accessibility: Mapping[str, Any] = field(default_factory=dict)
     localization: Mapping[str, Any] = field(default_factory=dict)
     security: Mapping[str, Any] = field(default_factory=dict)
+    performance: Mapping[str, Any] = field(default_factory=dict)
 
     @property
     def application_name(self) -> str:
@@ -221,6 +223,12 @@ class Settings:
         """Return mandatory Phase 26 defense-in-depth policy."""
 
         return SecurityConfiguration.from_mapping(self.security)
+
+    @property
+    def performance_configuration(self) -> PerformanceConfiguration:
+        """Return bounded local performance policy."""
+
+        return PerformanceConfiguration.from_mapping(self.performance)
 
 
 def _defaults() -> dict[str, dict[str, Any]]:
@@ -376,6 +384,7 @@ def _defaults() -> dict[str, dict[str, Any]]:
         "accessibility": {},
         "localization": {},
         "security": {},
+        "performance": {},
     }
 
 
@@ -614,6 +623,7 @@ def _merge_defaults(
                 "accessibility",
                 "localization",
                 "security",
+                "performance",
             }
             else raw[section]
         )
@@ -695,5 +705,6 @@ def load_settings(
     AccessibilityConfiguration.from_mapping(values["accessibility"])
     LocalizationConfiguration.from_mapping(values["localization"])
     SecurityConfiguration.from_mapping(values["security"])
+    PerformanceConfiguration.from_mapping(values["performance"])
 
     return Settings(**values)

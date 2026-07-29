@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from omega.core.exceptions import SecurityValidationError
+from omega.performance.cache import BoundedLruCache
 from omega.plugins.configuration import PluginConfiguration
 from omega.plugins.exceptions import PluginCompatibilityError, PluginValidationError
 from omega.plugins.models import (
@@ -45,8 +46,13 @@ _FIELDS = {
 
 
 class PluginValidator:
-    def __init__(self, configuration: PluginConfiguration) -> None:
+    def __init__(
+        self, configuration: PluginConfiguration, *, cache_size: int = 0
+    ) -> None:
         self.configuration = configuration
+        self._manifest_cache: BoundedLruCache[str, PluginManifest] = BoundedLruCache(
+            cache_size
+        )
 
     def parse_file(self, path: Path) -> PluginManifest:
         if path.is_symlink() or not path.is_file():
@@ -57,6 +63,12 @@ class PluginValidator:
     def parse(self, payload: bytes) -> PluginManifest:
         if len(payload) > self.configuration.maximum_manifest_bytes:
             raise PluginValidationError("Plugin manifest exceeds the size limit.")
+        cache_key: str | None = None
+        if self._manifest_cache.maximum_size:
+            cache_key = hashlib.sha256(payload).hexdigest()
+            cached = self._manifest_cache.get(cache_key)
+            if cached is not None:
+                return cached
         try:
             raw = load_bounded_json(
                 payload,
@@ -70,7 +82,14 @@ class PluginValidator:
             raise PluginValidationError("Plugin manifest is not valid JSON.") from error
         if not isinstance(raw, dict) or set(raw) - _FIELDS:
             raise PluginValidationError("Plugin manifest contains unknown fields.")
-        return self._manifest(raw)
+        manifest = self._manifest(raw)
+        if cache_key is not None:
+            self._manifest_cache.put(cache_key, manifest)
+        return manifest
+
+    @property
+    def manifest_cache_size(self) -> int:
+        return self._manifest_cache.statistics().size
 
     def validate_compatibility(
         self, manifest: PluginManifest

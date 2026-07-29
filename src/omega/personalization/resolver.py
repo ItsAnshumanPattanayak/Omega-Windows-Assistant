@@ -55,6 +55,57 @@ class PreferenceResolver:
             key, definition.default, PreferenceSource.BUILT_IN_DEFAULT
         )
 
+    def resolve_many(
+        self,
+        keys: tuple[str, ...],
+        *,
+        session_id: UUID | None = None,
+        profile_id: str | None = None,
+    ) -> dict[str, ResolvedPreference]:
+        """Resolve a bounded group with one profile lookup and one preference read."""
+
+        if len(keys) > len(DEFINITION_MAP) or len(set(keys)) != len(keys):
+            raise PreferenceValidationError("Preference batch is invalid.")
+        unknown = [key for key in keys if key not in DEFINITION_MAP]
+        if unknown:
+            raise PreferenceValidationError("That preference is unsupported.")
+        owner = profile_id or self.repository.active_profile_id()
+        stored = (
+            {}
+            if owner is None
+            else {
+                item.key: item.value for item in self.repository.list_preferences(owner)
+            }
+        )
+        session = self._session.get(session_id, {}) if session_id is not None else {}
+        resolved: dict[str, ResolvedPreference] = {}
+        for key in keys:
+            if key in SAFETY_VALUES:
+                resolved[key] = ResolvedPreference(
+                    key, SAFETY_VALUES[key], PreferenceSource.SAFETY_POLICY, True
+                )
+            elif key in session:
+                resolved[key] = ResolvedPreference(
+                    key, session[key], PreferenceSource.SESSION_OVERRIDE
+                )
+            elif key in stored:
+                resolved[key] = ResolvedPreference(
+                    key, stored[key], PreferenceSource.ACTIVE_PROFILE
+                )
+            elif key in self.configuration_values:
+                resolved[key] = ResolvedPreference(
+                    key,
+                    self.configuration_values[key],
+                    PreferenceSource.APPLICATION_CONFIGURATION,
+                )
+            else:
+                resolved[key] = ResolvedPreference(
+                    key,
+                    DEFINITION_MAP[key].default,
+                    PreferenceSource.BUILT_IN_DEFAULT,
+                )
+        return resolved
+
     def set_session(self, session_id: UUID, key: str, value: JsonValue) -> None:
         self._session.setdefault(session_id, {})[key] = value
 

@@ -22,3 +22,10 @@ out-of-range values fail startup. Mandatory protections—including log redactio
 the prohibition of shell/dynamic execution, confirmation bypass, automatic remote
 acquisition, background capture, telemetry, and cloud sync—cannot be disabled by
 configuration. See [security.md](security.md).
+
+## Phase 27 performance configuration
+
+The `performance` section bounds timing records, diagnostic runs, and parser/workflow/
+plugin caches. Timing collection is disabled by default. Sensitive-content caching
+and telemetry are mandatory false; unknown settings or unsafe values fail
+configuration loading. See [performance.md](performance.md).

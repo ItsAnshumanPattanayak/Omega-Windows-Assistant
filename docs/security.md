@@ -56,6 +56,12 @@ domain-specific size, count, timeout, queue, and concurrency bounds. Locks guard
 mutable process state; durable claim and idempotency mechanisms remain authoritative
 across restart.
 
+Phase 27 caches only bounded immutable metadata or inert plans. It does not cache
+credentials, provider bodies, clipboard/screenshot data, AI prompts or responses,
+confirmation tokens, authorization decisions, full private documents, or filesystem
+approvals. Cache keys avoid retaining command text, and cached workflow plans cannot
+grant confirmation or permission. See [performance.md](performance.md).
+
 ## Configuration and diagnostics
 
 The `security` configuration is typed, immutable, bounded, and rejects unknown keys.

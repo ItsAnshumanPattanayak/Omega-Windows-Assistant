@@ -508,3 +508,15 @@ security:
   allow_background_screenshot_capture: false
   allow_telemetry: false
   allow_cloud_sync: false
+
+# Phase 27 local-only resource bounds. No content, telemetry, or metrics are uploaded.
+performance:
+  enabled: true
+  collect_local_timing_metrics: false
+  maximum_timing_records: 500
+  diagnostic_runs: 7
+  parser_cache_size: 256
+  workflow_plan_cache_size: 50
+  plugin_manifest_cache_size: 100
+  enable_sensitive_content_caching: false
+  enable_telemetry: false

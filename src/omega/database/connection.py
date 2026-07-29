@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
+from threading import RLock
 
 from omega.core.exceptions import (
     DatabaseConnectionError,
@@ -26,6 +27,8 @@ class DatabaseConnectionFactory:
         self.database_path = (
             database_path if database_path is not None else configuration.resolve_path()
         )
+        self._persistent_pragma_lock = RLock()
+        self._journal_mode_initialized = False
 
     def connect(
         self,
@@ -70,9 +73,12 @@ class DatabaseConnectionFactory:
             connection.execute(
                 "PRAGMA busy_timeout = " f"{self.configuration.busy_timeout_ms}"
             )
-            connection.execute(
-                "PRAGMA journal_mode = " f"{self.configuration.journal_mode}"
-            )
+            with self._persistent_pragma_lock:
+                if not self._journal_mode_initialized:
+                    connection.execute(
+                        "PRAGMA journal_mode = " f"{self.configuration.journal_mode}"
+                    )
+                    self._journal_mode_initialized = True
             connection.execute(
                 "PRAGMA synchronous = " f"{self.configuration.synchronous}"
             )

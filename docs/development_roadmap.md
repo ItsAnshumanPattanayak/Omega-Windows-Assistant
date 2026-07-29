@@ -93,7 +93,13 @@ The approved roadmap is intentionally incremental. Each phase should be designed
     execution-primitive checks, adversarial tests, and cross-domain threat-model
     documentation without adding a new execution path.
 
-28. **Phase 27 — Next:** to be defined after Phase 26 review.
+28. **Phase 27 — Performance Optimization and Resource Efficiency — Completed:**
+    measured lazy CLI startup, batched preference resolution, single-flight SQLite
+    journal configuration, bounded hash/identity caches, privacy-safe local timing,
+    idempotent shutdown, read-only diagnostics, repeatable benchmarks, and resource
+    regression tests without weakening Phase 26 controls.
+
+29. **Phase 28 — Next:** to be defined after Phase 27 review.
 
 Later phases may cover additional Windows integrations, packaging,
 installer support, and release hardening. AI-assisted intent fallback remains disabled

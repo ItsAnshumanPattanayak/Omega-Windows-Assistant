@@ -798,3 +798,22 @@ fail-closed options, and statically inspects source syntax for prohibited execut
 primitives. It is bounded, local, read-only, and does not initialize the application,
 database, providers, plugins, scheduler, GUI, microphone, or network. The complete
 threat model and operational guidance are in [security.md](security.md).
+
+## Phase 27 measured performance boundaries
+
+Lightweight CLI paths select their mode before importing `omega.app`. The full service
+composition remains explicit for terminal, GUI, voice, and device-listing modes.
+Startup preference resolution batches the active profile and its values, while every
+runtime mutation remains repository-backed.
+
+SQLite connections remain short-lived and scoped, but persistent WAL selection is
+single-flight per factory. Parser intent results use bounded hash keys, plugin
+manifests use bounded payload-fingerprint keys, and workflow plans reuse only the
+exact immutable definition object. No cache contains authorization, confirmation,
+filesystem approval, credentials, provider bodies, clipboard/screenshot content, AI
+prompts/responses, or full documents.
+
+Application shutdown is locked and idempotent. Timing collection is disabled by
+default and accepts only safe operation identifiers. The read-only
+`--performance-check` does not initialize the composition root or mutate the database.
+See [performance.md](performance.md) for methodology, measurements, and limitations.

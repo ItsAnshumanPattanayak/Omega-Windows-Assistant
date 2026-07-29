@@ -41,3 +41,10 @@ reserved Windows names, case-colliding members, nested archives, executable/inst
 hooks, encrypted entries, excessive expansion, and excessive compression ratios.
 Validation remains inert and installation remains explicit and atomic. These checks
 do not make same-process plugin code a sandbox. See [security.md](security.md).
+
+## Phase 27 discovery efficiency
+
+Validated immutable manifest metadata may be retained in a bounded process-local LRU
+keyed by the manifest payload fingerprint. Any payload change forces reparsing;
+discovery still reads the manifest, validates compatibility, fingerprints plugin
+source, and never imports disabled plugins.

@@ -4,10 +4,35 @@ from __future__ import annotations
 
 import argparse
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from typing import Protocol
 
-from omega.app import OmegaApplication
 from omega.core.exceptions import OmegaError
+
+
+class _AudioDevice(Protocol):
+    @property
+    def identifier(self) -> int: ...
+
+    @property
+    def name(self) -> str: ...
+
+    @property
+    def input_channels(self) -> int: ...
+
+    @property
+    def default_sample_rate_hz(self) -> int: ...
+
+
+class _Application(Protocol):
+    def run(self) -> int: ...
+    def run_gui(self) -> int: ...
+    def run_voice(self) -> int: ...
+    def list_audio_devices(self) -> Sequence[_AudioDevice]: ...
+
+
+# Injectable seam for entry-point tests; production resolves the class lazily.
+OmegaApplication: Callable[[], _Application] | None = None
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -42,6 +67,11 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="run bounded, read-only local security diagnostics and exit",
     )
+    parser.add_argument(
+        "--performance-check",
+        action="store_true",
+        help="run bounded, read-only local performance diagnostics and exit",
+    )
     return parser
 
 
@@ -60,6 +90,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             options.gui,
             options.gui_check,
             options.security_check,
+            options.performance_check,
             options.voice,
             options.list_audio_devices,
         )
@@ -70,6 +101,21 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.print_usage(sys.stderr)
         return 2
     try:
+        if options.performance_check:
+            from omega.config import load_settings
+            from omega.performance.diagnostics import (
+                PerformanceDiagnostics,
+                format_performance_report,
+            )
+            from omega.utils.paths import project_root
+
+            settings = load_settings()
+            performance_report = PerformanceDiagnostics(
+                settings.performance_configuration,
+                repository_root=project_root(),
+            ).run(settings)
+            print(format_performance_report(performance_report))
+            return 0 if performance_report.available else 1
         if options.security_check:
             from omega.config import load_settings
             from omega.security.diagnostics import (
@@ -79,19 +125,24 @@ def main(argv: Sequence[str] | None = None) -> int:
             from omega.utils.paths import project_root
 
             settings = load_settings()
-            report = SecurityDiagnostics(
+            security_report = SecurityDiagnostics(
                 settings.security_configuration,
                 repository_root=project_root(),
             ).run(settings)
-            print(format_security_report(report))
-            return 0 if report.passed else 1
+            print(format_security_report(security_report))
+            return 0 if security_report.passed else 1
         if options.gui_check:
             from omega.gui.application import OmegaGuiApplication
 
             OmegaGuiApplication.check_available()
             print("Omega GUI support is available.")
             return 0
-        application = OmegaApplication()
+        if OmegaApplication is None:
+            from omega.app import OmegaApplication as ConcreteApplication
+
+            application: _Application = ConcreteApplication()
+        else:
+            application = OmegaApplication()
         if options.list_audio_devices:
             devices = application.list_audio_devices()
             if not devices:

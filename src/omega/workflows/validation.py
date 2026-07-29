@@ -2,6 +2,7 @@
 
 import json
 
+from omega.performance.cache import BoundedLruCache
 from omega.workflows.configuration import WorkflowConfiguration
 from omega.workflows.models import (
     WorkflowDefinition,
@@ -103,10 +104,17 @@ class WorkflowValidator:
 
 
 class WorkflowPlanner:
-    def __init__(self, validator: WorkflowValidator) -> None:
+    def __init__(self, validator: WorkflowValidator, *, cache_size: int = 0) -> None:
         self.validator = validator
+        self._cache: BoundedLruCache[int, tuple[WorkflowDefinition, WorkflowPlan]] = (
+            BoundedLruCache(cache_size)
+        )
 
     def plan(self, workflow: WorkflowDefinition) -> WorkflowPlan:
+        cache_key = id(workflow)
+        cached = self._cache.get(cache_key)
+        if cached is not None and cached[0] is workflow:
+            return cached[1]
         result = self.validator.validate(workflow)
         if not result.valid:
             from omega.workflows.exceptions import WorkflowValidationError
@@ -127,6 +135,15 @@ class WorkflowPlanner:
             workflow.default_timeout_seconds
             or self.validator.configuration.maximum_execution_seconds
         )
-        return WorkflowPlan(
+        plan = WorkflowPlan(
             workflow.name, steps, maximum, workflow.failure_policy, workflow.trigger
         )
+        self._cache.put(cache_key, (workflow, plan))
+        return plan
+
+    def clear_cache(self) -> None:
+        self._cache.clear()
+
+    @property
+    def cache_size(self) -> int:
+        return self._cache.statistics().size

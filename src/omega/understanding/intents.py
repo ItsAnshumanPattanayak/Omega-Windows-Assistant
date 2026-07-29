@@ -2,18 +2,37 @@
 
 from __future__ import annotations
 
+import hashlib
+import re
+
 from omega.models import IntentType
+from omega.performance.cache import BoundedLruCache
 from omega.understanding.aliases import ApplicationAliasRegistry
 from omega.understanding.patterns import INTENT_PATTERNS
+
+_EXTENSION = re.compile(r"\.[a-z0-9]{1,10}(?:\b|$)")
+_LOGICAL_LOCATION = re.compile(
+    r"open (?:the )?(?:desktop|documents|downloads|pictures|music|videos|home|"
+    r"current directory|current folder|project directory)(?:[\\/].+)?"
+)
 
 
 class RuleBasedIntentDetector:
     """Recognize one supported intent using explicitly ordered rules."""
 
-    def __init__(self, aliases: ApplicationAliasRegistry) -> None:
+    def __init__(
+        self, aliases: ApplicationAliasRegistry, *, cache_size: int = 256
+    ) -> None:
         self.aliases = aliases
+        self._cache: BoundedLruCache[str, tuple[IntentType, str | None]] = (
+            BoundedLruCache(cache_size)
+        )
 
     def detect(self, normalized_text: str) -> tuple[IntentType, str | None]:
+        key = hashlib.sha256(normalized_text.encode("utf-8")).hexdigest()
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
         for pattern in INTENT_PATTERNS:
             if not pattern.expression.fullmatch(normalized_text):
                 continue
@@ -64,21 +83,21 @@ class RuleBasedIntentDetector:
                 or not re_has_extension(normalized_text)
             ):
                 intent = IntentType.GET_FOLDER_INFORMATION
-            return intent, pattern.name
-        return IntentType.UNKNOWN, None
+            result: tuple[IntentType, str | None] = (intent, pattern.name)
+            self._cache.put(key, result)
+            return result
+        unknown_result = (IntentType.UNKNOWN, None)
+        self._cache.put(key, unknown_result)
+        return unknown_result
+
+    @property
+    def cache_size(self) -> int:
+        return self._cache.statistics().size
 
 
 def re_has_extension(text: str) -> bool:
-    import re
-
-    return re.search(r"\.[a-z0-9]{1,10}(?:\b|$)", text) is not None
+    return _EXTENSION.search(text) is not None
 
 
 def _opens_logical_location(text: str) -> bool:
-    import re
-
-    locations = (
-        "desktop|documents|downloads|pictures|music|videos|home|"
-        "current directory|current folder|project directory"
-    )
-    return re.fullmatch(rf"open (?:the )?(?:{locations})(?:[\\/].+)?", text) is not None
+    return _LOGICAL_LOCATION.fullmatch(text) is not None

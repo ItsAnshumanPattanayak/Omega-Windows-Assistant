@@ -74,7 +74,14 @@ All supported operations pass through the same command-processing and safety lif
 
 ## Current capabilities
 
-Omega currently includes functionality completed through **Phase 26**:
+Omega currently includes functionality completed through **Phase 27**:
+
+Phase 27 adds measured startup and resource-efficiency improvements: lightweight CLI
+modes avoid the full application import graph, startup preferences use bounded batch
+reads, SQLite persistent pragmas initialize once per factory, parser/plugin/workflow
+caches are bounded and content-safe, shutdown is idempotent, and local read-only
+`--performance-check` reports timing distributions without private content. See
+[docs/performance.md](docs/performance.md).
 
 Phase 26 adds defense-in-depth security controls across every existing feature:
 strict bounded input and JSON validation, universal pre-dispatch invariants,

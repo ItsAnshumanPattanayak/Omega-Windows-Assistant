@@ -183,10 +183,13 @@ class CommandParser:
         command_aliases: CommandAliasCatalog | None = None,
         language: str = "en",
         security_configuration: SecurityConfiguration | None = None,
+        intent_cache_size: int = 256,
     ) -> None:
         self.aliases = aliases or ApplicationAliasRegistry.from_file()
         self.normalizer = CommandNormalizer()
-        self.detector = RuleBasedIntentDetector(self.aliases)
+        self.detector = RuleBasedIntentDetector(
+            self.aliases, cache_size=intent_cache_size
+        )
         self.extractor = RuleBasedEntityExtractor(self.aliases)
         self.command_aliases = command_aliases or create_default_aliases()
         self.language = language

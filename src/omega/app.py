@@ -6,6 +6,8 @@ import sys
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from pathlib import Path
+from threading import RLock
+from time import perf_counter
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -128,6 +130,7 @@ from omega.knowledge.extractors import (
 from omega.knowledge.semantic_search import UnavailableSemanticSearch
 from omega.knowledge.validation import KnowledgeFileValidator
 from omega.models._serialization import JsonValue
+from omega.performance import LocalTimingMetrics
 from omega.personalization import (
     PersonalizationContext,
     PluginPreferenceAccess,
@@ -213,8 +216,16 @@ class OmegaApplication:
         *,
         database_path: Path | None = None,
     ) -> None:
+        initialization_started = perf_counter()
+        self._shutdown_lock = RLock()
+        self._shutdown_complete = False
         self.started_at = datetime.now(UTC)
         self.settings: Settings = load_settings(config_path)
+        performance_configuration = self.settings.performance_configuration
+        self.performance_metrics = LocalTimingMetrics(
+            enabled=performance_configuration.collect_local_timing_metrics,
+            maximum_records=performance_configuration.maximum_timing_records,
+        )
         self.accessibility_service = AccessibilityService(
             self.settings.accessibility_configuration
         )
@@ -331,18 +342,29 @@ class OmegaApplication:
         self.localization_service = create_default_localization(
             self.settings.localization_configuration
         )
-        preferred_language = self.preference_resolver.resolve("language").value
+        startup_preferences = self.preference_resolver.resolve_many(
+            (
+                "language",
+                "locale",
+                "time_format",
+                "date_format",
+                "time_zone",
+                "unit_system",
+                "display_name",
+            )
+        )
+        preferred_language = startup_preferences["language"].value
         if isinstance(
             preferred_language, str
         ) and self.localization_service.registry.get(preferred_language):
             self.localization_service.set_language(preferred_language)
-        preferred_locale = self.preference_resolver.resolve("locale").value
+        preferred_locale = startup_preferences["locale"].value
         self.locale_formatter = LocaleFormatter(
             str(preferred_locale),
-            time_format=str(self.preference_resolver.resolve("time_format").value),
-            date_format=str(self.preference_resolver.resolve("date_format").value),
-            time_zone=str(self.preference_resolver.resolve("time_zone").value),
-            unit_system=str(self.preference_resolver.resolve("unit_system").value),
+            time_format=str(startup_preferences["time_format"].value),
+            date_format=str(startup_preferences["date_format"].value),
+            time_zone=str(startup_preferences["time_zone"].value),
+            unit_system=str(startup_preferences["unit_system"].value),
         )
         self.workflow_preference_access = WorkflowPreferenceAccess(
             self.preference_resolver, self.preference_service
@@ -563,6 +585,10 @@ class OmegaApplication:
         )
         workflow_configuration = self.settings.workflow_configuration
         workflow_validator = WorkflowValidator(workflow_configuration)
+        workflow_planner = WorkflowPlanner(
+            workflow_validator,
+            cache_size=performance_configuration.workflow_plan_cache_size,
+        )
 
         def inert_workflow_step(
             step: WorkflowStep, context: Mapping[str, JsonValue]
@@ -585,7 +611,7 @@ class OmegaApplication:
             WorkflowRepository(database_factory),
             WorkflowRunRepository(database_factory),
             workflow_validator,
-            WorkflowPlanner(workflow_validator),
+            workflow_planner,
             workflow_executor,
         )
         plugin_configuration = self.settings.plugin_configuration
@@ -594,7 +620,10 @@ class OmegaApplication:
             if database_path is not None
             else data_dir() / "plugins"
         )
-        plugin_validator = PluginValidator(plugin_configuration)
+        plugin_validator = PluginValidator(
+            plugin_configuration,
+            cache_size=performance_configuration.plugin_manifest_cache_size,
+        )
         plugin_repository = PluginRepository(database_factory)
         plugin_permissions = PluginPermissionService(plugin_repository)
         self.plugin_manager = PluginManager(
@@ -695,7 +724,7 @@ class OmegaApplication:
         )
 
         personalized_user = dict(self.settings.user)
-        preferred_name = self.preference_resolver.resolve("display_name").value
+        preferred_name = startup_preferences["display_name"].value
         if isinstance(preferred_name, str) and preferred_name.strip():
             personalized_user["display_name"] = preferred_name
         self.session = OmegaSession(
@@ -707,6 +736,7 @@ class OmegaApplication:
                 ),
                 language=self.localization_service.active_language,
                 security_configuration=self.settings.security_configuration,
+                intent_cache_size=performance_configuration.parser_cache_size,
             ),
             security_configuration=self.settings.security_configuration,
             greeting_builder=self.personalization_context.greeting,
@@ -785,6 +815,9 @@ class OmegaApplication:
             safety_gateway=safety_gateway,
         )
         self.voice_configuration = self.settings.voice_configuration
+        self.performance_metrics.record(
+            "application_initialize", initialization_started
+        )
         self.logger.info(
             "%s %s initialized in %s mode.",
             self.settings.application_name,
@@ -875,10 +908,16 @@ class OmegaApplication:
     def shutdown(self) -> None:
         """Release only resources explicitly owned by this Omega instance."""
 
+        with self._shutdown_lock:
+            if self._shutdown_complete:
+                return
+            self._shutdown_complete = True
+        started_at = perf_counter()
         self.browser_manager.shutdown()
         self.scheduler.stop()
         self.plugin_manager.shutdown()
         self.ai_service.shutdown()
+        self.performance_metrics.record("application_shutdown", started_at)
 
     def create_voice_service(
         self,
