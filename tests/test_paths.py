@@ -9,8 +9,10 @@ from omega.utils import paths
 def test_project_paths_resolve_from_source_layout() -> None:
     root = paths.project_root()
 
-    assert root.name == "project Omega"
-    assert paths.source_root() == root / "src"
+    assert (root / "pyproject.toml").is_file()
+    assert (root / "src").is_dir()
+    assert (root / "tests").is_dir()
+    assert paths.s  ource_root() == root / "src"
     assert paths.config_dir() == root / "config"
     assert paths.data_dir() == root / "data"
     assert paths.database_dir() == root / "data" / "database"
