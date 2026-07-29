@@ -27,13 +27,28 @@ from omega.execution.productivity_dispatcher import ProductivityActionDispatcher
 from omega.execution.scheduling_dispatcher import SchedulingActionDispatcher
 from omega.execution.system_dispatcher import SystemActionDispatcher
 from omega.execution.workflow_dispatcher import WorkflowDispatcher
-from omega.models import CommandSource, UserCommand
+from omega.models import (
+    CommandEntity,
+    CommandSource,
+    EntityType,
+    IntentType,
+    UserCommand,
+)
 from omega.safety import SafeExecutionGateway
 from omega.security import SecurityConfiguration, SlidingWindowRateLimiter
+from omega.session.clarification import PendingApplicationClarification
 from omega.session.greeting import greeting_for
 from omega.session.state import SessionState
 from omega.understanding.parser import CommandParser
 from omega.understanding.responses import format_parse_response
+from omega.understanding.result import CommandParseResult
+
+_CLARIFICATION_APPROVALS = frozenset(
+    {"yes", "yes please", "open it", "please open it", "confirm"}
+)
+_CLARIFICATION_CANCELLATIONS = frozenset(
+    {"no", "cancel", "do not open it", "never mind"}
+)
 
 _ALLOWED_TRANSITIONS = {
     SessionState.INACTIVE: {SessionState.ACTIVE, SessionState.TERMINATED},
@@ -88,6 +103,10 @@ class OmegaSession:
             assistant_settings, "shutdown_phrase"
         )
         self.timeout_seconds = self._timeout(assistant_settings)
+        self.application_clarification_timeout_seconds = self._positive_timeout(
+            assistant_settings.get("application_clarification_timeout_seconds", 30),
+            "application_clarification_timeout_seconds",
+        )
         self._clock = monotonic_clock
         self._now_provider = now_provider
         self._greeting_builder = greeting_builder
@@ -125,6 +144,7 @@ class OmegaSession:
         self.activated_at: float | None = None
         self.last_activity_at: float | None = None
         self._history: list[UserCommand] = []
+        self._pending_application: PendingApplicationClarification | None = None
         self._input_lock = RLock()
 
     @staticmethod
@@ -144,6 +164,24 @@ class OmegaSession:
                 "active_session_timeout_seconds must be positive."
             )
         return float(value)
+
+    @staticmethod
+    def _positive_timeout(value: object, name: str) -> float:
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
+            raise ModelValidationError(f"{name} must be positive.")
+        return float(value)
+
+    @property
+    def pending_application_clarification(
+        self,
+    ) -> PendingApplicationClarification | None:
+        """Return the current non-expired application clarification, if any."""
+
+        pending = self._pending_application
+        if pending is not None and pending.is_expired(self._clock()):
+            self._pending_application = None
+            return None
+        return pending
 
     @property
     def history(self) -> tuple[UserCommand, ...]:
@@ -189,6 +227,7 @@ class OmegaSession:
         self._clear_email_selection()
         self._clear_calendar_selection()
         self._clear_confirmations()
+        self._pending_application = None
         if self._browser_dispatcher is not None:
             self._browser_dispatcher.shutdown()
         if self.state is SessionState.INACTIVE:
@@ -210,6 +249,7 @@ class OmegaSession:
         self._clear_email_selection()
         self._clear_calendar_selection()
         self._clear_confirmations()
+        self._pending_application = None
         if self._browser_dispatcher is not None:
             self._browser_dispatcher.shutdown()
         if self.state is not SessionState.TERMINATED:
@@ -239,6 +279,7 @@ class OmegaSession:
         self._clear_email_selection()
         self._clear_calendar_selection()
         self._clear_confirmations()
+        self._pending_application = None
         if self._browser_dispatcher is not None:
             self._browser_dispatcher.shutdown()
         self.session_id = None
@@ -310,9 +351,21 @@ class OmegaSession:
                     self._history.append(controlled.command)
                     self.last_activity_at = self._clock()
                     return controlled.user_message
+            clarification_response = self._handle_application_clarification(
+                text, source
+            )
+            if clarification_response is not None:
+                self.last_activity_at = self._clock()
+                return clarification_response
             result = self._parser.parse(text, self.session_id, source=source)
             self._history.append(result.command)
             self.last_activity_at = self._clock()
+            if not result.matched and not result.requires_clarification:
+                application_response = self._offer_application_clarification(
+                    text, source
+                )
+                if application_response is not None:
+                    return application_response
             if self._history_dispatcher is not None:
                 history_result = self._history_dispatcher.dispatch(result)
                 if history_result is not None:
@@ -387,6 +440,74 @@ class OmegaSession:
         raise InvalidSessionTransitionError(
             "Session cannot accept input while shutting down."
         )
+
+    def _offer_application_clarification(
+        self, text: str, source: CommandSource
+    ) -> str | None:
+        dispatcher = self._application_dispatcher
+        session_id = self.session_id
+        if dispatcher is None or session_id is None:
+            return None
+        matches = dispatcher.registry.matching_definitions(text)
+        if not matches:
+            return None
+        if len(matches) > 1:
+            names = ", ".join(definition.display_name for definition in matches)
+            return f"I found multiple applications: {names}. Please enter one name."
+        definition = matches[0]
+        self._pending_application = PendingApplicationClarification(
+            session_id=session_id,
+            application_id=definition.application_id,
+            display_name=definition.display_name,
+            source=source,
+            expires_at=(self._clock() + self.application_clarification_timeout_seconds),
+        )
+        return f"Do you want to open {definition.display_name}?"
+
+    def _handle_application_clarification(
+        self, text: str, source: CommandSource
+    ) -> str | None:
+        pending = self.pending_application_clarification
+        if pending is None:
+            return None
+        if pending.session_id != self.session_id:
+            self._pending_application = None
+            return None
+        response = " ".join(text.strip().casefold().split())
+        if response in _CLARIFICATION_CANCELLATIONS:
+            self._pending_application = None
+            return f"Okay, I will not open {pending.display_name}."
+        if response not in _CLARIFICATION_APPROVALS:
+            return (
+                f"Please answer yes or no: do you want to open "
+                f"{pending.display_name}?"
+            )
+        self._pending_application = None
+        command = UserCommand(
+            original_text=text,
+            normalized_text=response,
+            intent=IntentType.OPEN_APPLICATION,
+            entities=[
+                CommandEntity(
+                    EntityType.APPLICATION,
+                    pending.application_id,
+                    raw_value=pending.display_name,
+                    name="application_name",
+                )
+            ],
+            confidence=1.0,
+            source=source,
+            session_id=self.session_id,
+            metadata={"clarified_application_name": pending.display_name},
+        )
+        self._history.append(command)
+        dispatcher = self._application_dispatcher
+        if dispatcher is None:
+            return "Application management is unavailable."
+        dispatched = dispatcher.dispatch(CommandParseResult(command, True))
+        if dispatched is None:
+            return f"I could not open {pending.display_name}."
+        return dispatched.user_message
 
     def _clear_confirmations(self) -> None:
         if self._safety_gateway is not None:

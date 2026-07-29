@@ -16,6 +16,23 @@ with a safe configuration error. The development `config/app_config.yaml` may co
 local display or optional-device/model settings and is never packaged. The
 distribution uses the separately reviewed non-personal template documented below;
 neither file may contain credentials or tokens.
+
+## Version 2 voice and clarification settings
+
+The source configuration selects the relative local model directory
+`vosk-model-en-us-0.22-lgraph`. The non-personal packaged template keeps voice
+disabled and its model path unset because Omega never downloads or packages model
+data. Existing Version 1 user configuration remains user-owned and missing settings
+receive safe defaults.
+
+`voice.microphone_device` accepts `null` for the system default, a non-negative input
+index, or an exact input-device name. Use `omega --list-audio-devices` to discover
+bounded device metadata. Ordinary and sensitive confidence thresholds default to
+`0.60` and `0.90`, and sensitive confirmation cannot be set below `0.80`.
+
+`assistant.application_clarification_timeout_seconds` defaults to 30 seconds. It
+controls only the expiring application-name question and does not alter the central
+confirmation timeout or policy.
 ## Phase 26 security configuration
 
 The `security` section defines bounded command, JSON, diagnostic, log, and archive

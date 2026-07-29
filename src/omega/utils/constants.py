@@ -5,7 +5,7 @@ from __future__ import annotations
 APP_NAME = "Omega"
 PACKAGE_NAME = "omega"
 DISTRIBUTION_NAME = "omega-windows-assistant"
-APP_VERSION = "1.0.0"
+APP_VERSION = "2.0.0"
 DEFAULT_ACTIVATION_PHRASE = "Hello Omega"
 DEFAULT_SHUTDOWN_PHRASE = "Shut down Omega"
 MINIMUM_PYTHON_VERSION = (3, 11)

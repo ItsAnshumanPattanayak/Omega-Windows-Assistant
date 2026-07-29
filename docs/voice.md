@@ -1,4 +1,4 @@
-# Omega offline voice
+# Omega offline voice in Version 2
 
 Phase 12 provides optional, explicitly started voice interaction over Omega’s
 existing session and safety architecture. It is not a background Windows
@@ -23,18 +23,20 @@ not silently download a speech model.
 ## Model setup
 
 1. Download a compatible English Vosk model from the official Vosk model page.
-2. Extract it under `data/voice_models/`, for example:
-   `data/voice_models/vosk-model-small-en-us-0.15/`.
+2. Extract it under `data/voice_models/`. Version 2 is configured for the official
+   128 MB `data/voice_models/vosk-model-en-us-0.22-lgraph/` model.
 3. Configure only the relative directory:
 
 ```yaml
 voice:
   enabled: true
-  model_path: vosk-model-small-en-us-0.15
+  model_path: vosk-model-en-us-0.22-lgraph
 ```
 
 Absolute paths and `..` traversal are rejected. The entire model root is ignored
-by Git. Model validity is checked only during explicit voice initialization.
+by Git. Model validity is checked only during explicit voice initialization. The
+previous `vosk-model-small-en-us-0.15` directory may remain installed as a fallback;
+upgrades do not delete it.
 
 ## Configuration
 
@@ -44,7 +46,8 @@ The `voice` section in `config/app_config.yaml` controls:
 - relative model path and optional microphone index/name;
 - bounded sample rate, block size, listening/session timeouts, and transcript
   size;
-- ordinary and stricter confirmation confidence thresholds;
+- ordinary and stricter confirmation confidence thresholds (defaults `0.60` and
+  `0.90`; sensitive confirmation cannot be configured below `0.80`);
 - local speech enablement, rate, volume, and optional installed voice name;
 - whether a timed-out active session returns to passive wake listening.
 
@@ -73,7 +76,10 @@ message without a normal-use traceback. Ctrl+C stops and releases the adapters.
 
 In the desktop interface, select **Start voice** to initialize one listener and
 **Stop voice** to release it. The status area shows microphone/listening state
-and the latest bounded transcription preview. Voice events are marshalled to the
+and the latest bounded transcription preview. Readiness events identify the active
+model path, selected microphone, and sample rate without exposing audio. Voice
+events distinguish unavailable models/devices, low confidence, invalid transcripts,
+recognizer failures, and normal stop state. Voice events are marshalled to the
 Tk thread; background workers never manipulate widgets. Closing the GUI stops
 voice first. Typed commands continue to work when voice is disabled or
 unavailable.
@@ -107,12 +113,20 @@ requires the exact operation-specific phrase at the stricter confidence
 threshold; silence, partial recognition, low confidence, and generic “yes”
 never approve.
 
-## Confirmation security
+## Application-name clarification and confirmation security
+
+While a session is active, a final high-confidence transcript containing only an
+exact registered application name or alias can create a short-lived clarification:
+`Do you want to open Notepad?` Contextual `yes please`, `open it`, `no`, and
+`never mind` replies apply only to that typed clarification. It expires, is cleared
+on shutdown or timeout, cannot be replayed, and the resulting open command still
+uses the normal dispatcher and safety gateway.
 
 Speech never changes confirmation semantics. If the central gateway has a
 pending action, only its exact displayed confirmation or cancellation phrase is
 eligible, and only when recognition is final and meets the stricter configured
-confidence. Omega does not translate “yes” into approval.
+confidence. Omega never translates a bare “yes” into approval for a sensitive
+action, and a yes/no reply with no pending application clarification does nothing.
 
 Silence, partial recognition, low confidence, ambiguity, timeout, cancellation,
 wrong session/action/target, expired state, changed resource fingerprint, or a
@@ -156,8 +170,10 @@ traces are not spoken.
 - **Recognition rejected:** speak the wake phrase or command again clearly.
   Confirmation intentionally uses a higher threshold.
 
-Recognition accuracy depends on the chosen local model, microphone, noise, and
-speaker. Phase 12 does not claim perfect, multilingual, or far-field accuracy.
+Recognition accuracy depends on the chosen local model, microphone, noise, accent,
+and speaker. The larger official model was loaded programmatically during Version 2
+development, but no claim is made about the user's microphone, Indian English,
+multilingual, or far-field accuracy until real-device testing is completed.
 
 ## Tests
 

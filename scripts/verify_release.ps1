@@ -8,8 +8,8 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 $RepositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
-$ExpectedVersion = "1.0.0"
-$ExpectedTag = "v1.0.0"
+$ExpectedVersion = "2.0.0"
+$ExpectedTag = "v2.0.0"
 $Python = if (Test-Path -LiteralPath (Join-Path $RepositoryRoot ".venv\Scripts\python.exe")) {
     Join-Path $RepositoryRoot ".venv\Scripts\python.exe"
 } else {

@@ -9,6 +9,8 @@ from typing import Any
 
 from omega.core.exceptions import VoiceConfigurationError
 
+_MINIMUM_SAFE_CONFIRMATION_CONFIDENCE = 0.80
+
 _ALLOWED_KEYS = frozenset(
     {
         "enabled",
@@ -99,13 +101,13 @@ class VoiceConfiguration:
             voice_name = cls._text(voice_name, "voice.voice_name")
 
         minimum = cls._number(
-            values.get("minimum_confidence", 0.5),
+            values.get("minimum_confidence", 0.60),
             "voice.minimum_confidence",
             0.0,
             1.0,
         )
         strict = cls._number(
-            values.get("confirmation_confidence_threshold", 0.85),
+            values.get("confirmation_confidence_threshold", 0.90),
             "voice.confirmation_confidence_threshold",
             0.0,
             1.0,
@@ -114,6 +116,10 @@ class VoiceConfiguration:
             raise VoiceConfigurationError(
                 "voice.confirmation_confidence_threshold must be at least "
                 "voice.minimum_confidence."
+            )
+        if strict < _MINIMUM_SAFE_CONFIRMATION_CONFIDENCE:
+            raise VoiceConfigurationError(
+                "voice.confirmation_confidence_threshold must be at least 0.80."
             )
 
         return cls(

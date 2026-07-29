@@ -29,6 +29,13 @@ class SoundDeviceMicrophone:
         self._blocks: Queue[bytes] = Queue(maxsize=queue_capacity)
         self._stream: Any | None = None
         self._lock = Lock()
+        self._selected_device: str = "system default"
+
+    @property
+    def selected_device(self) -> str:
+        """Return bounded display metadata for the selected input device."""
+
+        return self._selected_device
 
     @staticmethod
     def _module() -> ModuleType:
@@ -50,20 +57,52 @@ class SoundDeviceMicrophone:
                 )
             module = self._module()
             try:
+                selected = self._resolve_configured_device(module)
                 stream = module.RawInputStream(
                     samplerate=self.sample_rate_hz,
                     blocksize=self.block_size,
-                    device=self.device,
+                    device=selected,
                     dtype="int16",
                     channels=1,
                     callback=self._callback,
                 )
                 stream.start()
+            except MicrophoneUnavailableError:
+                raise
             except Exception as error:
                 raise MicrophoneUnavailableError(
                     "Omega could not open the selected microphone."
                 ) from error
             self._stream = stream
+
+    def _resolve_configured_device(self, module: ModuleType) -> int | None:
+        if self.device is None:
+            self._selected_device = "system default"
+            return None
+        devices = self._query_devices(module)
+        if isinstance(self.device, int):
+            matched = next(
+                (item for item in devices if item.identifier == self.device), None
+            )
+            if matched is None:
+                raise MicrophoneUnavailableError(
+                    f"Configured microphone index {self.device} is unavailable."
+                )
+        else:
+            key = " ".join(self.device.strip().casefold().split())
+            exact = [
+                item
+                for item in devices
+                if " ".join(item.name.casefold().split()) == key
+            ]
+            if len(exact) != 1:
+                raise MicrophoneUnavailableError(
+                    f'Configured microphone "{self.device}" is unavailable or '
+                    "ambiguous. Use --list-audio-devices to choose an index."
+                )
+            matched = exact[0]
+        self._selected_device = f"{matched.identifier}: {matched.name}"
+        return matched.identifier
 
     def _callback(
         self,
@@ -121,7 +160,11 @@ class SoundDeviceMicrophone:
     def list_devices(self) -> tuple[AudioDevice, ...]:
         """Discover at most 100 input devices only when explicitly requested."""
 
-        module = self._module()
+        return self._query_devices(self._module())
+
+    def _query_devices(self, module: ModuleType) -> tuple[AudioDevice, ...]:
+        """Return bounded input metadata from one already imported adapter."""
+
         try:
             raw_devices = module.query_devices()
         except Exception as error:

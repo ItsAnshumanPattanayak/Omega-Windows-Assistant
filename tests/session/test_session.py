@@ -54,3 +54,13 @@ def test_timeout_and_invalid_timeout() -> None:
                 "active_session_timeout_seconds": 0,
             },
         )
+    with pytest.raises(ModelValidationError, match="clarification_timeout"):
+        OmegaSession(
+            {"display_name": "A"},
+            {
+                "activation_phrase": "Hello",
+                "shutdown_phrase": "Bye",
+                "active_session_timeout_seconds": 5,
+                "application_clarification_timeout_seconds": 0,
+            },
+        )

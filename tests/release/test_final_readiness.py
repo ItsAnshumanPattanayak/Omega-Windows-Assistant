@@ -15,12 +15,12 @@ from omega.utils.constants import APP_VERSION
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_authoritative_release_version_is_1_0_0() -> None:
-    assert project_version(ROOT) == "1.0.0"
-    assert APP_VERSION == "1.0.0"
-    assert validate_version_sources(ROOT, tag="v1.0.0") == "1.0.0"
+def test_authoritative_release_version_is_2_0_0() -> None:
+    assert project_version(ROOT) == "2.0.0"
+    assert APP_VERSION == "2.0.0"
+    assert validate_version_sources(ROOT, tag="v2.0.0") == "2.0.0"
     settings = load_settings(ROOT / "config" / "app_config.yaml")
-    assert settings.application_version == "1.0.0"
+    assert settings.application_version == "2.0.0"
 
 
 def test_migration_chain_is_contiguous_unique_and_current() -> None:
@@ -127,6 +127,9 @@ def test_required_release_documents_and_local_links_exist() -> None:
         ROOT / "docs" / "release_checklist.md",
         ROOT / "docs" / "known_limitations.md",
         ROOT / "docs" / "releases" / "v1.0.0.md",
+        ROOT / "docs" / "releases" / "v2.0.0.md",
+        ROOT / "docs" / "command_reference.md",
+        ROOT / "docs" / "version_history.md",
     )
     assert all(path.is_file() for path in required)
     for document in required:

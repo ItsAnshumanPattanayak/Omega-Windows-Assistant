@@ -87,3 +87,28 @@ class ApplicationRegistry:
         if definition is None or (not include_disabled and not definition.enabled):
             return None
         return definition
+
+    def matching_definitions(
+        self, identifier: str, *, include_disabled: bool = False
+    ) -> tuple[ApplicationDefinition, ...]:
+        """Return deterministic exact ID, display-name, or alias matches.
+
+        No fuzzy or substring matching is performed. More than one result is possible
+        only when definitions intentionally share the same display name.
+        """
+
+        key = " ".join(identifier.strip().casefold().split())
+        if not key:
+            return ()
+        matches: list[ApplicationDefinition] = []
+        for definition in self._by_id.values():
+            if not include_disabled and not definition.enabled:
+                continue
+            candidates = {
+                " ".join(definition.application_id.casefold().split()),
+                " ".join(definition.display_name.casefold().split()),
+                *(" ".join(alias.casefold().split()) for alias in definition.aliases),
+            }
+            if key in candidates:
+                matches.append(definition)
+        return tuple(matches)

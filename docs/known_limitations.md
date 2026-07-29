@@ -1,4 +1,4 @@
-# Omega 1.0 known limitations
+# Omega 2.0 known limitations
 
 - Omega is Windows-focused. Pure domain code may import elsewhere, but Windows
   integration and packaging are authoritative only on supported Windows systems.
@@ -8,7 +8,8 @@
   artifacts; the release-preparation environment lacks PyInstaller and Inno Setup.
 - Optional voice requires a compatible local Vosk model, microphone/audio backend,
   and installed Windows SAPI voice. Hindi UI translation is partial, and multilingual
-  speech recognition is not claimed.
+  speech recognition is not claimed. The Version 2 model loads successfully, but
+  microphone accuracy and Indian English handling still require real-device testing.
 - Email and calendar depend on explicit provider configuration. Automated tests use
   zero-network fake providers; no live account behavior is certified by this release.
 - Local AI never downloads models automatically. Quality, speed, language coverage,

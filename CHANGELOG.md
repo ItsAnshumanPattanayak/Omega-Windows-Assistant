@@ -3,23 +3,33 @@
 Notable changes are recorded here. Entries describe repository behavior and do not
 imply that an artifact has already been published.
 
-## Unreleased
+## [2.0.0] - Unreleased
 
 ### Added
 
-- None.
+- Context-bound application-name clarifications for registered applications and
+  aliases, routed through the existing dispatcher and safety gateway.
+- Chat-oriented GUI message layout, collapsible recent activity, and categorized
+  More Activities navigation that preserves every Version 1 action.
+- Voice readiness diagnostics and explicit configured-microphone validation.
 
 ### Changed
 
-- None.
+- The supported offline English model is now the official 128 MB
+  `vosk-model-en-us-0.22-lgraph`; local model files remain ignored by Git.
+- Default ordinary-command confidence is `0.60`, while sensitive voice
+  confirmations default to `0.90` and cannot be configured below `0.80`.
+- Application metadata, packaged defaults, runtime output, and release tooling now
+  consistently report Version `2.0.0`.
 
 ### Fixed
 
-- None recorded.
+- The GUI controller continues to be initialized before toolbar construction.
 
 ### Security
 
-- None.
+- Bare yes/no responses authorize only a current, unexpired application
+  clarification and never replace exact confirmation for sensitive actions.
 
 ### Deprecated
 

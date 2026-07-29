@@ -24,8 +24,8 @@ def test_safe_defaults_are_disabled_and_offline() -> None:
     assert result.offline_recognition_enabled is True
     assert result.model_path is None
     assert result.sample_rate_hz == 16_000
-    assert result.minimum_confidence == 0.5
-    assert result.confirmation_confidence_threshold == 0.85
+    assert result.minimum_confidence == 0.6
+    assert result.confirmation_confidence_threshold == 0.9
 
 
 def test_relative_model_path_is_contained_in_model_root() -> None:
@@ -54,6 +54,7 @@ def test_relative_model_path_is_contained_in_model_root() -> None:
         ({"minimum_confidence": -0.1}, "between 0.0 and 1.0"),
         ({"minimum_confidence": True}, "between 0.0 and 1.0"),
         ({"confirmation_confidence_threshold": 1.1}, "between 0.0 and 1.0"),
+        ({"confirmation_confidence_threshold": 0.79}, "at least 0.80"),
         (
             {
                 "minimum_confidence": 0.9,

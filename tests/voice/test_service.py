@@ -219,6 +219,17 @@ def test_explicit_start_and_stop_release_resources_once() -> None:
     assert service.state is VoiceState.IDLE
 
 
+def test_voice_diagnostics_report_configured_adapter_readiness() -> None:
+    service, *_ = service_components()
+
+    diagnostics = service.diagnostics()
+
+    assert diagnostics.model_path == "configured recognizer adapter"
+    assert diagnostics.microphone == "system default"
+    assert diagnostics.sample_rate_hz == 16_000
+    assert diagnostics.recognizer_ready
+
+
 def test_duplicate_start_is_rejected() -> None:
     service, *_ = service_components()
     service.start()

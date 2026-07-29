@@ -11,6 +11,7 @@ from typing import Final
 from uuid import UUID
 
 from omega.core.exceptions import (
+    MicrophoneUnavailableError,
     RecognitionError,
     SpeechSynthesisError,
     VoiceError,
@@ -22,6 +23,7 @@ from omega.session import OmegaSession, SessionState
 from omega.voice.configuration import VoiceConfiguration
 from omega.voice.models import (
     TranscriptionResult,
+    VoiceDiagnostics,
     VoiceEvent,
     VoiceState,
     VoiceStateMachine,
@@ -86,6 +88,31 @@ class VoiceService:
         with self._lock:
             return self._thread is not None and self._thread.is_alive()
 
+    def diagnostics(self) -> VoiceDiagnostics:
+        """Return bounded readiness details without reading audio or user data."""
+
+        model_path = getattr(self.recognizer, "model_path", None)
+        microphone = getattr(self.audio_source, "selected_device", None)
+        return VoiceDiagnostics(
+            model_path=(
+                str(model_path)
+                if model_path is not None
+                else "configured recognizer adapter"
+            ),
+            microphone=(
+                str(microphone)
+                if microphone is not None
+                else str(self.configuration.microphone_device or "system default")
+            ),
+            sample_rate_hz=self.configuration.sample_rate_hz,
+            recognizer_ready=self.state
+            not in {
+                VoiceState.DISABLED,
+                VoiceState.UNAVAILABLE,
+                VoiceState.ERROR,
+            },
+        )
+
     def set_speech_enabled(self, enabled: bool) -> None:
         """Allow a runtime UI preference to disable, but not policy-enable, TTS."""
 
@@ -128,7 +155,14 @@ class VoiceService:
             self._thread = worker
         worker.start()
         self._logger.info("Omega voice service started.")
-        self._emit("Listening for the configured wake phrase.")
+        diagnostics = self.diagnostics()
+        self._emit(
+            "Recognizer ready. "
+            f"Model: {diagnostics.model_path}; "
+            f"microphone: {diagnostics.microphone}; "
+            f"sample rate: {diagnostics.sample_rate_hz} Hz. "
+            "Listening for the configured wake phrase."
+        )
 
     def stop(self) -> None:
         """Stop listening and release all audio resources idempotently."""
@@ -304,7 +338,13 @@ class VoiceService:
                     if self.session.state is not SessionState.ACTIVE
                     else self.configuration.active_listening_timeout_seconds
                 )
-                audio = self.audio_source.read(timeout)
+                try:
+                    audio = self.audio_source.read(timeout)
+                except MicrophoneUnavailableError:
+                    self._logger.warning("Selected microphone became unavailable.")
+                    self._safe_transition(VoiceState.UNAVAILABLE)
+                    self._emit("Microphone unavailable or disconnected.")
+                    break
                 if self._stop.is_set():
                     break
                 if audio is None:

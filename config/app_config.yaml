@@ -1,6 +1,6 @@
 application:
   name: Omega
-  version: 1.0.0
+  version: 2.0.0
   environment: development
 
 user:
@@ -10,6 +10,7 @@ assistant:
   activation_phrase: Hello Omega
   shutdown_phrase: Shut down Omega
   active_session_timeout_seconds: 300
+  application_clarification_timeout_seconds: 30
 
 logging:
   level: INFO
@@ -95,7 +96,7 @@ history:
 voice:
   enabled: true
   offline_recognition_enabled: true
-  model_path: vosk-model-small-en-us-0.15
+  model_path: vosk-model-en-us-0.22-lgraph
   microphone_device: null
   sample_rate_hz: 16000
   audio_block_size: 4000
@@ -103,12 +104,12 @@ voice:
   active_listening_timeout_seconds: 10
   active_session_timeout_seconds: 300
   maximum_transcript_characters: 1000
-  minimum_confidence: 0.50
+  minimum_confidence: 0.60
   speak_responses: true
   speech_rate: 180
   speech_volume: 1.0
   voice_name: null
-  confirmation_confidence_threshold: 0.85
+  confirmation_confidence_threshold: 0.90
   return_to_passive_after_session: true
 
 browser:

@@ -28,6 +28,18 @@ def test_registry_resolves_ids_and_aliases_case_insensitively() -> None:
     assert registry.resolve("  SAMPLE APP ") is registry.get("sample")
     assert registry.resolve("unknown") is None
     assert isinstance(registry.definitions, tuple)
+    assert registry.matching_definitions("  sample   app ") == (registry.get("sample"),)
+
+
+def test_registry_matching_is_exact_and_can_report_display_name_ambiguity() -> None:
+    first = _definition("first", "alpha")
+    second = _definition("second", "beta")
+    object.__setattr__(first, "display_name", "Shared Tool")
+    object.__setattr__(second, "display_name", "Shared Tool")
+    registry = ApplicationRegistry([first, second])
+
+    assert registry.matching_definitions("share") == ()
+    assert registry.matching_definitions("shared tool") == (first, second)
 
 
 def test_disabled_applications_are_excluded_by_default() -> None:
@@ -49,6 +61,10 @@ def test_duplicate_ids_conflicting_aliases_and_empty_registry_are_rejected() -> 
 def test_registry_loads_canonical_configuration_and_rejects_invalid_json() -> None:
     registry = ApplicationRegistry.from_file()
     assert registry.get("chrome").display_name == "Google Chrome"  # type: ignore[union-attr]
+    assert registry.resolve("note pad").application_id == "notepad"  # type: ignore[union-attr]
+    assert registry.resolve("vs code").application_id == (  # type: ignore[union-attr]
+        "visual_studio_code"
+    )
     with TemporaryDirectory(dir=Path.cwd() / "data") as directory:
         path = Path(directory) / "bad.json"
         path.write_text(json.dumps({"applications": {"bad": []}}), encoding="utf-8")

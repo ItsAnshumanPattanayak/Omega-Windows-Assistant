@@ -243,6 +243,7 @@ def _defaults() -> dict[str, dict[str, Any]]:
             "activation_phrase": DEFAULT_ACTIVATION_PHRASE,
             "shutdown_phrase": DEFAULT_SHUTDOWN_PHRASE,
             "active_session_timeout_seconds": 300,
+            "application_clarification_timeout_seconds": 30,
         },
         "logging": {
             "level": "INFO",
@@ -336,12 +337,12 @@ def _defaults() -> dict[str, dict[str, Any]]:
             "active_listening_timeout_seconds": 10,
             "active_session_timeout_seconds": 300,
             "maximum_transcript_characters": 1_000,
-            "minimum_confidence": 0.5,
+            "minimum_confidence": 0.60,
             "speak_responses": True,
             "speech_rate": 180,
             "speech_volume": 1.0,
             "voice_name": None,
-            "confirmation_confidence_threshold": 0.85,
+            "confirmation_confidence_threshold": 0.90,
             "return_to_passive_after_session": True,
         },
         "browser": {

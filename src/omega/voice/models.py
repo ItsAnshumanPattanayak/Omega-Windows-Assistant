@@ -223,6 +223,24 @@ class AudioDevice:
 
 
 @dataclass(frozen=True)
+class VoiceDiagnostics:
+    """Non-sensitive readiness information for user-facing diagnostics."""
+
+    model_path: str
+    microphone: str
+    sample_rate_hz: int
+    recognizer_ready: bool
+
+    def to_dict(self) -> dict[str, str | int | bool]:
+        return {
+            "model_path": self.model_path,
+            "microphone": self.microphone,
+            "sample_rate_hz": self.sample_rate_hz,
+            "recognizer_ready": self.recognizer_ready,
+        }
+
+
+@dataclass(frozen=True)
 class VoiceEvent:
     """Thread-neutral update for terminal and GUI adapters."""
 

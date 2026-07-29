@@ -4,21 +4,23 @@ Omega is a privacy-first Windows desktop assistant built with Python. It allows 
 
 Omega is designed to work locally and safely. Sensitive, destructive, and external actions require confirmation before execution.
 
-## Current Release
+## Current Source Version
 
 ```text
-Omega Windows Assistant v1.0.0
-Status: Source release ready
+Omega Windows Assistant v2.0.0
+Status: Unreleased source implementation
 Platform: Windows 10 and Windows 11
 ```
 
-Omega can currently be used directly from its source code.
+Omega can currently be used directly from its source code. Version 1.0.0 remains the
+stable source baseline; Version 2.0.0 has not been tagged or published.
 
 The Windows installer and portable package become available only after they are built and attached to an official GitHub Release.
 
 ## Main Features
 
 - Open and close registered Windows applications
+- Ask before opening an application entered by name or approved alias
 - Create, read, update, move, rename, and delete files safely
 - Create and manage folders
 - Open websites and perform supported browser actions
@@ -34,7 +36,27 @@ The Windows installer and portable package become available only after they are 
 - Use offline voice commands
 - Personalize Omega’s responses and defaults
 - Use accessibility and multilingual settings
-- Use a graphical interface or terminal mode
+- Use a chat-oriented graphical interface or terminal mode
+
+## Version 2 Experience
+
+Version 2 keeps the Version 1 safety and persistence architecture while improving
+the desktop interaction layer:
+
+- entering an exact registered application name or alias creates an expiring prompt
+  such as `Do you want to open Notepad?`;
+- contextual replies such as `yes please`, `open it`, `no`, or `never mind` apply
+  only to that prompt and cannot approve an unrelated sensitive action;
+- the GUI gives the conversation most of the window, aligns user and Omega messages
+  distinctly, and lets the recent-activity pane collapse;
+- **More Activities** groups all existing actions into eight keyboard-accessible
+  categories instead of permanently displaying a large button grid;
+- offline voice mode reports model, microphone, sample-rate, readiness, transcript,
+  low-confidence, and error state information more clearly.
+
+The selected development model is the official
+`vosk-model-en-us-0.22-lgraph`. It is not distributed by Git, the installer, or
+Omega itself. Recognition quality still requires real microphone testing.
 
 ## Safety and Privacy
 
@@ -181,7 +203,7 @@ python -m omega --gui-check
 Expected version:
 
 ```text
-omega-windows-assistant 1.0.0
+omega-windows-assistant 2.0.0
 ```
 
 Additional diagnostic commands may include:
@@ -311,13 +333,13 @@ Download a compatible Vosk speech-recognition model manually.
 Example English model:
 
 ```text
-vosk-model-small-en-us-0.15
+vosk-model-en-us-0.22-lgraph
 ```
 
 Extract it into:
 
 ```text
-data/voice_models/vosk-model-small-en-us-0.15
+data/voice_models/vosk-model-en-us-0.22-lgraph
 ```
 
 Voice models are:
@@ -335,7 +357,7 @@ Example:
 
 ```yaml
 voice:
-  model_path: vosk-model-small-en-us-0.15
+  model_path: vosk-model-en-us-0.22-lgraph
 ```
 
 Use a model that matches the configured recognition language.
@@ -1433,6 +1455,9 @@ See:
 - [Release checklist](docs/release_checklist.md)
 - [Release-readiness report](docs/release_readiness.md)
 - [v1.0.0 release notes](docs/releases/v1.0.0.md)
+- [v2.0.0 upgrade notes](docs/releases/v2.0.0.md)
+- [Command reference](docs/command_reference.md)
+- [Version history](docs/version_history.md)
 - [Security](docs/security.md)
 - [Threat model](docs/threat_model.md)
 - [Performance](docs/performance.md)
@@ -1444,8 +1469,6 @@ See:
 - [Plugin development](docs/plugin_development.md)
 - [Workflows](docs/workflows.md)
 - [Known limitations](docs/known_limitations.md)
-
-Some filenames may differ according to the final repository structure. Remove any documentation link whose target file is not present.
 
 ---
 
@@ -1468,7 +1491,7 @@ https://github.com/ItsAnshumanPattanayak
 # Version
 
 ```text
-Omega Windows Assistant v1.0.0
+Omega Windows Assistant v2.0.0 (unreleased)
 ```
 
 # License

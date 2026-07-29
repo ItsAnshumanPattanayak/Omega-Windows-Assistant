@@ -3,7 +3,7 @@ from uuid import UUID
 
 from omega.applications import ApplicationDefinition, ApplicationRegistry
 from omega.execution import ApplicationActionDispatcher
-from omega.models import ActionResult, ErrorCategory, OmegaErrorDetails
+from omega.models import ActionResult, CommandSource, ErrorCategory, OmegaErrorDetails
 from omega.session import OmegaSession, SessionState
 
 
@@ -182,3 +182,101 @@ def test_failed_application_result_does_not_crash_session() -> None:
 
     assert "could not find" in session.handle_input("Open Chrome")
     assert session.state is SessionState.ACTIVE
+
+
+def test_application_name_requires_context_bound_approval() -> None:
+    manager = SessionManagerStub()
+    session = _session(manager)
+    session.activate()
+
+    assert session.handle_input("  ChRoMe ") == "Do you want to open Google Chrome?"
+    pending = session.pending_application_clarification
+    assert pending is not None
+    assert pending.application_id == "chrome"
+    assert manager.calls == []
+
+    assert session.handle_input("yes please") == "Opening Google Chrome."
+    assert manager.calls == ["open"]
+    assert session.pending_application_clarification is None
+    assert session.history[-1].metadata == {
+        "clarified_application_name": "Google Chrome"
+    }
+
+
+def test_application_clarification_can_cancel_and_cannot_replay() -> None:
+    manager = SessionManagerStub()
+    session = _session(manager)
+    session.activate()
+
+    session.handle_input("chrome")
+    assert session.handle_input("never mind") == (
+        "Okay, I will not open Google Chrome."
+    )
+    assert "no pending confirmation" in session.handle_input("yes")
+    assert manager.calls == []
+
+
+def test_application_clarification_expires_without_real_sleep() -> None:
+    clock = [0.0]
+    manager = SessionManagerStub()
+    session = _session(manager, clock=lambda: clock[0])
+    session.activate()
+    session.handle_input("chrome")
+    clock[0] = 30.0
+
+    assert session.pending_application_clarification is None
+    assert "application, file, or folder" in session.handle_input("open it")
+    assert manager.calls == []
+
+
+def test_application_clarification_is_cleared_on_shutdown() -> None:
+    manager = SessionManagerStub()
+    session = _session(manager)
+    session.activate()
+    session.handle_input("chrome")
+
+    session.shutdown()
+
+    assert session.pending_application_clarification is None
+    assert manager.calls == []
+
+
+def test_non_answer_does_not_replace_current_application_clarification() -> None:
+    manager = SessionManagerStub()
+    session = _session(manager)
+    session.activate()
+    session.handle_input("chrome")
+
+    assert session.handle_input("maybe") == (
+        "Please answer yes or no: do you want to open Google Chrome?"
+    )
+    assert session.pending_application_clarification is not None
+    assert manager.calls == []
+
+
+def test_voice_uses_the_same_application_clarification_lifecycle() -> None:
+    manager = SessionManagerStub()
+    session = _session(manager)
+    session.activate()
+
+    session.handle_input("chrome", source=CommandSource.VOICE)
+    assert session.handle_input("open it", source=CommandSource.VOICE) == (
+        "Opening Google Chrome."
+    )
+
+    assert session.history[-1].source is CommandSource.VOICE
+    assert manager.calls == ["open"]
+
+
+def test_sensitive_confirmation_coexists_without_application_approval() -> None:
+    manager = SessionManagerStub()
+    session = _session(manager)
+    session.activate()
+    session.handle_input("Close Chrome")
+    session.handle_input("chrome")
+
+    response = session.handle_input("yes")
+
+    assert "don't understand" in response
+    assert manager.calls == []
+    assert session.pending_application_clarification is not None

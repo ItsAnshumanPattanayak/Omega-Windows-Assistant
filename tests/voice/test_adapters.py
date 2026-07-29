@@ -108,6 +108,66 @@ def test_microphone_capture_is_explicit_bounded_and_closes(monkeypatch) -> None:
     assert stream.closed
 
 
+def test_microphone_name_resolves_to_stable_input_index(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    class Stream:
+        active = True
+
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+        def start(self):
+            return None
+
+        def stop(self):
+            return None
+
+        def close(self):
+            return None
+
+    module = SimpleNamespace(
+        RawInputStream=Stream,
+        query_devices=lambda: [
+            {
+                "name": "USB Microphone",
+                "max_input_channels": 1,
+                "default_samplerate": 48_000,
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        "omega.voice.microphone.importlib.import_module", lambda _: module
+    )
+    microphone = SoundDeviceMicrophone(
+        device=" usb   microphone ",
+        sample_rate_hz=16_000,
+        block_size=4_000,
+    )
+
+    microphone.start()
+    try:
+        assert captured["device"] == 0
+        assert microphone.selected_device == "0: USB Microphone"
+    finally:
+        microphone.stop()
+
+
+def test_unavailable_configured_microphone_is_actionable(monkeypatch) -> None:
+    module = SimpleNamespace(query_devices=lambda: [])
+    monkeypatch.setattr(
+        "omega.voice.microphone.importlib.import_module", lambda _: module
+    )
+    microphone = SoundDeviceMicrophone(
+        device=7,
+        sample_rate_hz=16_000,
+        block_size=4_000,
+    )
+
+    with pytest.raises(MicrophoneUnavailableError, match="index 7 is unavailable"):
+        microphone.start()
+
+
 def test_microphone_disconnect_is_reported_safely(monkeypatch) -> None:
     class Stream:
         active = False

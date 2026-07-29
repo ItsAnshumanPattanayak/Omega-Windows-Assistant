@@ -5,6 +5,7 @@ import pytest
 from omega.core.exceptions import ModelValidationError, VoiceStateError
 from omega.voice.models import (
     TranscriptionResult,
+    VoiceDiagnostics,
     VoiceEvent,
     VoiceState,
     VoiceStateMachine,
@@ -107,6 +108,17 @@ def test_voice_event_serialization_is_safe() -> None:
     assert event.to_dict()["state"] == "active_listening"
     assert event.to_dict()["transcript"] == "Open Chrome"
     assert isinstance(event.to_dict()["occurred_at"], str)
+
+
+def test_voice_diagnostics_serialization_is_bounded() -> None:
+    diagnostics = VoiceDiagnostics("model", "0: Microphone", 16_000, True)
+
+    assert diagnostics.to_dict() == {
+        "model_path": "model",
+        "microphone": "0: Microphone",
+        "sample_rate_hz": 16_000,
+        "recognizer_ready": True,
+    }
 
 
 @pytest.mark.parametrize(

@@ -36,7 +36,7 @@
     },
     "notepad": {
       "display_name": "Notepad",
-      "aliases": ["notepad", "text editor"],
+      "aliases": ["notepad", "note pad", "text editor"],
       "executable_names": ["notepad.exe"],
       "candidate_paths": [
         "%WINDIR%\\System32\\notepad.exe",
@@ -44,6 +44,22 @@
       ],
       "process_names": ["notepad.exe"],
       "allow_multiple_instances": true,
+      "supports_graceful_close": true,
+      "requires_close_confirmation": true,
+      "allow_force_close": false,
+      "enabled": true
+    },
+    "visual_studio_code": {
+      "display_name": "Visual Studio Code",
+      "aliases": ["visual studio code", "vs code", "vscode"],
+      "executable_names": ["Code.exe"],
+      "candidate_paths": [
+        "%LOCALAPPDATA%\\Programs\\Microsoft VS Code\\Code.exe",
+        "%ProgramFiles%\\Microsoft VS Code\\Code.exe"
+      ],
+      "process_names": ["Code.exe"],
+      "validate_process_path": true,
+      "allow_multiple_instances": false,
       "supports_graceful_close": true,
       "requires_close_confirmation": true,
       "allow_force_close": false,

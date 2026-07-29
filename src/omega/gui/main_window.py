@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import tkinter as tk
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from tkinter import filedialog, messagebox, simpledialog, ttk
 from typing import TYPE_CHECKING
@@ -47,7 +47,7 @@ class OmegaMainWindow(GuiView):
             f"{application.settings.application_name} "
             f"{application.settings.application_version}"
         )
-        self.root.minsize(760, 520)
+        self.root.minsize(800, 560)
         self.root.geometry(
             f"{self.preferences.window_width}x{self.preferences.window_height}"
         )
@@ -101,90 +101,52 @@ class OmegaMainWindow(GuiView):
 
         toolbar = ttk.Frame(self.root, padding=(12, 0, 12, 8))
         toolbar.grid(row=1, column=0, sticky="ew")
-        actions = (
+        essential_actions = (
             ("Activate", self._activate),
             ("Shutdown session", self._shutdown),
-            ("Show history", self._show_history),
-            ("Refresh", self._refresh),
             ("Undo", self._undo),
-            ("Export", self._export),
-            ("Clear history", self._clear_history),
             ("Settings", self._settings),
-            ("Help / About", self._help),
             ("Start voice", self._start_voice),
             ("Stop voice", self._stop_voice),
-            ("Open browser", self._open_browser),
-            ("List tabs", self._list_tabs),
-            ("Back", self._browser_back),
-            ("Forward", self._browser_forward),
-            ("Refresh page", self._browser_refresh),
-            ("List reminders", self._list_reminders),
-            ("List alarms", self._list_alarms),
-            ("List timers", self._list_timers),
-            ("Notes", self._list_notes),
-            ("Tasks", self._list_tasks),
-            ("Due today", self._due_tasks),
-            ("Overdue", self._overdue_tasks),
-            ("Knowledge", self._knowledge_collections),
-            ("Documents", self._knowledge_documents),
-            ("Add document", self._add_knowledge_file),
-            ("Add folder", self._add_knowledge_folder),
-            ("Knowledge search", self._search_knowledge),
-            ("Sources", self._knowledge_sources),
-            ("Re-index source", self._reindex_knowledge_source),
-            ("Remove source", self._remove_knowledge_source),
-            ("Email status", self._email_status),
-            ("Inbox", self._list_emails),
-            ("Unread email", self._list_unread_emails),
-            ("Email search", self._search_emails),
-            ("Open email", self._open_email),
-            ("Summarize email", self._summarize_email),
-            ("Draft email", self._draft_email),
-            ("Reply draft", self._reply_email),
-            ("Email drafts", self._list_email_drafts),
-            ("Send draft", self._send_email_draft),
-            ("Archive email", self._archive_email),
-            ("Attachments", self._email_attachments),
-            ("Calendar", self._calendar_today),
-            ("Availability", self._calendar_availability),
-            ("Calendar search", self._calendar_search),
-            ("Add event", self._calendar_add),
-            ("Clipboard", self.controller.read_clipboard),
-            ("Clear clipboard", self.controller.clear_clipboard),
-            ("Screenshot", self.controller.capture_screenshot),
-            ("Screenshots", self.controller.list_screenshots),
-            ("Displays", self.controller.show_display_information),
-            ("Windows", self.controller.list_visible_windows),
-            ("Workflows", self.controller.list_workflows),
-            ("New workflow", self._create_workflow),
-            ("Preview workflow", self._preview_workflow),
-            ("Plugins", self.controller.list_plugins),
-            ("Local AI status", self.controller.show_local_ai_status),
-            ("AI models", self.controller.list_local_ai_models),
-            ("Cancel AI", self.controller.cancel_ai_generation),
-            ("Clear AI context", self.controller.clear_ai_conversation),
-            ("My profile", self.controller.show_profile),
-            ("Preferences", self.controller.show_preferences),
-            ("Privacy settings", self.controller.show_privacy_preferences),
-            ("Export profile", self.controller.export_profile),
-            ("Reset session prefs", self.controller.reset_session_preferences),
         )
-        self.operation_buttons: list[ttk.Button] = []
-        for toolbar_index, (label, command) in enumerate(actions):
+        self.operation_buttons: list[ttk.Widget] = []
+        for toolbar_index, (label, command) in enumerate(essential_actions):
             button = ttk.Button(toolbar, text=label, command=command)
-            button.grid(
-                row=toolbar_index // 5,
-                column=toolbar_index % 5,
-                padx=2,
-                pady=2,
-                sticky="ew",
-            )
+            button.grid(row=0, column=toolbar_index, padx=2, pady=2, sticky="ew")
             self.operation_buttons.append(button)
             if label == "Undo":
                 self.undo_button = button
 
+        self.activity_actions = self._activity_action_groups()
+        self.more_activities_menu = tk.Menu(self.root, tearoff=False)
+        for category, actions in self.activity_actions.items():
+            category_menu = tk.Menu(self.more_activities_menu, tearoff=False)
+            for label, activity_command in actions:
+                category_menu.add_command(label=label, command=activity_command)
+            self.more_activities_menu.add_cascade(label=category, menu=category_menu)
+        self.more_activities_button = ttk.Menubutton(
+            toolbar,
+            text="More Activities",
+            menu=self.more_activities_menu,
+        )
+        self.more_activities_button.grid(
+            row=0, column=len(essential_actions), padx=2, pady=2, sticky="ew"
+        )
+        self.activity_toggle_button = ttk.Button(
+            toolbar, text="Hide activity", command=self._toggle_activity
+        )
+        self.activity_toggle_button.grid(
+            row=0, column=len(essential_actions) + 1, padx=2, pady=2, sticky="ew"
+        )
+        self.operation_buttons.extend(
+            [self.more_activities_button, self.activity_toggle_button]
+        )
+        for column in range(len(essential_actions) + 2):
+            toolbar.columnconfigure(column, weight=1)
+
         panes = ttk.Panedwindow(self.root, orient=tk.HORIZONTAL)
         panes.grid(row=2, column=0, sticky="nsew", padx=12)
+        self.panes = panes
 
         conversation_frame = ttk.Frame(panes, padding=8)
         conversation_frame.columnconfigure(0, weight=1)
@@ -219,6 +181,8 @@ class OmegaMainWindow(GuiView):
         self.send_button.grid(row=0, column=1, sticky="ns", padx=(8, 0))
 
         activity_frame = ttk.Frame(panes, padding=8)
+        self.activity_frame = activity_frame
+        self._activity_visible = True
         activity_frame.columnconfigure(0, weight=1)
         activity_frame.rowconfigure(1, weight=1)
         ttk.Label(activity_frame, text="Recent activity").grid(
@@ -246,8 +210,8 @@ class OmegaMainWindow(GuiView):
         self.activity.grid(row=1, column=0, sticky="nsew")
         activity_scroll.grid(row=1, column=1, sticky="ns")
 
-        panes.add(conversation_frame, weight=3)
-        panes.add(activity_frame, weight=2)
+        panes.add(conversation_frame, weight=5)
+        panes.add(activity_frame, weight=1)
 
         status = ttk.Frame(self.root, padding=(12, 7))
         status.grid(row=3, column=0, sticky="ew")
@@ -274,6 +238,106 @@ class OmegaMainWindow(GuiView):
             pady=(3, 0),
         )
 
+    def _activity_action_groups(
+        self,
+    ) -> dict[str, tuple[tuple[str, Callable[[], object]], ...]]:
+        """Return every secondary Version 1 action in stable categories."""
+
+        return {
+            "Applications and browser": (
+                ("Open browser", self._open_browser),
+                ("List tabs", self._list_tabs),
+                ("Back", self._browser_back),
+                ("Forward", self._browser_forward),
+                ("Refresh page", self._browser_refresh),
+            ),
+            "Productivity": (
+                ("Show history", self._show_history),
+                ("Refresh activity", self._refresh),
+                ("Undo", self._undo),
+                ("Export history", self._export),
+                ("Clear history", self._clear_history),
+                ("Notes", self._list_notes),
+                ("Tasks", self._list_tasks),
+                ("Due today", self._due_tasks),
+                ("Overdue", self._overdue_tasks),
+            ),
+            "Scheduling": (
+                ("Reminders", self._list_reminders),
+                ("Alarms", self._list_alarms),
+                ("Timers", self._list_timers),
+            ),
+            "Knowledge": (
+                ("Collections", self._knowledge_collections),
+                ("Documents", self._knowledge_documents),
+                ("Add document", self._add_knowledge_file),
+                ("Add folder", self._add_knowledge_folder),
+                ("Search", self._search_knowledge),
+                ("Sources", self._knowledge_sources),
+                ("Re-index source", self._reindex_knowledge_source),
+                ("Remove source", self._remove_knowledge_source),
+            ),
+            "Email and calendar": (
+                ("Email status", self._email_status),
+                ("Inbox", self._list_emails),
+                ("Unread email", self._list_unread_emails),
+                ("Email search", self._search_emails),
+                ("Open email", self._open_email),
+                ("Summarize email", self._summarize_email),
+                ("Draft email", self._draft_email),
+                ("Reply draft", self._reply_email),
+                ("Email drafts", self._list_email_drafts),
+                ("Send draft", self._send_email_draft),
+                ("Archive email", self._archive_email),
+                ("Attachments", self._email_attachments),
+                ("Calendar", self._calendar_today),
+                ("Availability", self._calendar_availability),
+                ("Calendar search", self._calendar_search),
+                ("Add event", self._calendar_add),
+            ),
+            "Workflows": (
+                ("List workflows", self.controller.list_workflows),
+                ("New workflow", self._create_workflow),
+                ("Preview workflow", self._preview_workflow),
+            ),
+            "Plugins and local AI": (
+                ("Plugins", self.controller.list_plugins),
+                ("Local AI status", self.controller.show_local_ai_status),
+                ("AI models", self.controller.list_local_ai_models),
+                ("Cancel AI", self.controller.cancel_ai_generation),
+                ("Clear AI context", self.controller.clear_ai_conversation),
+            ),
+            "System and privacy": (
+                ("Clipboard", self.controller.read_clipboard),
+                ("Clear clipboard", self.controller.clear_clipboard),
+                ("Screenshot", self.controller.capture_screenshot),
+                ("Screenshots", self.controller.list_screenshots),
+                ("Displays", self.controller.show_display_information),
+                ("Windows", self.controller.list_visible_windows),
+                ("My profile", self.controller.show_profile),
+                ("Preferences", self.controller.show_preferences),
+                ("Privacy settings", self.controller.show_privacy_preferences),
+                ("Export profile", self.controller.export_profile),
+                (
+                    "Reset session preferences",
+                    self.controller.reset_session_preferences,
+                ),
+                ("Help / About", self._help),
+            ),
+        }
+
+    def _toggle_activity(self) -> None:
+        """Show or hide the secondary activity pane without losing its data."""
+
+        if self._activity_visible:
+            self.panes.forget(self.activity_frame)
+            self._activity_visible = False
+            self.activity_toggle_button.configure(text="Show activity")
+        else:
+            self.panes.add(self.activity_frame, weight=1)
+            self._activity_visible = True
+            self.activity_toggle_button.configure(text="Hide activity")
+
     def _create_workflow(self) -> None:
         name = simpledialog.askstring(
             "New workflow", "Workflow name:", parent=self.root
@@ -290,9 +354,19 @@ class OmegaMainWindow(GuiView):
 
     def add_message(self, message: ConversationMessage) -> None:
         self.conversation.configure(state="normal")
-        tag = message.kind.value
-        self.conversation.insert("end", f"{message.sender}: ", (tag, "sender"))
-        self.conversation.insert("end", message.text + "\n\n", (tag,))
+        kind = message.kind.value
+        alignment = (
+            "message_user" if message.kind is MessageKind.USER else "message_assistant"
+        )
+        timestamp = message.occurred_at.astimezone().strftime("%H:%M")
+        self.conversation.insert(
+            "end",
+            f"{message.sender} · {timestamp}\n",
+            (kind, alignment, "sender"),
+        )
+        self.conversation.insert(
+            "end", message.text + "\n\n", (kind, alignment, "message_body")
+        )
         self.conversation.configure(state="disabled")
         if self.preferences.auto_scroll:
             self.conversation.see("end")
@@ -309,7 +383,7 @@ class OmegaMainWindow(GuiView):
             self.send_button.configure(state="normal")
             self.command_input.configure(state="normal")
         for button in self.operation_buttons:
-            button.configure(state="disabled" if busy else "normal")
+            button.configure({"state": "disabled" if busy else "normal"})
         if not busy and not self._undo_available:
             self.undo_button.configure(state="disabled")
 
@@ -388,6 +462,25 @@ class OmegaMainWindow(GuiView):
         self.conversation.tag_configure("warning", foreground="#b06000")
         self.conversation.tag_configure("error", foreground="#b3261e")
         self.conversation.tag_configure("sender", font=("Segoe UI Semibold", font_size))
+        self.conversation.tag_configure(
+            "message_user",
+            justify="right",
+            lmargin1=140,
+            lmargin2=140,
+            rmargin=14,
+            spacing1=6,
+            spacing3=4,
+        )
+        self.conversation.tag_configure(
+            "message_assistant",
+            justify="left",
+            lmargin1=14,
+            lmargin2=14,
+            rmargin=140,
+            spacing1=6,
+            spacing3=4,
+        )
+        self.conversation.tag_configure("message_body", spacing2=2)
         self.root.geometry(f"{preferences.window_width}x{preferences.window_height}")
         if preferences.maximized:
             self.root.state("zoomed")

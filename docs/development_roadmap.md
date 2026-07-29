@@ -121,6 +121,13 @@ The approved roadmap is intentionally incremental. Each phase should be designed
     readiness script. Tagging, hosted CI, clean-machine package/installer builds, and
     publication remain explicit post-approval manual gates.
 
+32. **Version 2.0 Experience Upgrade — Implemented, release verification pending:**
+    the official larger desktop Vosk model was validated locally; voice diagnostics,
+    exact application-name clarification, contextual yes/no safety, chat-oriented GUI,
+    categorized More Activities navigation, and Version 2 metadata are implemented.
+    Physical microphone/Indian English tests, clean-machine packaging, hosted CI,
+    tagging, and publication remain pending.
+
 Future work is driven by reviewed limitations and real release feedback. AI-assisted
 intent fallback remains disabled unless a future reviewed phase enables it under
 strict schema and confirmation rules.

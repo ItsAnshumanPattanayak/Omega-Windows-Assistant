@@ -877,3 +877,25 @@ manual `v1.0.0` tag, and successful tag workflow remain separate checklist gates
 [release_readiness.md](release_readiness.md),
 [known_limitations.md](known_limitations.md), and
 [release_checklist.md](release_checklist.md).
+
+## Version 2 interaction architecture
+
+Version 2 preserves every Version 1 execution boundary. Ordinary parsing still runs
+first. Only an unmatched input is compared exactly with enabled application IDs,
+display names, and reviewed aliases. One match creates a typed, session-bound,
+monotonic-expiry `PendingApplicationClarification`; multiple matches are listed and no
+match retains the ordinary unknown-command response.
+
+A contextual approval creates a normal `UserCommand` with `OPEN_APPLICATION` intent
+and an application entity, then uses `ApplicationActionDispatcher` and
+`SafeExecutionGateway`. It never calls the application manager directly. The pending
+clarification is distinct from `PendingConfirmation`, has one-use replay protection,
+and clears on cancellation, timeout, shutdown, or execution. Central exact
+confirmation is checked first, so a sensitive pending action cannot be approved by
+the application yes/no vocabulary.
+
+The GUI remains a presentation adapter over `GuiController`. A single selectable
+text widget renders bounded directional message regions, the activity pane is
+collapsible, and More Activities is a categorized native menu. No category owns a
+parser, dispatcher, or service. Voice diagnostics are presentation-safe metadata;
+audio and model initialization remain explicit and lazy.

@@ -1,4 +1,4 @@
-# Omega desktop interface
+# Omega Version 2 desktop interface
 
 Phase 11 provides an optional Windows desktop interface using Python's standard-library tkinter and ttk. It is a presentation layer over the existing `OmegaApplication`; it does not contain a second parser, executor, safety engine, confirmation store, history repository, or recovery implementation.
 
@@ -22,18 +22,28 @@ python -m omega --gui
 
 ## Main window
 
-The resizable main window contains:
+The resizable main window now treats conversation as the primary workspace and
+contains:
 
 - assistant name, version, and active/inactive state;
-- selectable chronological conversation text;
+- selectable chronological conversation text with user messages aligned right and
+  Omega/system/result messages aligned left;
 - multiline command input, Enter to send, and Shift+Enter for a newline;
-- bounded recent command/action activity with status and timestamps;
+- bounded recent command/action activity with status and timestamps in a smaller,
+  collapsible pane;
 - Ready, Processing, Awaiting Confirmation, Error, and Closed status;
-- Activate, Shutdown, Show History, Refresh, Undo, Export, Clear History, Settings, and Help controls;
+- compact Activate, Shutdown, Undo, Settings, Start/Stop Voice, More Activities, and
+  activity-panel controls;
+- eight More Activities categories preserving all Version 1 application/browser,
+  productivity, scheduling, knowledge, email/calendar, workflow, plugin/AI, system,
+  privacy, and help actions;
 - system, light, and dark ttk themes with configurable safe font sizes;
 - in-application success, warning, error, confirmation, and refresh notifications.
 
-Input is limited to 10,000 characters. Whitespace-only input is rejected. While one operation is processing, command-producing controls are disabled so a callback or repeated click cannot execute it twice.
+Input is limited to 10,000 characters. Whitespace-only input is rejected. Enter sends
+and Shift+Enter inserts a newline. While one operation is processing,
+command-producing controls are disabled so a callback or repeated click cannot
+execute it twice. Native menus retain keyboard navigation and Escape dismissal.
 
 ## Safety integration
 

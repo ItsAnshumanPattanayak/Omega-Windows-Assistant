@@ -1,7 +1,7 @@
 # Safe packaged defaults. This template contains no personal or machine-specific data.
 application:
   name: Omega
-  version: 1.0.0
+  version: 2.0.0
   environment: production
 
 user:
@@ -11,6 +11,7 @@ assistant:
   activation_phrase: Hello Omega
   shutdown_phrase: Shut down Omega
   active_session_timeout_seconds: 300
+  application_clarification_timeout_seconds: 30
 
 logging:
   level: INFO
