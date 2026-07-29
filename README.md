@@ -1,1767 +1,1515 @@
-<div align="center">
+# Omega Windows Assistant
 
-# Ω OMEGA
+Omega is a privacy-first Windows desktop assistant built with Python. It allows users to control applications, manage files and folders, create notes and tasks, schedule reminders, search local documents, use offline voice commands, create workflows, connect optional email and calendar providers, and use optional local AI features.
 
-### A Local, Safety-First Windows Desktop Assistant
+Omega is designed to work locally and safely. Sensitive, destructive, and external actions require confirmation before execution.
 
-**Control applications, manage files, browse safely, use voice commands, monitor your system, create reminders, and organize notes and tasks—all from one assistant.**
-
-<br>
-
-[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Platform](https://img.shields.io/badge/Platform-Windows-0078D4?logo=windows&logoColor=white)](#system-requirements)
-[![Interface](https://img.shields.io/badge/Interface-CLI%20%7C%20GUI%20%7C%20Voice-8A2BE2)](#interaction-modes)
-[![Database](https://img.shields.io/badge/Database-SQLite-003B57?logo=sqlite&logoColor=white)](#local-persistence)
-[![Privacy](https://img.shields.io/badge/Privacy-Local--First-success)](#privacy)
-[![Status](https://img.shields.io/badge/Status-v1.0%20Release%20Candidate-blue)](#release-status)
-[![License](https://img.shields.io/badge/License-MIT-green)](#license)
-
-<br>
-
-[Features](#features) •
-[Installation](#installation) •
-[Run Omega](#running-omega) •
-[Examples](#example-commands) •
-[Safety](#safety-architecture) •
-[Testing](#testing) •
-[Roadmap](#development-status)
-
-</div>
-
----
-
-## About Omega
-
-**Omega** is a modular Windows assistant designed to help users interact with their computer through text, a desktop graphical interface, and optional offline voice commands.
-
-Unlike a basic command launcher, Omega uses a structured application architecture with:
-Omega can explicitly import approved PDF, DOCX, TXT, and Markdown files into
-local collections. It validates size, signature, location, and format; extracts
-text without running macros, scripts, links, attachments, or document
-instructions; creates deterministic bounded chunks; and persists metadata and
-chunks in SQLite migration 8, with canonical source-path lookup added by
-migration 9.
-
-Keyword search, collection/document filters, source previews, page or section
-references, extractive document-grounded answers, transactional re-indexing,
-source-preserving removal, and bounded JSON/Markdown metadata exports work
-fully offline. Semantic search is an optional local adapter boundary and falls
-back clearly to keyword search when no explicit local model is configured.
-Explicit folder indexing is non-recursive by default and bounded by configured
-file-count and total-byte limits. Omega does not automatically crawl or watch
-folders, perform OCR, upload documents, download models,
-execute document content, or provide cloud RAG. See
-[knowledge.md](docs/knowledge.md).
-
-- Typed commands and actions
-- Intent recognition and entity extraction
-- Centralized safety evaluation
-- Permission policies
-- Scoped confirmations
-- Persistent command and action history
-- Recovery and undo support
-- Local SQLite storage
-- Modular feature dispatchers
-- GUI, terminal, and voice integration
-
-Omega is designed around one core principle:
-
-> **Convenience must never bypass safety.**
-
-All supported operations pass through the same command-processing and safety lifecycle, regardless of whether the command originated from the terminal, desktop GUI, or voice interface.
-
----
-
-## Current capabilities
-
-Omega includes completed functionality through **Phase 30 release preparation**.
-Phase 28 executable and
-installer source is locally verified; a real artifact build still requires a Windows
-environment with the pinned packaging tools. Phase 29 GitHub-hosted workflows are
-implemented and locally validated; current hosted-run status must be reviewed in the
-repository before release.
-
-Phase 29 adds read-only pull-request and `main` validation, security automation,
-Windows package builds, strict version/tag checks, bounded release metadata, SHA-256
-manifests, conservative dependency updates, and a tag-only GitHub Release path. It
-does not create tags, publish on ordinary pushes, use production provider secrets, or
-claim signed/reproducible builds. See [ci_cd.md](docs/ci_cd.md) and
-[releasing.md](docs/releasing.md).
-
-Phase 30 finalizes version `1.0.0`, performs repository-wide QA, and provides the
-[release-readiness audit](docs/release_readiness.md),
-[v1.0.0 release notes](docs/releases/v1.0.0.md),
-[known limitations](docs/known_limitations.md), and
-[manual release checklist](docs/release_checklist.md). No tag or release exists until
-the reviewed commit is pushed and the checklist and GitHub workflows complete.
-
-Phase 28 adds a Windows one-folder packaging definition, separate console and GUI
-executables, a per-user Inno Setup installer definition, packaging-aware resources,
-first-run configuration and runtime-data separation, safe upgrade/uninstall behavior,
-manifest verification, and reproducible PowerShell build scripts. Builds are unsigned
-and do not bundle models, credentials, personal configuration, databases, plugins, or
-user content. See [installation.md](docs/installation.md) and
-[packaging.md](docs/packaging.md).
-
-Phase 27 adds measured startup and resource-efficiency improvements: lightweight CLI
-modes avoid the full application import graph, startup preferences use bounded batch
-reads, SQLite persistent pragmas initialize once per factory, parser/plugin/workflow
-caches are bounded and content-safe, shutdown is idempotent, and local read-only
-`--performance-check` reports timing distributions without private content. See
-[docs/performance.md](docs/performance.md).
-
-Phase 26 adds defense-in-depth security controls across every existing feature:
-strict bounded input and JSON validation, universal pre-dispatch invariants,
-credential-safe logging, command rate limiting, hardened plugin archive inspection,
-fail-closed configuration, and a bounded read-only `--security-check`. It does not
-add remote scanning, telemetry, shell execution, or a new execution path. See
-[docs/security.md](docs/security.md).
-
-Phase 25 adds offline accessibility and localization foundations: keyboard focus
-shortcuts, visible textual status, bounded font scaling, high contrast, reduced-motion
-preferences, screen-reader-friendly terminal output, accessible confirmation policy,
-Unicode command defenses, locale-aware formatting, a complete English catalog, and an
-explicitly partial Hindi preview with English fallback. Translation catalogs are
-bounded data only; Omega makes no external translation request and does not download
-language packs. See [docs/accessibility.md](docs/accessibility.md) and
-[docs/localization.md](docs/localization.md).
-
-Phase 24 adds explicit local profiles, validated persisted and session-only
-preferences, deterministic safety-first precedence, bounded JSON export/import,
-registered application and approved folder aliases, quiet/working hours,
-accessibility settings, and narrow workflow, plugin, GUI, voice, and local-AI
-integration. It performs no telemetry, cloud sync, behavioral inference, or hidden
-profiling, and preferences cannot remove mandatory confirmations. See
-[docs/personalization.md](docs/personalization.md).
-
-Phase 23 adds an optional, disabled-by-default local-AI boundary for bounded text
-generation, summarization, citation-checked grounded answers, embeddings, and
-reviewable draft proposals. It includes a zero-network fake provider and an optional
-loopback-only HTTP adapter, but no model, runtime, cloud provider, or heavyweight ML
-dependency is bundled or downloaded. Deterministic Omega features remain available
-when AI is disabled or unavailable. See [docs/local_ai.md](docs/local_ai.md).
-
-Phase 22 adds bounded JSON plugin manifests, manifest-only discovery, safe local
-package validation, disabled-by-default installation, fingerprint-bound permissions,
-version compatibility, namespaced extensions, and lazy reviewed loading. Omega never
-downloads or automatically updates plugins, invokes pip, or claims same-process
-Python is a secure sandbox.
-
-Phase 21 adds bounded, reviewable multi-step workflow definitions, static
-validation and preview, deterministic scalar variables and conditions, sequential
-execution, pause/cancellation controls, and privacy-minimized run history.
-Workflows are an allowlisted orchestration format—not a scripting language—and
-cannot contain shell, PowerShell, Python, JavaScript, raw SQL, arbitrary network
-requests, watchers, or unattended sensitive actions. Starting or saving a
-workflow never replaces the confirmation required by an individual sensitive
-step.
-
-Phase 20 provides explicit plain-text clipboard commands, bounded screenshot
-capture, display information, and visible-window metadata through the existing
-terminal, GUI, and offline voice command lifecycle. Clipboard clearing and
-screenshot deletion require exact confirmation, and deletion uses the Recycle
-Bin recovery path. Clipboard history, background monitoring, automatic screen
-capture, OCR, keylogging, cloud upload, and execution of clipboard content are
-not supported. Screenshot capture uses a lazy optional Pillow adapter and
-reports that the capability is unavailable when that dependency is absent.
-
-Examples include `read the clipboard`, `copy hello to clipboard`, `take a
-screenshot`, `show screen information`, and `list visible windows`. Every
-operation is explicit and bounded; Omega never watches the clipboard or screen.
-
-| Area | Status |
-|---|---|
-| Command understanding | ✅ Implemented |
-| Terminal interface | ✅ Implemented |
-| Desktop GUI | ✅ Implemented |
-| Optional voice interaction | ✅ Implemented |
-| Application management | ✅ Implemented |
-| Safe file management | ✅ Implemented |
-| Safe folder management | ✅ Implemented |
-| Confirmation system | ✅ Implemented |
-| Recycle Bin and undo | ✅ Implemented |
-| Persistent history | ✅ Implemented |
-| Runtime settings | ✅ Implemented |
-| Safe browser automation | ✅ Implemented |
-| Windows system information | ✅ Implemented |
-| Volume and brightness controls | ✅ Implemented |
-| Windows Settings launcher | ✅ Implemented |
-| Confirmed power actions | ✅ Implemented |
-| Reminders and recurring reminders | ✅ Implemented |
-| Alarms and timers | ✅ Implemented |
-| Notes and task management | ✅ Implemented |
-| Knowledge-base document search | ✅ Implemented |
-| Privacy-first email assistance | ✅ Implemented (live adapter not bundled) |
-| Privacy-first calendar assistance | ✅ Implemented (live adapter not bundled) |
-| Privacy-first local AI | ✅ Implemented (optional; no real model bundled) |
-
-### Privacy-first local AI
-
-Local AI is disabled by default. When explicitly configured, Omega can generate
-bounded text, summarize provided text, maintain bounded session-local context, and
-produce reviewable email, calendar, note, task, and workflow suggestions. Generated
-text is labeled, unverified, omitted from normal persistent history, and never
-treated as authorization or redispatched as a command.
-
-Omega does not download models, install inference packages, contact cloud AI,
-expose credentials, execute model-generated code, or give a model direct access to
-files, email, calendars, workflows, plugins, or the shell. Grounded answers validate
-citations against retrieved local chunks. Prompt-injection defenses are layered but
-cannot eliminate every model risk; a same-machine runtime must be trusted separately.
-
-### Privacy-first email assistance
-
-Phase 18 adds bounded, provider-independent email workflows. Omega can list and
-search message summaries, read sanitized plain text, prepare deterministic local
-summaries, expose attachment metadata, and create or revise reviewable drafts.
-Sending and archiving require exact, scoped, expiring confirmation through the
-same safety gateway used by every interface. Draft creation never sends.
-
-Email is disabled by default. No live mail provider is bundled or claimed as
-verified; the in-memory fake provider exists for automated tests and explicit
-local demonstrations only. Omega stores no credentials, mailbox bodies, or
-attachment binaries in its database. It never renders remote HTML, loads remote
-images, opens links, downloads attachments, permanently deletes mail, or retries
-an ambiguous send automatically. See [docs/email.md](docs/email.md).
-
-### Privacy-first calendar assistance
-
-Phase 19 adds bounded, provider-independent calendar listing, search, event
-reading, deterministic agendas, busy-interval availability, and reviewable
-event proposals. Create, update, delete, and invitation-response mutations all
-require exact, scoped, expiring confirmation. Recurring mutations require an
-explicit scope, and ambiguous provider timeouts are never retried automatically.
-
-Calendar assistance is disabled by default. No live calendar provider or
-credential flow is bundled; the fake provider performs zero network operations.
-SQLite stores metadata-only idempotency receipts, never event content or
-credentials. See [docs/calendar.md](docs/calendar.md).
-
----
-
-# Features
-
-## 1. Multi-interface interaction
-
-Omega supports three interaction modes.
-
-### Terminal interface
-
-Use Omega directly from PowerShell or the VS Code terminal.
+## Current Release
 
 ```text
-Hello Omega
-Open Notepad
-Show my reminders
-Shut down Omega
+Omega Windows Assistant v1.0.0
+Status: Source release ready
+Platform: Windows 10 and Windows 11
 ```
 
-### Desktop graphical interface
+Omega can currently be used directly from its source code.
 
-The desktop application provides:
+The Windows installer and portable package become available only after they are built and attached to an official GitHub Release.
 
-- Conversation display
-- Command input
-- Assistant responses
-- Activity status
-- Persistent history
-- Confirmation dialogs
-- Settings controls
-- Undo and recovery controls
-- Browser controls
-- System-information panels
-- Reminder and timer views
-- Notes and task-management views
+## Main Features
 
-Long-running operations are processed outside the GUI thread so the desktop interface remains responsive.
+- Open and close registered Windows applications
+- Create, read, update, move, rename, and delete files safely
+- Create and manage folders
+- Open websites and perform supported browser actions
+- Create notes, tasks, and reminders
+- Schedule supported actions
+- Search locally indexed documents
+- Create privacy-safe email drafts
+- View calendars and create event proposals
+- Use clipboard and screenshot utilities
+- Build and run multi-step workflows
+- Install reviewed local plugins
+- Use optional local AI
+- Use offline voice commands
+- Personalize Omega’s responses and defaults
+- Use accessibility and multilingual settings
+- Use a graphical interface or terminal mode
 
-### Optional voice interaction
+## Safety and Privacy
 
-Omega supports optional local voice interaction with:
+Omega follows a local-first and confirmation-controlled design.
 
-- Microphone input
-- Configurable wake phrase
-- Speech-to-text
-- Active listening sessions
-- Local text-to-speech
-- Voice-state indicators
-- Strict confirmation handling
-- Text-only fallback when voice components are unavailable
+Omega does not:
 
-Default wake phrase:
+- Automatically send emails
+- Automatically modify calendar events
+- Execute arbitrary shell or PowerShell commands
+- Automatically download AI models
+- Automatically download voice models
+- Upload personal files by default
+- Enable telemetry by default
+- Synchronize personal data to the cloud by default
+- Monitor the clipboard continuously
+- Capture screenshots secretly
+- Enable plugins automatically after installation
 
-```text
-Hello Omega
-```
+Sensitive operations such as deletion, overwriting, email sending, calendar modification, plugin installation, and other external actions require confirmation.
 
-Assistant-session shutdown phrase:
-
-```text
-Shut down Omega
-```
-
-Voice commands are processed through the same parser and safety gateway as typed commands.
-
----
-
-## 2. Application management
-
-Omega can safely interact with registered Windows applications.
-
-Supported operations include:
-
-- Open an approved application
-- Close an approved application
-- Check whether an application is running
-- Resolve configured aliases
-- Discover registered applications
-- Prevent broad or unrelated process termination
-
-Example commands:
-
-```text
-Open Chrome
-Open Notepad
-Open Visual Studio Code
-Is Notepad running?
-Close Notepad
-```
-
-Omega does not expose unrestricted process termination through arbitrary process IDs.
+> Approved Python plugins run as trusted same-process code. They are not perfectly sandboxed. Install plugins only from sources you trust.
 
 ---
 
-## 3. Safe file management
+# System Requirements
 
-Omega provides controlled file operations inside approved locations.
-
-Supported capabilities include:
-
-- Create a file
-- Read supported text files
-- Write text to a file
-- Append text
-- Open a file
-- Rename or move supported files
-- Search for files
-- Delete through a recoverable workflow
-- Restore supported deleted files
-- Validate source and destination paths
-
-Example commands:
-
-```text
-Create a file called notes.txt
-Write Hello from Omega in notes.txt
-Open notes.txt
-Find report.pdf
-Delete test.txt
-Undo the last action
-```
-
-Safety protections include:
-
-- Protected-path checks
-- Approved-root validation
-- Path normalization
-- Traversal prevention
-- Confirmation for destructive actions
-- Recovery records
-- Duplicate-execution protection
-
----
-
-## 4. Safe folder management
-
-Omega can manage folders through the same safety infrastructure.
-
-Supported operations include:
-
-- Create folders
-- Open folders
-- Search for folders
-- Rename folders
-- Move folders
-- Inspect folder information
-- Delete folders through a safe workflow
-- Restore supported folder operations
-
-Example commands:
-
-```text
-Create a folder called Project Notes
-Open the Downloads folder
-Find my Resume Analyzer folder
-Rename Drafts to Completed Drafts
-```
-
-Omega prevents unsafe operations involving protected Windows locations or ambiguous destination paths.
-
----
-
-## 5. Central safety gateway
-
-Every supported state-changing operation is evaluated by Omega’s safety system.
-
-The safety architecture includes:
-
-- Risk classification
-- Permission decisions
-- Resource validation
-- Protected-target detection
-- Confirmation requirements
-- Confirmation expiration
-- Action fingerprinting
-- Duplicate-execution prevention
-- Structured denial responses
-- Persistent audit records
-
-Conceptual risk categories include:
-
-| Risk | Example |
-|---|---|
-| Low | Reading system information |
-| Medium | Changing volume or brightness |
-| High | Removing stored data or locking the computer |
-| Critical | Restarting or shutting down Windows |
-| Denied | Arbitrary shell execution or security bypass |
-
-The GUI, voice interface, browser controller, scheduling system, and other components cannot bypass the central execution gateway.
-
----
-
-## 6. Scoped confirmations
-
-Risky operations require deliberate confirmation.
-
-A confirmation may be linked to:
-
-- Session ID
-- Command ID
-- Action ID
-- Target resource
-- Requested operation
-- Resource fingerprint
-- Current revision
-- Expiration time
-
-This prevents:
-
-- Reusing confirmation for another action
-- Approving an action after the target changed
-- Approving an expired operation
-- Executing the same confirmed action twice
-- Treating silence or dialog closure as approval
-- Using low-confidence voice input for critical actions
-
----
-
-## 7. Recycle Bin, recovery, and undo
-
-Omega supports recoverable destructive operations where possible.
-
-Capabilities include:
-
-- Recycle Bin integration
-- Persistent recovery records
-- Undoable action registration
-- Restore supported deleted items
-- Prevent reuse of completed recovery records
-- Preserve recovery state across application restarts
-- Validate restored destinations
-
-Example:
-
-```text
-Delete E:\Omega-Test-Workspace\test.txt
-Undo the last action
-```
-
-Omega does not empty the Windows Recycle Bin or perform unrestricted permanent deletion.
-
----
-
-## 8. Persistent command and action history
-
-Omega stores command activity locally in SQLite.
-
-History may include:
-
-- User commands
-- Command source
-- Session identifiers
-- Generated actions
-- Risk level
-- Permission decision
-- Confirmation state
-- Action results
-- Error category
-- Execution timestamps
-- Recovery information
-
-Example commands:
-
-```text
-Show my history
-Show recent commands
-Show failed actions
-Show recent activity
-```
-
-History queries are bounded and ordered to prevent unbounded database output.
-
----
-
-## 9. History export and cleanup
-
-Omega can safely manage its own application history.
-
-Supported operations include:
-
-- Export history as JSON
-- View recent command history
-- View failed actions
-- Clear eligible historical records
-- Preserve active recovery information
-- Preserve database schema information
-- Return a cleanup summary
-
-Clearing Omega history does not delete personal files or empty the Windows Recycle Bin.
-
----
-
-## 10. Runtime preferences
-
-Omega stores safe mutable preferences locally.
-
-Preferences may include:
-
-- Theme
-- Font size
-- History display limits
-- Window state
-- Notification preferences
-- Voice preferences
-- Speech rate
-- Browser preferences
-- Productivity display settings
-
-Runtime preferences cannot override hard safety restrictions.
-
----
-
-## 11. Safe browser automation
-
-Omega can operate a controlled browser session.
-
-Supported operations include:
-
-- Open the browser
-- Close the Omega-controlled browser
-- Open a validated website
-- Search the web
-- Open a new tab
-- Close a tab
-- Switch tabs
-- List tabs
-- Refresh the current page
-- Go backward
-- Go forward
-- Show page information
-- Find text on a page
-- Use Omega-managed bookmarks
-
-Example commands:
-
-```text
-Open the browser
-Open https://example.com
-Search the web for Python decorators
-Open a new tab
-List tabs
-Go back
-Refresh the page
-Find the word Example on this page
-```
-
-### Browser restrictions
-
-Omega does not provide:
-
-- Password entry
-- Payment automation
-- Banking automation
-- CAPTCHA bypass
-- Arbitrary JavaScript execution
-- Browser-security bypass
-- Unrestricted form submission
-- Executable downloads
-- Cookie or token extraction
-- Hidden authenticated scraping
-- Broad termination of user browser processes
-
-Dangerous URL schemes and unsafe local-network targets are rejected by default.
-
----
-
-## 12. Windows system information
-
-Omega can retrieve bounded read-only system information.
-
-Supported information may include:
-
-- Operating-system summary
-- CPU usage
-- Processor counts
-- Memory usage
-- Available memory
-- Disk usage
-- Free disk space
-- Battery percentage
-- Charging status
-- Network status
-- Bounded process summaries
-
-Example commands:
-
-```text
-Show system information
-What is my CPU usage?
-Show memory usage
-Show disk space
-What is my battery percentage?
-Show network status
-List running processes
-```
-
-Omega does not expose:
-
-- Wi-Fi passwords
-- Product keys
-- Access tokens
-- Process environment variables
-- Process memory
-- Complete sensitive command lines
-- Credential stores
-
----
-
-## 13. Volume controls
-
-Supported audio controls include:
-
-- Get current volume
-- Set volume
-- Increase volume
-- Decrease volume
-- Mute
-- Unmute
-
-Example commands:
-
-```text
-Show volume
-Set volume to 40 percent
-Increase volume by 10 percent
-Mute the sound
-Unmute the sound
-```
-
-Volume values are validated and bounded.
-
----
-
-## 14. Brightness controls
-
-On supported hardware, Omega can:
-
-- Show brightness
-- Set brightness
-- Increase brightness
-- Decrease brightness
-
-Example commands:
-
-```text
-Show brightness
-Set brightness to 60 percent
-Decrease brightness by 10 percent
-```
-
-Unsupported external displays or hardware return a safe unavailable response instead of crashing Omega.
-
----
-
-## 15. Approved Windows Settings pages
-
-Omega can open allowlisted Windows Settings pages.
-
-Examples include:
-
-- Display
-- Sound
-- Notifications
-- Power and battery
-- Storage
-- Bluetooth and devices
-- Network and internet
-- Windows Update
-- Apps
-- Privacy
-
-Example commands:
-
-```text
-Open display settings
-Open sound settings
-Open Bluetooth settings
-Open storage settings
-```
-
-Omega does not accept arbitrary system protocols or unrestricted Settings URIs.
-
----
-
-## 16. Power and session controls
-
-Omega supports carefully restricted power operations:
-
-- Lock computer
-- Sleep
-- Hibernate when enabled and available
-- Sign out
-- Restart
-- Shut down
-- Cancel a pending power countdown where supported
-
-Example commands:
-
-```text
-Lock the computer
-Restart the computer
-Shut down the computer
-```
-
-High-risk and critical actions require scoped, operation-specific confirmation.
-
-Omega distinguishes between:
-
-```text
-Shut down Omega
-```
-
-and:
-
-```text
-Shut down the computer
-```
-
-The first ends the assistant session. The second requests a critical Windows power action.
-
----
-
-## 17. Reminders
-
-Omega provides persistent local reminders.
-
-Supported features include:
-
-- One-time reminders
-- Relative reminders
-- Daily reminders
-- Weekly reminders
-- Selected-weekday reminders
-- Recurring reminders
-- Reminder editing
-- Reminder cancellation
-- Reminder completion
-- Snoozing
-- Restart recovery
-- Overdue handling
-
-Example commands:
-
-```text
-Remind me in 30 minutes to review my code
-Remind me tomorrow at 7 PM to study DSA
-Remind me every Monday at 10 AM to check assignments
-List my reminders
-Cancel the study reminder
-Snooze this reminder for 10 minutes
-```
-
----
-
-## 18. Alarms
-
-Omega supports persistent local alarms.
-
-Capabilities include:
-
-- One-time alarms
-- Recurring alarms
-- Daily alarms
-- Weekday alarms
-- Dismissal
-- Snoozing
-- Cancellation
-- Restart restoration
-- Bounded notification repetition
-
-Example commands:
-
-```text
-Set an alarm for 6:30 AM
-Set an alarm every weekday at 7 AM
-List my alarms
-Snooze this alarm for five minutes
-Cancel my 7 AM alarm
-```
-
----
-
-## 19. Timers
-
-Omega supports multiple countdown timers.
-
-Capabilities include:
-
-- Start timer
-- Pause timer
-- Resume timer
-- Cancel timer
-- View remaining time
-- List active timers
-- Restore active or paused timers after restart
-- Deliver one completion notification
-
-Example commands:
-
-```text
-Start a timer for 20 minutes called Study Timer
-List my timers
-Pause the Study Timer
-Resume the Study Timer
-Cancel the Study Timer
-```
-
----
-
-## 20. Persistent scheduler
-
-Omega includes a local scheduling engine with:
-
-- Explicit startup and shutdown
-- SQLite persistence
-- Atomic due-item claiming
-- Duplicate-delivery prevention
-- Stale-claim recovery
-- Timezone-aware scheduling
-- UTC persistence
-- Restart restoration
-- Bounded overdue processing
-- Deterministic recurrence
-- GUI notifications
-- Terminal notifications
-- Optional spoken notifications
-
-The scheduler does not require:
-
-- A cloud service
-- A cloud account
-- Windows Task Scheduler
-- A permanently installed Windows service
-
-Destructive scheduled commands remain disabled or restricted by current safety policy.
-
----
-
-## 21. Notes
-
-Omega provides local note management.
-
-Supported operations include:
-
-- Create a note
-- View notes
-- Edit a note
-- Append content
-- Search notes
-- Pin and unpin notes
-- Archive notes
-- Restore archived notes
-- Delete notes with confirmation
-- Add and remove tags
-- Export notes
-
-Example commands:
-
-```text
-Create a note called Project Ideas
-Add Use SQLite to the Project Ideas note
-Show the Project Ideas note
-Search my notes for machine learning
-Pin the Project Ideas note
-Archive the Shopping note
-```
-
-Note content is always treated as data.
-
-Omega does not execute:
-
-- Code blocks
-- Markdown commands
-- HTML
-- JavaScript
-- Links
-- Shell commands written inside notes
-
----
-
-## 22. Task lists and to-do management
-
-Omega supports local productivity management.
-
-Capabilities include:
-
-- Create task lists
-- Create tasks
-- Update task details
-- Complete tasks
-- Reopen tasks
-- Cancel tasks
-- Archive tasks
-- Restore tasks
-- Delete tasks with confirmation
-- Move tasks between lists
-- Set priorities
-- Set deadlines
-- Remove deadlines
-- Add and remove tags
-- Search and filter tasks
-
-Example commands:
-
-```text
-Create a task list called Omega QA
-Add a task to Omega QA called Test voice mode
-Set the task priority to high
-Set the deadline to tomorrow at 7 PM
-Show tasks due today
-Show overdue tasks
-Mark Test voice mode complete
-```
-
-Supported task views may include:
-
-- Pending
-- In progress
-- Due today
-- Overdue
-- Upcoming
-- Completed
-- Cancelled
-- Archived
-
-Task text is never executed as an Omega command.
-
----
-
-## 23. Task and reminder integration
-
-Tasks can be linked to the Phase 15 scheduling system.
-
-Supported behavior includes:
-
-- Link an existing reminder to a task
-- Create a reminder for a task deadline
-- Show linked reminder status
-- Unlink reminders
-- Cancel a linked reminder explicitly
-- Prevent duplicate reminder links
-- Preserve reminder history after task completion
-
-Example:
-
-```text
-Remind me about the Test voice mode task tomorrow at 6 PM
-```
-
-Completing a task does not silently execute or remove unrelated actions.
-
----
-
-## 24. Productivity import and export
-
-Omega supports safe productivity data handling.
-
-Supported formats may include:
-
-- JSON import
-- JSON export
-- Markdown export
-
-Safety restrictions include:
-
-- No Pickle import
-- No Python file import
-- No script execution
-- No raw SQLite database import
-- No executable Markdown
-- No automatic link opening
-- No unsafe export path
-- No silent overwrite
-- Bounded import and export sizes
-
----
-
-# Architecture
-
-Omega follows a layered and modular architecture.
-
-```text
-┌─────────────────────────────────────────────┐
-│              User Interfaces                │
-│       Terminal │ Desktop GUI │ Voice        │
-└─────────────────────┬───────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────┐
-│         Command and Session Handling        │
-│  Activation │ Normalization │ Clarification │
-└─────────────────────┬───────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────┐
-│          Natural-Language Understanding     │
-│      Intent Detection │ Entity Extraction   │
-└─────────────────────┬───────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────┐
-│             Feature Dispatchers             │
-│ Apps │ Files │ Folders │ Browser │ System   │
-│ Scheduling │ Productivity │ History          │
-└─────────────────────┬───────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────┐
-│              Safety Architecture            │
-│ Risk │ Permission │ Confirmation │ Gateway  │
-└─────────────────────┬───────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────┐
-│             Services and Adapters           │
-│ Windows APIs │ Browser │ Audio │ SQLite     │
-└─────────────────────┬───────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────┐
-│             Persistent Local Data           │
-│ History │ Actions │ Recovery │ Schedules    │
-│ Settings │ Notes │ Tasks                     │
-└─────────────────────────────────────────────┘
-```
-
----
-
-# Project structure
-
-The exact structure may evolve, but the project follows a layout similar to:
-
-```text
-Omega-Windows-Assistant/
-│
-├── config/
-│   └── app_config.yaml
-│
-├── data/
-│   ├── database/
-│   ├── logs/
-│   └── exports/
-│
-├── docs/
-│
-├── src/
-│   └── omega/
-│       ├── applications/
-│       ├── browser/
-│       ├── database/
-│       ├── files/
-│       ├── folders/
-│       ├── gui/
-│       ├── history/
-│       ├── productivity/
-│       ├── recovery/
-│       ├── safety/
-│       ├── scheduling/
-│       ├── system/
-│       ├── understanding/
-│       ├── voice/
-│       ├── app.py
-│       └── __main__.py
-│
-├── tests/
-│
-├── .gitignore
-├── pyproject.toml
-└── README.md
-```
-
-> The actual repository is the source of truth. Some package names may differ depending on the implemented architecture.
-
----
-
-# System requirements
+## Required
 
 - Windows 10 or Windows 11
-- Python 3.11 or a compatible version declared in `pyproject.toml`
+- Python supported by the project
 - PowerShell
 - Git
-- Optional microphone for voice mode
-- Optional supported audio and brightness hardware
-- Optional supported browser automation dependencies
+- Internet access for initial package installation
+
+## Optional
+
+- Microphone for voice mode
+- Compatible Vosk model for offline speech recognition
+- Installed Windows SAPI voice for speech output
+- Local AI runtime and model for AI features
+- Provider credentials for optional email integration
+- Provider credentials for optional calendar integration
+- Inno Setup for building the Windows installer
+- PyInstaller for building the Windows application bundle
 
 ---
 
-# Installation
+# Quick Start for the Project Owner
 
-Packaged Windows installation, runtime data paths, upgrade behavior, and unsigned-build
-limitations are documented in [docs/installation.md](docs/installation.md).
+The current local project is located at:
 
-## 1. Clone the repository
+```text
+E:\project Omega
+```
+
+Open PowerShell and run:
+
+```powershell
+cd "E:\project Omega"
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\Activate.ps1
+python -m omega
+```
+
+Activate Omega by typing:
+
+```text
+Hello Omega
+```
+
+Stop Omega safely by typing:
+
+```text
+Shut down Omega
+```
+
+---
+
+# Method 1 — Run Omega From Source
+
+This method is suitable for developers, contributors, testers, and users who already have Python installed.
+
+## Step 1: Clone the repository
 
 ```powershell
 git clone https://github.com/ItsAnshumanPattanayak/Omega-Windows-Assistant.git
 cd Omega-Windows-Assistant
 ```
 
-For the existing local project:
-
-```powershell
-cd "E:\project Omega"
-```
-
-## 2. Create a virtual environment
+## Step 2: Create a virtual environment
 
 ```powershell
 python -m venv .venv
 ```
 
-## 3. Activate it
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-When PowerShell blocks script activation:
+## Step 3: Activate the virtual environment
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
 ```
 
-## 4. Upgrade pip
+The execution-policy command affects only the current PowerShell window.
+
+Whenever you reopen the project, activate the environment again:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+## Step 4: Upgrade pip
 
 ```powershell
 python -m pip install --upgrade pip
 ```
 
-## 5. Install Omega
+## Step 5: Install Omega
 
 ```powershell
 python -m pip install -e .
 ```
 
-When a development dependency group exists:
+For development tools:
 
 ```powershell
 python -m pip install -e ".[dev]"
 ```
 
-Check `pyproject.toml` before installing optional groups.
+Do not commit the following directory:
+
+```text
+.venv/
+```
+
+## Step 6: Verify the installation
+
+```powershell
+python -m omega --version
+python -m omega --help
+python -m omega --gui-check
+```
+
+Expected version:
+
+```text
+omega-windows-assistant 1.0.0
+```
+
+Additional diagnostic commands may include:
+
+```powershell
+python -m omega --security-check
+python -m omega --performance-check
+```
 
 ---
 
-# Running Omega
+# Start Omega in Terminal Mode
 
-Always activate the virtual environment first:
+Open PowerShell:
+
+```powershell
+cd "E:\project Omega"
+.\.venv\Scripts\Activate.ps1
+python -m omega
+```
+
+For another cloned copy:
+
+```powershell
+cd Omega-Windows-Assistant
+.\.venv\Scripts\Activate.ps1
+python -m omega
+```
+
+Example interaction:
+
+```text
+You: Hello Omega
+
+Omega: Good evening, Anshuman. How can I help you?
+
+You: Open Chrome
+
+Omega: Chrome opened successfully.
+
+You: Create a folder named College Notes
+
+Omega: The folder proposal is ready.
+
+You: Show my tasks
+
+Omega: Here are your current tasks.
+
+You: Shut down Omega
+
+Omega: Shutting down safely.
+```
+
+The greeting depends on:
+
+- Current time
+- Active user profile
+- Display-name preference
+- Greeting preference
+- Response-style preference
+
+After activation, commands generally do not need the word “Omega” before every instruction.
+
+---
+
+# Start Omega in GUI Mode
+
+Run:
+
+```powershell
+cd "E:\project Omega"
+.\.venv\Scripts\Activate.ps1
+python -m omega --gui
+```
+
+Check whether the GUI is available:
+
+```powershell
+python -m omega --gui-check
+```
+
+The GUI can be used to:
+
+- Enter commands
+- Read Omega’s responses
+- Approve or cancel confirmations
+- Manage notes and tasks
+- View reminders
+- Search local knowledge
+- Manage workflows
+- Manage plugins
+- Configure personalization
+- Configure accessibility
+- View local AI status
+- Review email drafts
+- Review calendar proposals
+
+Close the GUI normally using its close button or Omega’s safe shutdown option.
+
+---
+
+# Start Omega in Voice Mode
+
+Voice mode is optional.
+
+Omega uses offline speech recognition through Vosk and Windows speech output through SAPI.
+
+## Step 1: Install the voice dependencies
+
+Activate the environment:
 
 ```powershell
 cd "E:\project Omega"
 .\.venv\Scripts\Activate.ps1
 ```
 
-## View available launch options
+Install the required packages:
 
 ```powershell
-python -m omega --help
+python -m pip install vosk sounddevice comtypes
 ```
 
-This command is the source of truth for the currently implemented launch flags.
+## Step 2: Download a Vosk model
 
-## Terminal mode
+Download a compatible Vosk speech-recognition model manually.
+
+Example English model:
+
+```text
+vosk-model-small-en-us-0.15
+```
+
+Extract it into:
+
+```text
+data/voice_models/vosk-model-small-en-us-0.15
+```
+
+Voice models are:
+
+- Not included in the repository
+- Not downloaded automatically
+- Not committed to GitHub
+- Selected and managed locally by each user
+
+## Step 3: Configure the model
+
+Set the voice model path in the user configuration.
+
+Example:
+
+```yaml
+voice:
+  model_path: vosk-model-small-en-us-0.15
+```
+
+Use a model that matches the configured recognition language.
+
+## Step 4: Check microphone devices
 
 ```powershell
-python -m omega
+python -m omega --list-audio-devices
 ```
 
-When a project script is registered, this may also work:
+Select the correct input device in Omega’s configuration when required.
 
-```powershell
-omega
-```
-
-## Desktop GUI
-
-Use the GUI option shown by:
-
-```powershell
-python -m omega --help
-```
-
-The expected command is commonly:
-
-```powershell
-python -m omega --gui
-```
-
-## Voice mode
-
-Use the voice option shown by the help command.
-
-Expected examples may include:
+## Step 5: Start voice mode
 
 ```powershell
 python -m omega --voice
 ```
 
-or:
+Example:
 
-```powershell
-python -m omega --gui --voice
+```text
+You: Hello Omega
+
+Omega: Good morning. How can I help you?
+
+You: Open Chrome
+
+You: Show today's tasks
+
+You: Create a note
+
+You: Shut down Omega
 ```
 
-Voice mode may require additional local dependencies or an offline speech model. Consult the project’s voice documentation and configuration.
+After activation, you normally do not need to repeat “Omega” before every command.
+
+## Voice limitations
+
+- A microphone is required
+- Recognition accuracy depends on the microphone and environment
+- The configured Vosk model must match the spoken language
+- Available text-to-speech voices depend on installed Windows SAPI voices
+- Text and GUI modes remain available when voice is not configured
 
 ---
 
-# First safe test
+# Method 2 — Run Omega Using the Windows Installer
 
-Create an isolated workspace before testing file operations:
+## When an official installer is available
 
-```powershell
-New-Item -ItemType Directory -Path "E:\Omega-Test-Workspace" -Force
+Open the official GitHub Releases page:
+
+```text
+https://github.com/ItsAnshumanPattanayak/Omega-Windows-Assistant/releases
 ```
 
-Start Omega and test:
+Download the installer for the required version.
+
+Example expected filename:
+
+```text
+Omega-Windows-Assistant-Setup-1.0.0.exe
+```
+
+Also download:
+
+```text
+SHA256SUMS.txt
+```
+
+## Verify the installer checksum
+
+Example PowerShell command:
+
+```powershell
+Get-FileHash ".\Omega-Windows-Assistant-Setup-1.0.0.exe" -Algorithm SHA256
+```
+
+Compare the displayed hash with the value inside:
+
+```text
+SHA256SUMS.txt
+```
+
+## Install Omega
+
+1. Double-click the installer.
+2. Review the publisher and version.
+3. Continue only when it came from the official repository release.
+4. Select the installation directory.
+5. Choose whether to create a desktop shortcut.
+6. Finish the installation.
+7. Open Omega from:
+
+```text
+Start Menu → Omega Windows Assistant
+```
+
+You may also use the desktop shortcut when selected during installation.
+
+## Windows SmartScreen warning
+
+Omega binaries may be unsigned.
+
+Windows SmartScreen may display a warning. Continue only when:
+
+- You downloaded the installer from the official GitHub repository
+- The version is correct
+- The SHA-256 checksum matches
+- You trust the release source
+
+Do not disable Windows Defender or SmartScreen globally.
+
+## When an installer is not available
+
+Run Omega from the source code or build the installer locally using the instructions below.
+
+---
+
+# Method 3 — Portable Build
+
+When a portable archive is attached to a GitHub Release:
+
+1. Download the portable `.zip` file.
+2. Verify its SHA-256 checksum.
+3. Extract it into a normal user-writable folder.
+4. Do not extract it into protected system folders.
+5. Open the extracted Omega executable.
+
+Example expected filename:
+
+```text
+Omega-Windows-Assistant-Portable-1.0.0.zip
+```
+
+Portable builds should not be placed inside:
+
+```text
+C:\Windows
+C:\Program Files
+C:\Program Files (x86)
+```
+
+Use a user-writable location such as:
+
+```text
+C:\Users\<username>\Applications\Omega
+```
+
+Portable availability depends on the published release artifacts.
+
+---
+
+# First-Time Setup
+
+After starting Omega for the first time, configure only the features you need.
+
+Recommended setup:
+
+1. Set your display name.
+2. Select your time zone.
+3. Select your preferred browser.
+4. Select your preferred code editor.
+5. Configure safe workspace folders.
+6. Configure voice only when needed.
+7. Configure local AI only when needed.
+8. Connect email only when needed.
+9. Connect calendar only when needed.
+10. Review plugin permissions before enabling plugins.
+11. Review privacy and retention preferences.
+12. Test Omega using a harmless command.
+
+Example commands:
 
 ```text
 Hello Omega
-Open Notepad
-Show system information
-Create a folder called Notes inside E:\Omega-Test-Workspace
-Create a file called test.txt inside E:\Omega-Test-Workspace
-Write Hello from Omega in test.txt
-Open test.txt
-Start a timer for one minute called Test Timer
-Create a note called Omega Testing
+Show my preferences
+Call me Anshuman
+Set my time zone to Asia/Kolkata
+Set my preferred browser to Chrome
+Set my default editor to Visual Studio Code
+Use concise responses
+Use 24-hour time
+Show my tasks
 Shut down Omega
 ```
 
-Avoid testing shutdown, restart, sign-out, sleep, hibernate, or deletion of important files during the first test session.
-
 ---
 
-# Example commands
+# Example Commands
 
-## Applications
+Command availability may depend on the installed version, active configuration, registered applications, and enabled optional features.
+
+## Application Commands
 
 ```text
 Open Chrome
+Close Chrome
+Open Visual Studio Code
 Open Notepad
-Is Visual Studio Code running?
-Close Notepad
+Show registered applications
 ```
 
-## Files and folders
+## File Commands
 
 ```text
-Create a folder called Study Notes
-Create a file called topics.txt
-Write Arrays and Sorting in topics.txt
-Open topics.txt
-Find report.pdf
-Undo the last action
+Create a file named notes.txt
+Open notes.txt
+Read notes.txt
+Write Hello Omega to notes.txt
+Search for notes.txt
+Show file information
+Rename notes.txt
+Move notes.txt
+Delete notes.txt
 ```
 
-## Browser
+Deletion, replacement, and overwrite operations require confirmation.
+
+## Folder Commands
 
 ```text
-Open the browser
-Open https://example.com
-Search the web for Python binary search
-Open a new tab
-List tabs
-Refresh the page
+Create a folder named College Notes
+Open my Projects folder
+List my Documents folder
+Search for a folder named Assignments
+Rename a folder
+Move a folder
+Delete a folder
 ```
 
-## System
+Destructive folder operations require confirmation.
+
+## Notes and Tasks
 
 ```text
-Show system information
-Show CPU usage
-Show memory usage
-Show disk space
-Show battery status
-List running processes
-```
-
-## Audio and brightness
-
-```text
-Show volume
-Set volume to 30 percent
-Mute the sound
-Set brightness to 60 percent
-```
-
-## Settings
-
-```text
-Open display settings
-Open sound settings
-Open Bluetooth settings
-Open storage settings
-```
-
-## Scheduling
-
-```text
-Remind me in ten minutes to drink water
-Remind me tomorrow at 7 PM to practice DSA
-Set an alarm for 6:30 AM
-Start a timer for 25 minutes called Study Session
-Pause the Study Session timer
-Resume the Study Session timer
-List my reminders
-```
-
-## Notes
-
-```text
-Create a note called Project Ideas
-Add Build a local assistant to the Project Ideas note
+Create a note
 Show my notes
-Search my notes for assistant
-Pin the Project Ideas note
+Open the latest note
+Create a task
+Show my tasks
+Show today's tasks
+Mark this task completed
 ```
 
-## Tasks
+## Reminders and Scheduling
 
 ```text
-Create a task list called Placement Preparation
-Add a task called Practice sorting problems
-Set its priority to high
-Set its deadline to tomorrow at 9 PM
-Show tasks due today
-Show overdue tasks
-Mark Practice sorting problems complete
+Create a reminder
+Show my reminders
+Remind me to study at 7 PM
+Show scheduled actions
+Cancel this reminder
 ```
 
-## History
+## Local Knowledge Base
 
 ```text
-Show my history
-Show recent commands
-Show failed actions
-Export my history
+Show knowledge sources
+Add this document to my knowledge base
+Search my knowledge base for authentication
+Explain this knowledge result
+Remove this knowledge source
 ```
 
----
+User documents remain local unless the user explicitly configures another provider.
 
-# Configuration
-
-Omega uses trusted application configuration, expected under:
+## Email Assistance
 
 ```text
-config/app_config.yaml
+Show recent emails
+Search emails from Rahul
+Summarize this email
+Create an email draft
+Improve this draft
+Show this draft
+Send this draft
 ```
 
-Configuration may control:
+Sending email requires explicit confirmation.
 
-- Wake phrase
-- Shutdown phrase
-- Approved paths
-- Application registry
-- Safety policies
-- Database paths
-- History limits
-- Voice settings
-- Browser restrictions
-- System-control limits
-- Scheduler behavior
-- Notification preferences
-- Productivity limits
+Omega should not send an email automatically.
 
-Do not use runtime preferences to weaken safety rules.
+## Calendar Assistance
 
-Before changing configuration:
+```text
+Show today's calendar
+Show this week's calendar
+Check my availability
+Create a calendar proposal
+Update this event proposal
+Create this calendar event
+Delete this event
+```
 
-1. Create a backup.
-2. Change only documented keys.
-3. Preserve valid YAML indentation.
-4. Run tests after the change.
-5. Never store secrets directly in committed configuration.
+Calendar creation, updates, deletion, and invitation responses require confirmation.
+
+## Clipboard and Screenshots
+
+```text
+Copy this text to the clipboard
+Show clipboard text
+Clear the clipboard
+Take a screenshot
+Show display information
+Show screenshots
+Delete this screenshot
+```
+
+Clearing clipboard content and deleting screenshots may require confirmation.
+
+Omega does not continuously monitor the clipboard or screen.
+
+## Workflows
+
+```text
+List my workflows
+Show Morning Setup
+Preview Morning Setup
+Validate Morning Setup
+Run Morning Setup
+Pause this workflow
+Resume this workflow
+Cancel this workflow
+Show workflow history
+```
+
+Sensitive workflow steps still require their own confirmation.
+
+A workflow-level approval does not bypass step-level safety checks.
+
+## Plugins
+
+```text
+List plugins
+Show plugin details
+Validate this plugin
+Install plugin from this path
+Show plugin permissions
+Enable this plugin
+Disable this plugin
+Remove this plugin
+```
+
+New plugins remain disabled until reviewed and approved.
+
+## Local AI
+
+```text
+Show local AI status
+Show available local AI models
+Summarize this note
+Explain this document
+Improve this email draft
+Suggest tasks from this note
+Suggest a workflow
+Cancel AI generation
+```
+
+Local AI output is treated as a proposal, not authorization.
+
+Generated actions are not executed automatically.
+
+## Personalization
+
+```text
+Call me Anshuman
+Use concise responses
+Use detailed responses
+Use 24-hour time
+Set my time zone to Asia/Kolkata
+Set my preferred browser to Chrome
+Enable quiet hours
+Show my preferences
+Reset voice preferences
+```
+
+## Accessibility
+
+```text
+Enable high contrast
+Increase text size
+Decrease text size
+Enable screen-reader mode
+Disable terminal colors
+Show keyboard shortcuts
+Speak more slowly
+Use concise spoken responses
+```
 
 ---
 
-# Local persistence
+# Optional Features
 
-Omega uses SQLite for local persistence.
+## Voice
 
-Stored information may include:
+Requires:
 
-- Commands
-- Actions
-- Results
-- Confirmation status
-- Recovery records
-- Runtime preferences
-- History
-- Reminders
-- Alarms
-- Timers
-- Notes
-- Task lists
-- Tasks
-- Tags
-- Reminder links
+- Microphone
+- Vosk package
+- Compatible Vosk model
+- Sounddevice
+- Windows SAPI voice
 
-Database migrations run during explicit application startup rather than during package import.
+Voice is local and optional.
 
-Runtime database files should remain excluded from Git.
+## Local AI
+
+Requires:
+
+- Approved local AI runtime
+- Compatible local model
+- Sufficient system memory
+- Explicit configuration
+
+Omega does not automatically download AI models.
+
+When AI is unavailable, deterministic Omega features remain usable.
+
+## Email
+
+Requires the user’s own provider configuration.
+
+Email flow:
+
+```text
+Read or search → Create draft → Review → Confirm → Send
+```
+
+Omega does not automatically send email.
+
+## Calendar
+
+Requires the user’s own calendar-provider configuration.
+
+Calendar flow:
+
+```text
+Search → Create proposal → Validate → Review → Confirm → Create or update
+```
+
+Omega does not automatically modify calendar data.
+
+## Knowledge Base
+
+Knowledge documents are indexed locally.
+
+Users should never commit private knowledge documents or generated knowledge databases to GitHub.
+
+## Plugins
+
+Plugins must be:
+
+1. Selected explicitly
+2. Validated
+3. Reviewed
+4. Permission-approved
+5. Enabled manually
+
+Only install plugins from trusted sources.
+
+## Workflows
+
+Workflows combine supported Omega actions into ordered multi-step operations.
+
+Omega workflows are not an unrestricted scripting engine.
+
+They do not support arbitrary:
+
+- PowerShell
+- Shell execution
+- Python execution
+- SQL execution
+- Network commands
+- Infinite loops
+
+## Accessibility and Languages
+
+Omega includes accessibility and localization architecture.
+
+Features may include:
+
+- Keyboard navigation
+- Font scaling
+- High contrast
+- Reduced motion
+- Screen-reader-friendly terminal output
+- Voice-rate configuration
+- Locale-aware date and time formatting
+- English interface
+- Partial additional language support
+
+Formal accessibility certification is not claimed.
 
 ---
 
-# Privacy
+# Build the Windows Application
 
-Omega is designed as a local-first project.
+Before building, commit or safely preserve important source changes.
 
-Default privacy principles include:
+Do not include personal runtime data in a build.
 
-- Local command processing
-- Local database storage
-- No required cloud account
-- No hidden telemetry
-- No automatic document upload
-- No raw audio persistence by default
-- No continuous clipboard monitoring
-- No hidden screenshot capture
-- No password collection
-- No credential storage
-- No browser-cookie extraction
-- No automatic filesystem scanning
-- No cloud scheduler requirement
-
-Optional components must fail safely without breaking core text-based functionality.
-
----
-
-# Security restrictions
-
-Omega intentionally does not provide:
-
-- Arbitrary CMD execution
-- Arbitrary PowerShell execution
-- Arbitrary shell execution
-- `eval` or `exec`
-- Unsafe Pickle deserialization
-- Automatic administrator elevation
-- Registry modification
-- Windows Defender disabling
-- Firewall disabling
-- UAC bypass
-- BitLocker modification
-- Generic process killing
-- Wi-Fi password retrieval
-- Product-key extraction
-- Event-log clearing
-- CAPTCHA bypass
-- Payment automation
-- Banking automation
-- Password entry automation
-- Executable download automation
-- Automatic execution of note or task content
-- Destructive scheduled commands without current safety evaluation
-
----
-
-# Testing
-
-Activate the virtual environment and run:
+## Step 1: Activate the environment
 
 ```powershell
-python -m ruff check .
-python -m black --check .
-python -m mypy src
-python -m pytest -p no:cacheprovider
+cd "E:\project Omega"
+.\.venv\Scripts\Activate.ps1
 ```
 
-Do not use:
+## Step 2: Install packaging tools
+
+When the project provides a packaging dependency group:
 
 ```powershell
-pytest --basetemp
+python -m pip install -e ".[packaging]"
 ```
 
-The project uses:
+Otherwise install the required packaging tool manually:
 
 ```powershell
-python -m mypy src
+python -m pip install pyinstaller
 ```
 
-as its production type-checking boundary.
+Verify:
 
-## Manual testing recommendations
+```powershell
+python -m PyInstaller --version
+```
 
-Use:
+## Step 3: Build the application
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\build_windows.ps1
+```
+
+## Step 4: Verify the package
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\verify_package.ps1
+```
+
+## Step 5: Inspect the output
+
+```powershell
+Get-ChildItem .\dist -Recurse
+```
+
+Generated files may appear under:
 
 ```text
-E:\Omega-Test-Workspace
+build/
+dist/
 ```
 
-for file and folder tests.
+Do not commit generated build output.
 
-Start with:
+Test the actual executable generated inside `dist`.
 
-1. Terminal startup
-2. GUI startup
-3. Application opening
-4. Read-only system information
-5. Safe test-file creation
-6. Browser navigation to a harmless page
-7. Short timer
-8. Short reminder
-9. Note creation
-10. Task creation
-11. Voice mode
-12. Recovery and undo
+Example:
 
-Save all work before testing power operations.
+```powershell
+.\dist\Omega\Omega.exe --version
+.\dist\Omega\Omega.exe --help
+.\dist\Omega\Omega.exe --gui-check
+```
+
+Use the actual executable path produced by the build.
 
 ---
 
-# Development status
+# Build the Windows Installer
 
-Omega has completed the reviewed implementation sequence through Phase 29 and is
-prepared as a version `1.0.0` release candidate by Phase 30. The actual repository,
-tests, [roadmap](docs/development_roadmap.md), and
-[release-readiness audit](docs/release_readiness.md) are the source of truth.
+Omega’s installer is designed for Windows.
 
-## Completed
+The installer may use Inno Setup.
 
-```text
-Phase 0  — Foundation and environment
-Phase 1  — Core command models
-Phase 2  — Text session lifecycle
-Phase 3  — Rule-based command understanding
-Phase 4  — Safe application management
-Phase 5  — Safe file management
-Phase 6  — Safe folder management
-Phase 7  — Centralized safety and permissions
-Phase 8  — Recovery, Recycle Bin, and undo
-Phase 9  — SQLite persistence foundation
-Phase 10 — History, recovery, settings, and composition
-Phase 11 — Desktop graphical interface
-Phase 12 — Offline-first voice interaction
-Phase 13 — Safe browser automation
-Phase 14 — Windows system controls
-Phase 15 — Reminders, alarms, timers, and scheduling
-Phase 16 — Notes, tasks, and productivity
-Phase 17 — Local knowledge base and document search
-Phase 18 — Privacy-first email assistance
-Phase 19 — Privacy-first calendar integration
-Phase 20 — Clipboard, screenshots, and desktop utilities
-Phase 21 — Safe workflow automation
-Phase 22 — Secure plugin architecture
-Phase 23 — Privacy-first local AI integration
-Phase 24 — Privacy-first personalization
-Phase 25 — Accessibility and multilingual support
-Phase 26 — Comprehensive security hardening
-Phase 27 — Performance and resource efficiency
-Phase 28 — Windows packaging and installer sources
-Phase 29 — CI/CD and release automation
-Phase 30 — Final QA and v1.0 release preparation
+## Step 1: Install Inno Setup
+
+Install Inno Setup from its official source.
+
+After installation, check:
+
+```powershell
+Get-Command ISCC.exe
 ```
 
-Current priority:
+When it is not available through `PATH`, check its default location:
 
-> Complete the manual release checklist, obtain green GitHub-hosted checks, build and
-> verify Windows artifacts, and create tag `v1.0.0` only from the approved `main`
-> commit.
+```powershell
+& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /?
+```
+
+## Step 2: Build the application first
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\build_windows.ps1
+```
+
+## Step 3: Verify the application package
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\verify_package.ps1
+```
+
+## Step 4: Build the installer
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\build_installer.ps1
+```
+
+## Step 5: Check the output
+
+```powershell
+Get-ChildItem .\installer\output -Recurse
+```
+
+The expected result will be similar to:
+
+```text
+Omega-Windows-Assistant-Setup-1.0.0.exe
+```
+
+The exact filename depends on the installer configuration.
+
+Do not automatically install the generated installer through the build script.
+
+Test it manually on a clean Windows computer or virtual machine.
 
 ---
 
-# Contributing
+# Files That Must Not Be Included in a Release
 
-Contributions should preserve Omega’s safety-first architecture.
+Do not include:
 
-Before submitting a change:
-
-```powershell
-python -m ruff check .
-python -m black --check .
-python -m mypy src
-python -m pytest -p no:cacheprovider
+```text
+.venv/
+.env
+data/*.db
+build/
+dist/
+installer/output/
+*.log
+credentials
+tokens
+voice models
+AI models
+screenshots
+clipboard history
+private plugins
+plugin runtime storage
+personal profiles
+workflow exports
+private knowledge documents
+__pycache__/
+.pytest_cache/
+machine-specific configuration
 ```
 
-Contribution expectations:
+Generated release files should be verified before distribution.
 
-- Do not bypass the safety gateway.
-- Do not add arbitrary command execution.
-- Do not weaken confirmations.
-- Add tests for new behavior.
-- Preserve terminal, GUI, and voice compatibility.
-- Avoid import-time side effects.
-- Keep optional dependencies optional.
-- Do not commit runtime databases, logs, personal files, models, or secrets.
+---
+
+# How Other People Can Use Omega
+
+Other users have three options.
+
+## Option 1: Install from source
+
+Suitable for developers and Python users.
+
+```powershell
+git clone https://github.com/ItsAnshumanPattanayak/Omega-Windows-Assistant.git
+cd Omega-Windows-Assistant
+python -m venv .venv
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e .
+python -m omega
+```
+
+## Option 2: Use the published installer
+
+Suitable for ordinary Windows users.
+
+```text
+GitHub Releases
+→ Download installer
+→ Verify checksum
+→ Run setup
+→ Open Omega from the Start Menu
+```
+
+## Option 3: Use a portable release
+
+Suitable for users who do not want a full installation.
+
+```text
+Download portable archive
+→ Verify checksum
+→ Extract it
+→ Start Omega
+```
+
+Each user must configure their own:
+
+- Display name
+- Preferences
+- Workspace folders
+- Email provider
+- Calendar provider
+- Voice model
+- AI model
+- Plugins
+- Knowledge documents
+
+Never give another person your:
+
+- `.env`
+- Database
+- Provider credentials
+- Tokens
+- Screenshots
+- Clipboard data
+- Personal configuration
+- Private plugins
+- Workflow exports
+- Profile exports
+- Knowledge documents
+
+---
+
+# Update Omega
+
+## Source installation
+
+Open the repository:
+
+```powershell
+cd Omega-Windows-Assistant
+```
+
+Check for local changes:
+
+```powershell
+git status
+```
+
+When the working tree is clean:
+
+```powershell
+git fetch origin
+git pull --ff-only origin main
+```
+
+Activate the environment:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+Refresh installation:
+
+```powershell
+python -m pip install -e .
+```
+
+Verify:
+
+```powershell
+python -m omega --version
+```
+
+Do not pull blindly when unresolved local modifications exist.
+
+## Installer installation
+
+Download the latest verified installer from the official GitHub Release.
+
+Run the newer installer over the current version.
+
+The installer is designed to preserve user data during upgrades, but important local data should still be backed up before major upgrades.
+
+Omega does not currently claim automatic-update support.
+
+---
+
+# Uninstall Omega
+
+Open:
+
+```text
+Windows Settings
+→ Apps
+→ Installed apps
+→ Omega Windows Assistant
+→ Uninstall
+```
+
+The installer is designed to remove application files while preserving local user data by default.
+
+Removing user data should be a separate explicit action.
+
+Back up important Omega data before manually deleting its local data directory.
+
+Do not delete unrelated folders.
 
 ---
 
 # Troubleshooting
 
-## PowerShell blocks virtual-environment activation
+## PowerShell cannot activate `.venv`
+
+Run:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
 ```
 
-## Omega module is not found
+Do not change execution policy globally unless you understand the security impact.
 
-Install the project in editable mode:
+## Python is not found
+
+Install a supported Python version.
+
+During Python installation, enable:
+
+```text
+Add Python to PATH
+```
+
+Then reopen PowerShell.
+
+## `No module named omega`
+
+Activate the environment:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+Install Omega:
 
 ```powershell
 python -m pip install -e .
 ```
 
-## Development tools are missing
-
-When the `dev` optional group exists:
-
-```powershell
-python -m pip install -e ".[dev]"
-```
-
 ## GUI does not start
 
-Check available options:
+Run:
 
 ```powershell
-python -m omega --help
+python -m omega --gui-check
 ```
 
-Then inspect the traceback and project logs.
+Then inspect the displayed error.
 
-## Voice mode is unavailable
+## Voice model is missing
 
-Check:
+Download a compatible Vosk model manually and configure its path.
 
-- Microphone permissions
-- Optional voice dependencies
-- Configured speech-model path
-- Audio input device
-- Voice configuration
-- Project voice documentation
+Voice models are not automatically downloaded.
 
-Text and GUI modes should continue working when voice is unavailable.
-
-## Brightness control is unavailable
-
-Brightness control may not work with every external monitor or graphics configuration. Omega should return an unsupported-device response safely.
-
-## Browser mode is unavailable
-
-Check:
-
-- Optional browser dependency
-- Supported browser installation
-- Browser backend setup
-- Project browser documentation
-
-Non-browser features should remain operational.
-
-## Tests fail with Windows temporary-folder permission errors
-
-Do not use `pytest --basetemp`.
+## Microphone is not detected
 
 Run:
+
+```powershell
+python -m omega --list-audio-devices
+```
+
+Check Windows microphone privacy permissions.
+
+## Local AI is unavailable
+
+Configure an approved local runtime and model.
+
+Omega’s deterministic features continue working without local AI.
+
+## Email is unavailable
+
+Configure the email provider.
+
+Omega remains usable without email integration.
+
+## Calendar is unavailable
+
+Configure the calendar provider.
+
+Omega remains usable without calendar integration.
+
+## SmartScreen blocks the installer
+
+Continue only when:
+
+- The installer came from the official repository
+- The version is correct
+- The checksum matches
+- You trust the release
+
+Do not disable Windows security globally.
+
+## Database or configuration problem
+
+Do not immediately delete the database or configuration.
+
+Check:
+
+- The documented user-data directory
+- Application logs
+- Configuration validation output
+- Security diagnostics
+- Release documentation
+
+Back up files before attempting manual repair.
+
+## Internet connection is lost
+
+Local Omega features should continue working.
+
+Internet-dependent features may fail gracefully, including:
+
+- Git operations
+- Provider-dependent email features
+- Provider-dependent calendar features
+- Optional remote services
+
+Local files, notes, tasks, workflows, knowledge search, preferences, and other offline features remain available when configured locally.
+
+---
+
+# Development Verification
+
+Activate the environment:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+Run formatting verification:
+
+```powershell
+python -m black --check .
+```
+
+Run linting:
+
+```powershell
+python -m ruff check .
+```
+
+Run static type checking:
+
+```powershell
+python -m mypy src
+```
+
+Run the test suite:
 
 ```powershell
 python -m pytest -p no:cacheprovider
 ```
 
+Run application checks:
+
+```powershell
+python -m omega --help
+python -m omega --version
+python -m omega --gui-check
+python -m omega --security-check
+python -m omega --performance-check
+```
+
+Do not use:
+
+```text
+pytest --basetemp
+```
+
+because the project has previously encountered Windows access-control issues with that option.
+
+## Final v1.0.0 Source Verification
+
+```text
+Collected: 1,730
+Passed: 1,720
+Failed: 0
+Skipped: 10
+Xfailed: 0
+```
+
+This confirms the source release-preparation state.
+
+It does not replace:
+
+- Clean-machine installer testing
+- Real packaged-executable testing
+- Live email-provider testing
+- Live calendar-provider testing
+- Physical microphone testing
+- Real local-model testing
+- Assistive-technology certification
+
 ---
 
-# Known limitations
+# Release Process
 
-Omega is Windows-focused; optional voice, browser, provider, plugin, and local-AI
-features require explicit local setup. Builds are unsigned, tkinter accessibility is
-not formally certified, natural-language coverage is deterministic rather than
-general, and real clean-machine package/installer verification remains a release
-checklist item. Omega intentionally has no cloud synchronization, automatic model or
-plugin downloads, OCR, automatic updater, mobile client, or background surveillance.
+Before creating a release:
 
-See [known_limitations.md](docs/known_limitations.md) for the complete reviewed list.
+1. Confirm the working tree is clean.
+2. Confirm local `main` matches `origin/main`.
+3. Confirm version is `1.0.0`.
+4. Run all quality checks.
+5. Run the release-readiness script.
+6. Push the final approved commit.
+7. Confirm GitHub Actions passes.
+8. Build and verify application artifacts.
+9. Generate SHA-256 checksums.
+10. Confirm prohibited files are absent.
+11. Test artifacts on a clean Windows system.
+12. Create the version tag.
+13. Push the tag.
+14. Confirm the release workflow succeeds.
+
+Suggested release tag:
+
+```text
+v1.0.0
+```
+
+Suggested tag command:
+
+```powershell
+git tag -a v1.0.0 -m "Omega Windows Assistant v1.0.0"
+git push origin v1.0.0
+```
+
+Do not create the release tag until the final commit is pushed and required CI checks pass.
 
 ---
 
-# Release status
+# Security Reporting
 
-Repository metadata targets `1.0.0` and the expected manual tag is `v1.0.0`. Phase 30
-does not create that tag or publish a release. Before publication, complete
-[release_checklist.md](docs/release_checklist.md), confirm GitHub-hosted checks pass,
-build on a clean supported Windows host, verify all artifacts and checksums, and test
-the downloaded release. See [v1.0.0.md](docs/releases/v1.0.0.md).
+Do not publicly disclose sensitive vulnerabilities before giving the project owner a reasonable opportunity to review them.
+
+See:
+
+- [Security policy](SECURITY.md)
+- [Security documentation](docs/security.md)
+- [Threat model](docs/threat_model.md)
 
 ---
+
+# Known Limitations
+
+- Omega is Windows-focused
+- Installer binaries may be unsigned
+- Voice requires a separately downloaded model
+- Local AI requires a separately configured local runtime and model
+- Email and calendar integrations require provider configuration
+- Same-process Python plugins are trusted after approval
+- Plugins are not perfectly sandboxed
+- Prompt injection cannot be eliminated completely
+- Accessibility behavior depends partly on tkinter and Windows
+- Additional-language coverage may be partial
+- No cloud synchronization by default
+- No automatic AI-model download
+- No automatic voice-model download
+- No OCR
+- No continuous screen understanding
+- No background surveillance
+- No automatic email sending
+- No automatic calendar mutation
+
+See:
+
+- [Known limitations](docs/known_limitations.md)
+
+---
+
+# Documentation
+
+- [Architecture](docs/architecture.md)
+- [Development roadmap](docs/development_roadmap.md)
+- [Installation](docs/installation.md)
+- [Packaging](docs/packaging.md)
+- [CI/CD](docs/ci_cd.md)
+- [Release instructions](docs/releasing.md)
+- [Release checklist](docs/release_checklist.md)
+- [Release-readiness report](docs/release_readiness.md)
+- [v1.0.0 release notes](docs/releases/v1.0.0.md)
+- [Security](docs/security.md)
+- [Threat model](docs/threat_model.md)
+- [Performance](docs/performance.md)
+- [Accessibility](docs/accessibility.md)
+- [Localization](docs/localization.md)
+- [Personalization](docs/personalization.md)
+- [Local AI](docs/local_ai.md)
+- [Plugins](docs/plugins.md)
+- [Plugin development](docs/plugin_development.md)
+- [Workflows](docs/workflows.md)
+- [Known limitations](docs/known_limitations.md)
+
+Some filenames may differ according to the final repository structure. Remove any documentation link whose target file is not present.
+
+---
+
+# Repository
+
+```text
+https://github.com/ItsAnshumanPattanayak/Omega-Windows-Assistant
+```
 
 # Author
 
-<div align="center">
+**Anshuman Pattanayak**
 
-### Anshuman Pattanayak
+GitHub:
 
-B.Tech Computer Science and Engineering  
-AI/ML and Software Development Enthusiast
+```text
+https://github.com/ItsAnshumanPattanayak
+```
 
-[![GitHub](https://img.shields.io/badge/GitHub-ItsAnshumanPattanayak-181717?logo=github)](https://github.com/ItsAnshumanPattanayak)
+# Version
 
-</div>
-
----
+```text
+Omega Windows Assistant v1.0.0
+```
 
 # License
 
-No license should be claimed until a license file has been added to the repository.
+This project is distributed under the license included in the repository.
 
-Recommended options include:
+See:
 
-- MIT License
-- Apache License 2.0
-- A proprietary “all rights reserved” notice
-
-After selecting a license:
-
-1. Add a `LICENSE` file.
-2. Replace the license badge at the top.
-3. Update this section with the chosen license.
+- [LICENSE](LICENSE)
 
 ---
 
-<div align="center">
+## Final Reminder
 
-## Ω Omega
+For the current local project:
 
-### Your computer. Your commands. Your control.
+```powershell
+cd "E:\project Omega"
+.\.venv\Scripts\Activate.ps1
+python -m omega
+```
 
-Built as a local, modular, and safety-first Windows assistant.
+For another developer:
 
-⭐ Star the repository if you find the project useful.
+```powershell
+git clone https://github.com/ItsAnshumanPattanayak/Omega-Windows-Assistant.git
+cd Omega-Windows-Assistant
+python -m venv .venv
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e .
+python -m omega
+```
 
-</div>
+For an ordinary user after the installer is published:
+
+```text
+Download installer
+→ Verify checksum
+→ Install Omega
+→ Open Start Menu
+→ Start Omega Windows Assistant
+```
