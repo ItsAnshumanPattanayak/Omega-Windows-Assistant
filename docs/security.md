@@ -112,3 +112,19 @@ not delete `%LOCALAPPDATA%\Omega`; this prevents an application uninstall from
 silently destroying notes, workflows, configuration, plugins, or other user state.
 Phase 28 does not provide code signing, antivirus certification, Microsoft Store
 approval, or a sandbox for same-process plugins.
+
+## CI and release security
+
+Phase 29 workflows use hosted Windows runners and read-only repository permission by
+default. Pull-request code never receives production credentials,
+`pull_request_target` is not used, and CI does not run user plugins, providers, voice
+capture, models, or private files. Dependency review is advisory or enforcing
+according to repository plan availability and never auto-merges updates.
+
+Only the final tag-triggered release publication job receives `contents: write`, after
+tag/version/main-ancestry, quality, test, security, package, and checksum verification.
+Artifact inspection rejects runtime databases, logs, screenshots, clipboard/profile
+exports, model data, plugin storage, credentials, private keys, traversal paths, and
+unreviewed support files. Builds remain unsigned; checksums prove file integrity but
+do not provide publisher authentication. The complete workflow trust policy is in
+[ci_cd.md](ci_cd.md).

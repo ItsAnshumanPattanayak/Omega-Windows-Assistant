@@ -62,3 +62,14 @@ and document formats depend on compatible extras being installed in the build
 environment. Report packaging regressions with sanitized tool versions, command,
 output path, and bounded error text—never a database, configuration secret, or user
 document.
+
+## CI artifacts
+
+The Phase 29 Windows workflow builds on `windows-latest` with Python 3.14 and the
+pinned build extra. It always runs package verification before creating
+`Omega-<version>-windows-x64.zip`. If trusted Inno Setup is already present, it may
+also produce `Omega-Setup-<version>.exe`; tooling is never bootstrapped through a
+downloaded script. `build-metadata.json` records only version, commit/tag, UTC build
+time, Python/tool versions, and runner architecture. `SHA256SUMS.txt` hashes only final
+ZIP/EXE distributables. Validation artifacts are retained for 14 days; release copies
+live in GitHub Releases. See [releasing.md](releasing.md).

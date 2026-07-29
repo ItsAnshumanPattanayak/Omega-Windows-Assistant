@@ -836,3 +836,22 @@ PyInstaller produces one folder containing `OmegaCLI.exe` and the windowed
 `Omega.exe`. The Inno Setup layer installs that folder per user and creates Start Menu
 and explicitly optional desktop shortcuts. Uninstall removes installed application
 files and shortcuts but intentionally preserves `%LOCALAPPDATA%\Omega`.
+
+## Phase 29 delivery boundary
+
+GitHub Actions is an external validation and distribution boundary, never an Omega
+execution path. Pull requests and ordinary `main` pushes receive read-only repository
+permission and run formatting, linting, typing, tests, imports, local diagnostics, and
+CLI smoke checks on hosted Windows runners without provider credentials or personal
+runtime data.
+
+The reusable Windows build job consumes tracked Phase 28 sources, verifies the bundle,
+creates a versioned portable archive, optionally invokes an already-available trusted
+Inno Setup compiler, and emits bounded metadata plus SHA-256 checksums. It uploads only
+the reviewed artifact directory with finite retention. Release publication is
+triggered solely by an existing version tag; tag/version/main-ancestry checks and all
+required validation precede the only job granted `contents: write`.
+
+No workflow starts providers, plugins, voice capture, background automation, or real
+GUI interaction. CI creates no version, commit, tag, provider mutation, or registry
+publication. See [ci_cd.md](ci_cd.md) and [releasing.md](releasing.md).

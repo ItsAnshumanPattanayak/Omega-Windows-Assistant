@@ -107,7 +107,12 @@ The approved roadmap is intentionally incremental. Each phase should be designed
     focused tests, and honest unsigned-build documentation are implemented and
     source-verified. Completion awaits a real PyInstaller bundle and Inno Setup build.
 
-30. **Phase 29 — Deferred:** define only after Phase 28 artifact verification.
+30. **Phase 29 — CI/CD, Automated Releases, and Artifact Verification — Completed:**
+    read-only pull-request and main validation, a Windows-authoritative build workflow,
+    bounded artifact metadata and SHA-256 manifests, version/tag consistency checks,
+    tag-only least-privilege release publication, dependency review, conservative
+    Dependabot updates, and branch-protection/release documentation. GitHub-hosted
+    execution and real package builds remain external verification steps.
 
 Later phases may cover additional Windows integrations, packaging,
 installer support, and release hardening. AI-assisted intent fallback remains disabled

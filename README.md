@@ -74,9 +74,17 @@ All supported operations pass through the same command-processing and safety lif
 
 ## Current capabilities
 
-Omega includes completed functionality through **Phase 27** and the source-verified
-Phase 28 packaging implementation. Real executable and installer verification remains
-pending on a build environment with the pinned tools installed.
+Omega includes completed functionality through **Phase 29**. Phase 28 executable and
+installer source is locally verified; a real artifact build still requires a Windows
+environment with the pinned packaging tools. Phase 29 GitHub-hosted workflows are
+implemented and locally validated but have not yet run on GitHub.
+
+Phase 29 adds read-only pull-request and `main` validation, security automation,
+Windows package builds, strict version/tag checks, bounded release metadata, SHA-256
+manifests, conservative dependency updates, and a tag-only GitHub Release path. It
+does not create tags, publish on ordinary pushes, use production provider secrets, or
+claim signed/reproducible builds. See [ci_cd.md](docs/ci_cd.md) and
+[releasing.md](docs/releasing.md).
 
 Phase 28 adds a Windows one-folder packaging definition, separate console and GUI
 executables, a per-user Inno Setup installer definition, packaging-aware resources,
