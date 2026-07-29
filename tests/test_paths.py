@@ -12,7 +12,7 @@ def test_project_paths_resolve_from_source_layout() -> None:
     assert (root / "pyproject.toml").is_file()
     assert (root / "src").is_dir()
     assert (root / "tests").is_dir()
-    assert paths.s  ource_root() == root / "src"
+    assert paths.source_root() == root / "src"
     assert paths.config_dir() == root / "config"
     assert paths.data_dir() == root / "data"
     assert paths.database_dir() == root / "data" / "database"
@@ -33,11 +33,8 @@ def test_path_imports_do_not_create_unexpected_directories(
         )
 
         assert not (temp_path / "data").exists()
-
         assert paths.database_dir() == temp_path / "data" / "database"
-
         assert paths.log_dir() == temp_path / "data" / "logs"
-
         assert not (temp_path / "data").exists()
 
 
