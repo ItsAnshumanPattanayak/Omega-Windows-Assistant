@@ -114,6 +114,13 @@ The approved roadmap is intentionally incremental. Each phase should be designed
     Dependabot updates, and branch-protection/release documentation. GitHub-hosted
     execution and real package builds remain external verification steps.
 
-Later phases may cover additional Windows integrations, packaging,
-installer support, and release hardening. AI-assisted intent fallback remains disabled
-unless a future reviewed phase enables it under strict schema and confirmation rules.
+31. **Phase 30 — Final QA, Documentation, and v1.0 Preparation — Completed:**
+    repository-wide release audit, version `1.0.0` consistency, command/dispatcher/risk
+    coverage validation, migration and fail-closed configuration checks, release notes,
+    known limitations, security reporting, a manual checklist, and a non-publishing
+    readiness script. Tagging, hosted CI, clean-machine package/installer builds, and
+    publication remain explicit post-approval manual gates.
+
+Future work is driven by reviewed limitations and real release feedback. AI-assisted
+intent fallback remains disabled unless a future reviewed phase enables it under
+strict schema and confirmation rules.

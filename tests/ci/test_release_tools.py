@@ -43,7 +43,7 @@ def test_version_sources_and_release_tag_agree() -> None:
     assert validate_version_sources(ROOT, tag=f"v{version}") == version
 
 
-@pytest.mark.parametrize("tag", ["0.1.0", "v0.1", "v9.9.9", "release-0.1.0"])
+@pytest.mark.parametrize("tag", ["1.0.0", "v1.0", "v9.9.9", "release-1.0.0"])
 def test_invalid_or_mismatched_release_tags_are_rejected(tag: str) -> None:
     with pytest.raises(ReleaseValidationError):
         validate_version_sources(ROOT, tag=tag)

@@ -112,5 +112,5 @@ def test_release_and_branch_protection_documentation_exists() -> None:
     releasing = (ROOT / "docs" / "releasing.md").read_text(encoding="utf-8")
     assert "Branch protection" in ci_cd
     assert "no force pushes" in ci_cd.casefold()
-    assert "v0.1.0" in releasing
+    assert "v1.0.0" in releasing
     assert "SHA256SUMS.txt" in releasing

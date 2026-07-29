@@ -13,8 +13,8 @@
 [![Interface](https://img.shields.io/badge/Interface-CLI%20%7C%20GUI%20%7C%20Voice-8A2BE2)](#interaction-modes)
 [![Database](https://img.shields.io/badge/Database-SQLite-003B57?logo=sqlite&logoColor=white)](#local-persistence)
 [![Privacy](https://img.shields.io/badge/Privacy-Local--First-success)](#privacy)
-[![Status](https://img.shields.io/badge/Status-Active%20Development-orange)](#development-status)
-[![License](https://img.shields.io/badge/License-Add%20License-lightgrey)](#license)
+[![Status](https://img.shields.io/badge/Status-v1.0%20Release%20Candidate-blue)](#release-status)
+[![License](https://img.shields.io/badge/License-MIT-green)](#license)
 
 <br>
 
@@ -74,10 +74,12 @@ All supported operations pass through the same command-processing and safety lif
 
 ## Current capabilities
 
-Omega includes completed functionality through **Phase 29**. Phase 28 executable and
+Omega includes completed functionality through **Phase 30 release preparation**.
+Phase 28 executable and
 installer source is locally verified; a real artifact build still requires a Windows
 environment with the pinned packaging tools. Phase 29 GitHub-hosted workflows are
-implemented and locally validated but have not yet run on GitHub.
+implemented and locally validated; current hosted-run status must be reviewed in the
+repository before release.
 
 Phase 29 adds read-only pull-request and `main` validation, security automation,
 Windows package builds, strict version/tag checks, bounded release metadata, SHA-256
@@ -85,6 +87,13 @@ manifests, conservative dependency updates, and a tag-only GitHub Release path. 
 does not create tags, publish on ordinary pushes, use production provider secrets, or
 claim signed/reproducible builds. See [ci_cd.md](docs/ci_cd.md) and
 [releasing.md](docs/releasing.md).
+
+Phase 30 finalizes version `1.0.0`, performs repository-wide QA, and provides the
+[release-readiness audit](docs/release_readiness.md),
+[v1.0.0 release notes](docs/releases/v1.0.0.md),
+[known limitations](docs/known_limitations.md), and
+[manual release checklist](docs/release_checklist.md). No tag or release exists until
+the reviewed commit is pushed and the checklist and GitHub workflows complete.
 
 Phase 28 adds a Windows one-folder packaging definition, separate console and GUI
 executables, a per-user Inno Setup installer definition, packaging-aware resources,
@@ -1539,8 +1548,10 @@ Save all work before testing power operations.
 
 # Development status
 
-Omega has completed the reviewed implementation sequence through Phase 23 and remains
-under active testing and stabilization.
+Omega has completed the reviewed implementation sequence through Phase 29 and is
+prepared as a version `1.0.0` release candidate by Phase 30. The actual repository,
+tests, [roadmap](docs/development_roadmap.md), and
+[release-readiness audit](docs/release_readiness.md) are the source of truth.
 
 ## Completed
 
@@ -1569,23 +1580,20 @@ Phase 20 — Clipboard, screenshots, and desktop utilities
 Phase 21 — Safe workflow automation
 Phase 22 — Secure plugin architecture
 Phase 23 — Privacy-first local AI integration
-```
-
-## Paused / planned
-
-```text
-Phase 24 — User profiles and personalization
+Phase 24 — Privacy-first personalization
 Phase 25 — Accessibility and multilingual support
-Phase 26 — Security hardening and privacy controls
-Phase 27 — Performance and reliability optimization
-Phase 28 — Packaging and Windows installer
-Phase 29 — Automated releases and CI/CD
-Phase 30 — Final QA, documentation, and v1.0 release
+Phase 26 — Comprehensive security hardening
+Phase 27 — Performance and resource efficiency
+Phase 28 — Windows packaging and installer sources
+Phase 29 — CI/CD and release automation
+Phase 30 — Final QA and v1.0 release preparation
 ```
 
 Current priority:
 
-> Run Omega manually, test completed capabilities, document bugs, and stabilize the existing system before adding more phases.
+> Complete the manual release checklist, obtain green GitHub-hosted checks, build and
+> verify Windows artifacts, and create tag `v1.0.0` only from the approved `main`
+> commit.
 
 ---
 
@@ -1692,19 +1700,24 @@ python -m pytest -p no:cacheprovider
 
 # Known limitations
 
-- Omega currently targets Windows.
-- Voice accuracy depends on microphone quality and the configured local model.
-- Voice dependencies may require separate installation.
-- Brightness control may not support every display.
-- Browser automation depends on the configured browser backend.
-- Omega does not operate as an always-running Windows service.
-- Notifications cannot be delivered while the computer is powered off.
-- Scheduled tasks require Omega to start again for restart recovery.
-- Natural-language parsing does not understand every possible sentence.
-- Ambiguous commands may require clarification.
-- Cloud synchronization is not currently included.
-- Local document knowledge search is planned but paused.
-- A packaged Windows installer is not yet available.
+Omega is Windows-focused; optional voice, browser, provider, plugin, and local-AI
+features require explicit local setup. Builds are unsigned, tkinter accessibility is
+not formally certified, natural-language coverage is deterministic rather than
+general, and real clean-machine package/installer verification remains a release
+checklist item. Omega intentionally has no cloud synchronization, automatic model or
+plugin downloads, OCR, automatic updater, mobile client, or background surveillance.
+
+See [known_limitations.md](docs/known_limitations.md) for the complete reviewed list.
+
+---
+
+# Release status
+
+Repository metadata targets `1.0.0` and the expected manual tag is `v1.0.0`. Phase 30
+does not create that tag or publish a release. Before publication, complete
+[release_checklist.md](docs/release_checklist.md), confirm GitHub-hosted checks pass,
+build on a clean supported Windows host, verify all artifacts and checksums, and test
+the downloaded release. See [v1.0.0.md](docs/releases/v1.0.0.md).
 
 ---
 

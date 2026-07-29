@@ -21,7 +21,7 @@ No manual input accepts a command, URL, branch, executable path, or package name
 2. Confirm `python -m omega.distribution.release validate-version
    --repository-root .` passes.
 3. Create and push a conservative version tag matching the authoritative project
-   version, for example `v0.1.0`. CI does not create this tag.
+   version, for example `v1.0.0`. CI does not create this tag.
 4. The `Release` workflow verifies the tag format and version, confirms its commit is
    in `origin/main`, reruns quality/tests/security, calls the verified Windows build,
    and checks every SHA-256 digest again.
@@ -35,7 +35,7 @@ deliberate maintainer review; never retag by force or rewrite `main`.
 ## Verifying downloads
 
 ```powershell
-(Get-FileHash -Algorithm SHA256 .\Omega-0.1.0-windows-x64.zip).Hash.ToLowerInvariant()
+(Get-FileHash -Algorithm SHA256 .\Omega-1.0.0-windows-x64.zip).Hash.ToLowerInvariant()
 Get-Content .\SHA256SUMS.txt
 ```
 

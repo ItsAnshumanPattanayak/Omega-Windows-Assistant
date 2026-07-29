@@ -855,3 +855,25 @@ required validation precede the only job granted `contents: write`.
 No workflow starts providers, plugins, voice capture, background automation, or real
 GUI interaction. CI creates no version, commit, tag, provider mutation, or registry
 publication. See [ci_cd.md](ci_cd.md) and [releasing.md](releasing.md).
+
+## Phase 30 stable-release contract
+
+`pyproject.toml` is the authoritative `1.0.0` version. Runtime constants and source and
+packaged configuration deliberately duplicate it for startup without packaging
+metadata access; release validation requires exact agreement. PyInstaller and Inno
+Setup consume the runtime distribution metadata, so executable, installer, artifact,
+CLI, and tag versions cannot diverge silently.
+
+The stable-release audit treats optional systems as explicit boundaries rather than
+mandatory side effects. Voice, browser, providers, plugins, and local AI remain lazy,
+disabled or unavailable safely when prerequisites are absent, and fake adapters cover
+their application-facing contracts. Migrations, dispatch coverage, risk coverage,
+fail-closed configuration, packaging exclusions, workflow permissions, documentation,
+and release metadata have local regression checks.
+
+Release preparation does not grant publication authority. A reviewed commit, green
+hosted CI, clean-machine Windows package and installer verification, checksum review,
+manual `v1.0.0` tag, and successful tag workflow remain separate checklist gates. See
+[release_readiness.md](release_readiness.md),
+[known_limitations.md](known_limitations.md), and
+[release_checklist.md](release_checklist.md).

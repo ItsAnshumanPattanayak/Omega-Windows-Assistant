@@ -1,7 +1,7 @@
 # Safe packaged defaults. This template contains no personal or machine-specific data.
 application:
   name: Omega
-  version: 0.1.0
+  version: 1.0.0
   environment: production
 
 user:
