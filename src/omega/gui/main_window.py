@@ -53,9 +53,6 @@ class OmegaMainWindow(GuiView):
         )
         self.root.protocol("WM_DELETE_WINDOW", self.close)
 
-        self._build()
-        self.root.bind("<Control-l>", lambda _event: self.command_input.focus_set())
-        self.root.bind("<F1>", lambda _event: self._help())
         runner = GuiTaskRunner(maximum_workers=2)
         self._runner = runner
         self.controller = GuiController(
@@ -70,6 +67,10 @@ class OmegaMainWindow(GuiView):
             ),
             logger=get_logger("gui.controller"),
         )
+
+        self._build()
+        self.root.bind("<Control-l>", lambda _event: self.command_input.focus_set())
+        self.root.bind("<F1>", lambda _event: self._help())
         self.apply_preferences(self.preferences)
         self.add_message(
             ConversationMessage(
