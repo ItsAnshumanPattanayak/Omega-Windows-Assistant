@@ -104,14 +104,23 @@ class SecurityDiagnostics:
                 "REMOTE_AI_ENDPOINT",
                 "Remote local-AI endpoints must remain disabled.",
             )
-        if not (self.repository_root / ".gitignore").is_file():
-            record(
-                FindingSeverity.WARNING,
-                "GITIGNORE_MISSING",
-                "Repository ignore policy could not be verified.",
-            )
         source_root = self.repository_root / "src" / "omega"
-        for finding in StaticSecurityScanner().scan(source_root):
+        if source_root.is_dir():
+            if not (self.repository_root / ".gitignore").is_file():
+                record(
+                    FindingSeverity.WARNING,
+                    "GITIGNORE_MISSING",
+                    "Repository ignore policy could not be verified.",
+                )
+            static_findings = StaticSecurityScanner().scan(source_root)
+        else:
+            static_findings = ()
+            record(
+                FindingSeverity.INFORMATION,
+                "PACKAGED_SOURCE_SCAN_UNAVAILABLE",
+                "Frozen mode relies on the build-time static security scan.",
+            )
+        for finding in static_findings:
             record(
                 FindingSeverity.ERROR,
                 finding.code,

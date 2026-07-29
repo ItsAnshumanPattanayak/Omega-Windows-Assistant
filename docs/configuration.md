@@ -12,8 +12,10 @@ motion, and screen-reader-friendly modes are explicit opt-ins.
 `allow_external_translation_services` and `automatically_download_language_packs`
 must remain `false`. Catalogs default to 1 MiB, 10,000 entries, 10,000 characters per
 message, and 50 aliases per intent. Unknown settings or unsafe limits prevent startup
-with a safe configuration error. Tracked configuration contains no personal values,
-credentials, tokens, model paths, or machine-specific locations.
+with a safe configuration error. The development `config/app_config.yaml` may contain
+local display or optional-device/model settings and is never packaged. The
+distribution uses the separately reviewed non-personal template documented below;
+neither file may contain credentials or tokens.
 ## Phase 26 security configuration
 
 The `security` section defines bounded command, JSON, diagnostic, log, and archive
@@ -29,3 +31,17 @@ The `performance` section bounds timing records, diagnostic runs, and parser/wor
 plugin caches. Timing collection is disabled by default. Sensitive-content caching
 and telemetry are mandatory false; unknown settings or unsafe values fail
 configuration loading. See [performance.md](performance.md).
+
+## Packaged configuration
+
+Source execution continues to read `config/app_config.yaml`. Windows bundles contain
+the separate, non-personal template `packaging/defaults/app_config.yaml`. On first
+packaged startup it is copied to `%LOCALAPPDATA%\Omega\config\app_config.yaml`; later
+starts and upgrades preserve that user-owned file. Code defaults supply missing
+optional fields, while missing required sections or invalid values produce a bounded
+configuration error. The packaged template disables voice, local AI, provider
+accounts, user plugins, background capture, sensitive caching, and telemetry.
+
+For isolated package verification only, `OMEGA_DATA_DIR` may select an absolute
+temporary runtime root. Relative values are rejected. Secrets and provider tokens do
+not belong in the packaged template or installation directory.

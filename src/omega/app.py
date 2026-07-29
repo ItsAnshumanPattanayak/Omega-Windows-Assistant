@@ -189,7 +189,7 @@ from omega.system import (
 from omega.understanding.parser import CommandParser
 from omega.utils.constants import MINIMUM_PYTHON_VERSION
 from omega.utils.logger import configure_logging, get_logger
-from omega.utils.paths import data_dir, log_dir
+from omega.utils.paths import data_dir, log_dir, plugin_dir, screenshot_dir
 from omega.voice.models import AudioDevice
 from omega.voice.protocols import VoiceEventSink
 from omega.workflows import (
@@ -562,7 +562,7 @@ class OmegaApplication:
         screenshot_root = (
             database_path.parent / "screenshots"
             if database_path is not None
-            else data_dir() / "screenshots"
+            else screenshot_dir()
         )
         recycle_backend = WindowsShellRecycleBinBackend()
 
@@ -618,7 +618,7 @@ class OmegaApplication:
         plugin_root = (
             database_path.parent / "plugins"
             if database_path is not None
-            else data_dir() / "plugins"
+            else plugin_dir()
         )
         plugin_validator = PluginValidator(
             plugin_configuration,
@@ -936,7 +936,7 @@ class OmegaApplication:
         if not configuration.enabled:
             raise VoiceInitializationError(
                 "Voice is disabled. Set voice.enabled to true in "
-                "config/app_config.yaml."
+                "the Omega user configuration file."
             )
         if not configuration.offline_recognition_enabled:
             raise VoiceInitializationError(

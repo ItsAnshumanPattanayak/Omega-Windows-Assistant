@@ -817,3 +817,22 @@ Application shutdown is locked and idempotent. Timing collection is disabled by
 default and accepts only safe operation identifiers. The read-only
 `--performance-check` does not initialize the composition root or mutate the database.
 See [performance.md](performance.md) for methodology, measurements, and limitations.
+
+## Phase 28 distribution boundary
+
+Source mode resolves read-only resources from the repository and runtime data from
+`data/`. A frozen application resolves resources from the PyInstaller bundle and all
+writable state from `%LOCALAPPDATA%\Omega` (or the absolute `OMEGA_DATA_DIR` used by
+isolated verification). The installed application directory is never used for logs,
+databases, screenshots, plugins, models, configuration overrides, or temporary files.
+
+On first packaged startup, Omega creates only its managed runtime directories and
+copies the safe packaged configuration template if no user configuration exists.
+Existing configuration is never replaced; missing optional fields continue to merge
+with code defaults, and invalid values fail through the existing bounded validation.
+Existing database migrations initialize or upgrade the user database in place.
+
+PyInstaller produces one folder containing `OmegaCLI.exe` and the windowed
+`Omega.exe`. The Inno Setup layer installs that folder per user and creates Start Menu
+and explicitly optional desktop shortcuts. Uninstall removes installed application
+files and shortcuts but intentionally preserves `%LOCALAPPDATA%\Omega`.

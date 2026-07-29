@@ -97,3 +97,18 @@ and review local provider/account activity. Do not rerun a destructive reproduct
 against real data. Report the smallest safe reproduction privately, then update Omega
 and rotate credentials after a reviewed fix. The detailed asset, actor, boundary, and
 residual-risk analysis is in [threat_model.md](threat_model.md).
+
+## Distribution security
+
+The Phase 28 bundle allowlists required configuration, policy, documentation, and
+license resources. A bounded verification pass rejects environment files, databases,
+logs, models, screenshots, test trees, development environments, private-key blocks,
+and credential-like assignments without printing their contents. The build scripts do
+not download tools, alter Windows security, install services, open firewall ports, or
+create scheduled tasks.
+
+The installer is per-user and does not require elevation by default. Uninstall does
+not delete `%LOCALAPPDATA%\Omega`; this prevents an application uninstall from
+silently destroying notes, workflows, configuration, plugins, or other user state.
+Phase 28 does not provide code signing, antivirus certification, Microsoft Store
+approval, or a sandbox for same-process plugins.

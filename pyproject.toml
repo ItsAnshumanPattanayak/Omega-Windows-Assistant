@@ -36,6 +36,10 @@ voice = [
 browser = [
     "playwright>=1.49,<2.0",
 ]
+build = [
+    "pyinstaller==6.21.0",
+    "pyinstaller-hooks-contrib==2026.6",
+]
 
 [project.scripts]
 omega = "omega.__main__:main"

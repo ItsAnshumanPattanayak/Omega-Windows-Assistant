@@ -74,7 +74,17 @@ All supported operations pass through the same command-processing and safety lif
 
 ## Current capabilities
 
-Omega currently includes functionality completed through **Phase 27**:
+Omega includes completed functionality through **Phase 27** and the source-verified
+Phase 28 packaging implementation. Real executable and installer verification remains
+pending on a build environment with the pinned tools installed.
+
+Phase 28 adds a Windows one-folder packaging definition, separate console and GUI
+executables, a per-user Inno Setup installer definition, packaging-aware resources,
+first-run configuration and runtime-data separation, safe upgrade/uninstall behavior,
+manifest verification, and reproducible PowerShell build scripts. Builds are unsigned
+and do not bundle models, credentials, personal configuration, databases, plugins, or
+user content. See [installation.md](docs/installation.md) and
+[packaging.md](docs/packaging.md).
 
 Phase 27 adds measured startup and resource-efficiency improvements: lightweight CLI
 modes avoid the full application import graph, startup preferences use bounded batch
@@ -1093,6 +1103,9 @@ Omega-Windows-Assistant/
 ---
 
 # Installation
+
+Packaged Windows installation, runtime data paths, upgrade behavior, and unsigned-build
+limitations are documented in [docs/installation.md](docs/installation.md).
 
 ## 1. Clone the repository
 

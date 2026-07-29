@@ -1,0 +1,95 @@
+# Safe packaged defaults. This template contains no personal or machine-specific data.
+application:
+  name: Omega
+  version: 0.1.0
+  environment: production
+
+user:
+  display_name: User
+
+assistant:
+  activation_phrase: Hello Omega
+  shutdown_phrase: Shut down Omega
+  active_session_timeout_seconds: 300
+
+logging:
+  level: INFO
+  console_enabled: true
+  file_enabled: true
+  max_file_size_mb: 5
+  backup_count: 3
+
+database:
+  enabled: true
+  filename: omega.db
+  busy_timeout_ms: 5000
+  journal_mode: WAL
+  synchronous: NORMAL
+  foreign_keys: true
+
+safety:
+  allow_administrator_operations: false
+  allow_arbitrary_shell_commands: false
+  permanent_deletion_enabled: false
+  default_decision: deny
+  confirmation_timeout_seconds: 30
+  maximum_confirmation_attempts: 3
+  allow_force_close: false
+  allow_absolute_paths: false
+  allow_network_paths: false
+  allow_device_paths: false
+  allow_destination_replace: false
+  allow_folder_merge: false
+  allow_cross_volume_destructive_move: false
+
+applications: {}
+files: {}
+folders: {}
+recovery: {}
+history: {}
+
+voice:
+  enabled: false
+  model_path: null
+
+plugins:
+  load_user_plugins: false
+  newly_installed_plugins_enabled: false
+  automatically_update_plugins: false
+  allow_remote_plugin_downloads: false
+
+local_ai:
+  enabled: false
+  provider: null
+  endpoint: null
+  automatically_download_models: false
+  allow_remote_endpoints: false
+
+email:
+  enabled: false
+  provider: null
+
+calendar:
+  enabled: false
+  provider: null
+
+desktop_utilities:
+  clipboard_history_enabled: false
+  allow_background_clipboard_monitoring: false
+  allow_background_screenshot_capture: false
+
+workflows:
+  allow_shell_steps: false
+  allow_code_execution_steps: false
+
+localization:
+  allow_external_translation_services: false
+
+personalization:
+  collect_usage_statistics: false
+  enable_cloud_sync: false
+
+performance:
+  collect_local_timing_metrics: false
+  enable_sensitive_content_caching: false
+  enable_telemetry: false

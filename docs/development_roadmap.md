@@ -99,7 +99,15 @@ The approved roadmap is intentionally incremental. Each phase should be designed
     idempotent shutdown, read-only diagnostics, repeatable benchmarks, and resource
     regression tests without weakening Phase 26 controls.
 
-29. **Phase 28 — Next:** to be defined after Phase 27 review.
+29. **Phase 28 — Windows Packaging, Executable, and Installer — Build verification
+    pending:**
+    packaging-aware resource and user-data paths, a safe first-run configuration,
+    PyInstaller one-folder CLI/GUI definitions, a per-user Inno Setup installer,
+    bounded distribution scanning, strict build scripts, upgrade-safe persistence,
+    focused tests, and honest unsigned-build documentation are implemented and
+    source-verified. Completion awaits a real PyInstaller bundle and Inno Setup build.
+
+30. **Phase 29 — Deferred:** define only after Phase 28 artifact verification.
 
 Later phases may cover additional Windows integrations, packaging,
 installer support, and release hardening. AI-assisted intent fallback remains disabled

@@ -103,4 +103,6 @@ Desktop.ini
 
 # PyInstaller
 *.spec
+!packaging/*.spec
 pyinstaller-build/
+installer/output/

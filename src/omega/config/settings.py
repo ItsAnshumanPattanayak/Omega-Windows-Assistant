@@ -25,6 +25,7 @@ from omega.productivity.configuration import ProductivityConfiguration
 from omega.scheduling.configuration import SchedulingConfiguration
 from omega.security.configuration import SecurityConfiguration
 from omega.system.configuration import SystemConfiguration
+from omega.utils import paths as path_utils
 from omega.utils.constants import (
     APP_CONFIG_FILENAME,
     APP_NAME,
@@ -32,7 +33,6 @@ from omega.utils.constants import (
     DEFAULT_ACTIVATION_PHRASE,
     DEFAULT_SHUTDOWN_PHRASE,
 )
-from omega.utils.paths import config_dir, data_dir
 from omega.voice.configuration import VoiceConfiguration
 from omega.workflows.configuration import WorkflowConfiguration
 
@@ -135,7 +135,7 @@ class Settings:
             self.voice,
             wake_phrase=str(self.assistant["activation_phrase"]),
             shutdown_phrase=str(self.assistant["shutdown_phrase"]),
-            model_root=data_dir() / "voice_models",
+            model_root=path_utils.data_dir() / "voice_models",
         )
 
     @property
@@ -645,10 +645,25 @@ def _merge_defaults(
 
 def load_settings(
     config_path: Path | None = None,
+    *,
+    initialize_user_configuration: bool = True,
 ) -> Settings:
     """Load and validate Omega's YAML configuration."""
 
-    path = config_path or config_dir() / APP_CONFIG_FILENAME
+    if config_path is not None:
+        path = config_path
+    elif path_utils.is_packaged():
+        user_path = path_utils.user_config_path()
+        if user_path.is_file():
+            path = user_path
+        elif initialize_user_configuration:
+            from omega.distribution.first_run import prepare_first_run
+
+            path = prepare_first_run().configuration_path
+        else:
+            path = path_utils.config_dir() / APP_CONFIG_FILENAME
+    else:
+        path = path_utils.config_dir() / APP_CONFIG_FILENAME
 
     try:
         with path.open(
@@ -688,7 +703,7 @@ def load_settings(
         values["voice"],
         wake_phrase=str(values["assistant"]["activation_phrase"]),
         shutdown_phrase=str(values["assistant"]["shutdown_phrase"]),
-        model_root=data_dir() / "voice_models",
+        model_root=path_utils.data_dir() / "voice_models",
     )
     BrowserConfiguration.from_mapping(values["browser"])
     SystemConfiguration.from_mapping(values["system"])

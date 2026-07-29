@@ -279,3 +279,7 @@ class SecurityValidationError(SecurityError):
 
 class PerformanceConfigurationError(ConfigurationError):
     """Raised when performance settings are invalid or weaken privacy."""
+
+
+class DistributionError(OmegaError):
+    """Raised when packaged resources or distribution output are unsafe."""

@@ -8,6 +8,7 @@ from collections.abc import Callable, Sequence
 from typing import Protocol
 
 from omega.core.exceptions import OmegaError
+from omega.utils.constants import APP_VERSION, DISTRIBUTION_NAME
 
 
 class _AudioDevice(Protocol):
@@ -42,6 +43,11 @@ def _parser() -> argparse.ArgumentParser:
         add_help=False,
     )
     parser.add_argument("-h", "--help", action="store_true")
+    parser.add_argument(
+        "--version",
+        action="store_true",
+        help="show the Omega version and exit",
+    )
     parser.add_argument(
         "--gui",
         action="store_true",
@@ -81,6 +87,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     arguments = list(sys.argv[1:] if argv is None else argv)
     parser = _parser()
     options, unknown = parser.parse_known_args(arguments)
+    if options.version:
+        if unknown:
+            print(f"Omega argument error: {' '.join(unknown)}", file=sys.stderr)
+            parser.print_usage(sys.stderr)
+            return 2
+        print(f"{DISTRIBUTION_NAME} {APP_VERSION}")
+        return 0
     if options.help:
         parser.print_help()
         return 0
@@ -109,7 +122,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             from omega.utils.paths import project_root
 
-            settings = load_settings()
+            settings = load_settings(initialize_user_configuration=False)
             performance_report = PerformanceDiagnostics(
                 settings.performance_configuration,
                 repository_root=project_root(),
@@ -124,7 +137,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             from omega.utils.paths import project_root
 
-            settings = load_settings()
+            settings = load_settings(initialize_user_configuration=False)
             security_report = SecurityDiagnostics(
                 settings.security_configuration,
                 repository_root=project_root(),
