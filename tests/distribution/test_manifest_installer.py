@@ -122,7 +122,10 @@ def test_build_scripts_use_safe_roots_and_do_not_download_tools() -> None:
     assert "git -C $RepositoryRoot rev-parse --show-toplevel" in windows
     assert "no:cacheprovider" in windows
     assert "Omega-build-manifest.json" in windows
-    assert "Inno Setup 6 compiler was not found" in installer
+    assert "Inno Setup 7\\ISCC.exe" in installer
+    assert "Inno Setup 6\\ISCC.exe" in installer
+    assert "Get-Command ISCC.exe" in installer
+    assert "Inno Setup compiler ISCC.exe was not found" in installer
     assert "Omega-Windows-Assistant-Setup-v$ExpectedVersion.exe" in installer
     assert "Get-FileHash" in installer
     assert "OMEGA_DATA_DIR" in verifier
