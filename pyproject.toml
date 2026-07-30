@@ -40,6 +40,10 @@ build = [
     "pyinstaller==6.21.0",
     "pyinstaller-hooks-contrib==2026.6",
 ]
+v2 = [
+    "opencv-python-headless>=4.10,<5.0",
+    "Pillow>=10.4,<13.0",
+]
 
 [project.scripts]
 omega = "omega.__main__:main"

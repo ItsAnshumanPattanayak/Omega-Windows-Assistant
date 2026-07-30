@@ -34,6 +34,15 @@ A privacy-first, local Windows automation assistant built with Python
 
 Omega helps you operate Windows through natural language without surrendering control of your files, data, or decisions.
 
+## Omega V2 Phase 1 GUI foundation
+
+The V2 development branch now includes an isolated animated GUI foundation built for
+Python 3.11. Activate `.venv-v2`, then run `python -m omega --v2-gui`; the existing
+terminal and Version 1 GUI remain available. The animation is always muted, and the
+Phase 1 controls only demonstrate typed UI states—they do not access a microphone or
+add new automation. See [the V2 GUI guide](docs/v2_gui.md) for setup, architecture,
+limitations, and troubleshooting.
+
 Features •Quick Start •GUI •Voice •Safety •Commands •Build •Documentation
 
 </div>

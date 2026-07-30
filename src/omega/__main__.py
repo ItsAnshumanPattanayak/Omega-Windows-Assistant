@@ -54,6 +54,16 @@ def _parser() -> argparse.ArgumentParser:
         help="start the optional tkinter desktop interface",
     )
     parser.add_argument(
+        "--v2-gui",
+        action="store_true",
+        help="start the Omega V2 animated GUI foundation",
+    )
+    parser.add_argument(
+        "--v2-gui-check",
+        action="store_true",
+        help="check Omega V2 GUI support without creating a window",
+    )
+    parser.add_argument(
         "--voice",
         action="store_true",
         help="start explicit offline voice mode",
@@ -101,6 +111,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         bool(value)
         for value in (
             options.gui,
+            options.v2_gui,
+            options.v2_gui_check,
             options.gui_check,
             options.security_check,
             options.performance_check,
@@ -150,6 +162,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             OmegaGuiApplication.check_available()
             print("Omega GUI support is available.")
             return 0
+        if options.v2_gui_check:
+            from omega.gui_v2.application import OmegaV2GuiApplication
+
+            OmegaV2GuiApplication.check_available()
+            print("Omega V2 GUI support is available.")
+            return 0
+        if options.v2_gui:
+            from omega.gui_v2.application import OmegaV2GuiApplication
+
+            return OmegaV2GuiApplication().run()
         if OmegaApplication is None:
             from omega.app import OmegaApplication as ConcreteApplication
 

@@ -899,3 +899,19 @@ text widget renders bounded directional message regions, the activity pane is
 collapsible, and More Activities is a categorized native menu. No category owns a
 parser, dispatcher, or service. Voice diagnostics are presentation-safe metadata;
 audio and model initialization remain explicit and lazy.
+
+## Version 2 Phase 1 GUI foundation
+
+The animated V2 interface is an isolated presentation adapter under
+`omega.gui_v2`. `OmegaV2GuiApplication` explicitly creates the window, observable
+`GuiStateManager`, view model, and silent looping video controller; importing these
+modules has no startup side effect. The existing terminal and Version 1 GUI remain
+unchanged and selectable through their existing entry points.
+
+The state manager owns stable UI states and descriptive metadata, while the view model
+owns bounded display text. The Tk adapter subscribes to snapshots and schedules frame
+updates without blocking the UI thread. Video decoding reads visual frames only and
+has no audio output path. Missing assets or multimedia support select a static fallback
+instead of preventing startup. Buttons in this phase are UI demonstrations and do not
+invoke the voice, permission, screen-awareness, or execution subsystems. See
+[v2_gui.md](v2_gui.md) for the environment and operational boundary.
