@@ -107,3 +107,6 @@ Desktop.ini
 pyinstaller-build/
 installer/output/
 artifacts/
+
+# Omega V2 virtual environment
+.venv-v2/

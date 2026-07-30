@@ -66,11 +66,17 @@ datas = [
     (str(ROOT / "config" / "protected_paths.json"), "config"),
     (str(ROOT / "docs" / "installation.md"), "docs"),
     (str(ROOT / "docs" / "security.md"), "docs"),
+    (str(ROOT / "assets" / "videos" / "omega_core_loop.mp4"), "assets/videos"),
     (str(ROOT / "LICENSE"), "."),
 ]
 
 hidden_imports = [
     "omega.gui.application",
+    "omega.gui_v2.application",
+    "omega.gui_v2.video",
+    "cv2",
+    "PIL.Image",
+    "PIL.ImageTk",
     "omega.performance.diagnostics",
     "omega.security.diagnostics",
     "omega.voice.microphone",

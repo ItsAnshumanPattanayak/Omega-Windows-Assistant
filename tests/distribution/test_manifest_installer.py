@@ -66,6 +66,7 @@ def test_pyinstaller_spec_includes_only_reviewed_resource_groups() -> None:
         "protected_paths.json",
         "installation.md",
         "security.md",
+        "omega_core_loop.mp4",
         "LICENSE",
     ):
         assert resource in spec
@@ -73,6 +74,14 @@ def test_pyinstaller_spec_includes_only_reviewed_resource_groups() -> None:
         assert prohibited not in spec
     assert 'name="OmegaCLI"' in spec and 'name="Omega"' in spec
     assert "console=True" in spec and "console=False" in spec
+    for hidden_import in (
+        "omega.gui_v2.application",
+        "omega.gui_v2.video",
+        "cv2",
+        "PIL.Image",
+        "PIL.ImageTk",
+    ):
+        assert hidden_import in spec
     for metadata in (
         "CompanyName",
         "FileDescription",
