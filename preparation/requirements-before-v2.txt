@@ -10,7 +10,7 @@ coverage==7.15.2
 idna==3.18
 iniconfig==2.3.0
 librt==0.13.0
-mypy==1.20.2
+mypy==2.3.0
 mypy_extensions==1.1.0
 -e git+https://github.com/ItsAnshumanPattanayak/Omega-Windows-Assistant.git@63c0e128926af185ea95ff66d5655f32849aba8b#egg=omega_windows_assistant
 packaging==26.2
