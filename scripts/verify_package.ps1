@@ -49,6 +49,30 @@ try {
     if (-not (Test-Path -LiteralPath (Join-Path $env:OMEGA_DATA_DIR "database\omega.db"))) {
         throw "Packaged database was not created in the isolated user-data directory."
     }
+    $VersionInfo = (Get-Item -LiteralPath $Gui).VersionInfo
+    if ($VersionInfo.CompanyName -ne "Anshuman Pattanayak" -or
+        $VersionInfo.FileDescription -ne "Omega Windows Assistant" -or
+        $VersionInfo.ProductName -ne "Omega Windows Assistant" -or
+        $VersionInfo.ProductVersion -ne "2.0.0" -or
+        $VersionInfo.OriginalFilename -ne "Omega.exe") {
+        throw "Packaged Windows version metadata is incomplete or inconsistent."
+    }
+    $GuiProcess = Start-Process -FilePath $Gui -ArgumentList "--gui" -WorkingDirectory $Distribution -PassThru
+    try {
+        if ($GuiProcess.WaitForExit(3000)) {
+            if ($GuiProcess.ExitCode -ne 0) {
+                throw "The packaged GUI exited with code $($GuiProcess.ExitCode)."
+            }
+        } else {
+            Write-Host "Packaged GUI remained responsive for the bounded launch window."
+        }
+    }
+    finally {
+        if (-not $GuiProcess.HasExited) {
+            Stop-Process -Id $GuiProcess.Id -Force
+            [void]$GuiProcess.WaitForExit(5000)
+        }
+    }
     Write-Host "Omega package verification passed without installation."
 }
 finally {

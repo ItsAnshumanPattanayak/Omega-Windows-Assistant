@@ -75,7 +75,9 @@ def test_build_metadata_is_bounded_and_utc(tmp_path: Path) -> None:
 
 def test_checksum_and_artifact_round_trip(tmp_path: Path) -> None:
     archive = _portable(tmp_path)
-    installer = tmp_path / f"Omega-Setup-{project_version(ROOT)}.exe"
+    installer = tmp_path / (
+        f"Omega-Windows-Assistant-Setup-v{project_version(ROOT)}.exe"
+    )
     installer.write_bytes(b"installer")
     _metadata(tmp_path)
     create_checksums(tmp_path, tmp_path / "SHA256SUMS.txt")

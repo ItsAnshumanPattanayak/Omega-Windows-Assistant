@@ -69,14 +69,14 @@ jobs:
         run: python -m pytest -p no:cacheprovider tests/distribution tests/ci
       - name: Build and verify one-folder bundle
         shell: pwsh
-        run: ./scripts/build_windows.ps1 -Python python -SkipChecks
+        run: ./scripts/build_windows_app.ps1 -Python python -SkipChecks
       - name: Build installer when available
         shell: pwsh
         run: |
           $Requested = $env:GITHUB_EVENT_NAME -ne "workflow_dispatch" -or "${{ inputs.build_installer }}" -eq "true"
           $Compiler = Get-Command iscc.exe -ErrorAction SilentlyContinue
           if ($Requested -and $Compiler) {
-            ./scripts/build_installer.ps1 -Python python -InnoCompiler $Compiler.Source
+            ./scripts/build_windows_installer.ps1 -Python python -InnoCompiler $Compiler.Source -SkipChecks
           } else {
             "Installer not built: trusted Inno Setup is unavailable or the bounded input disabled it." | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
           }
@@ -86,7 +86,7 @@ jobs:
           $Version = python -c "from omega import APP_VERSION; print(APP_VERSION)"
           New-Item -ItemType Directory -Force artifacts | Out-Null
           Compress-Archive -Path dist/Omega/* -DestinationPath "artifacts/Omega-$Version-windows-x64.zip"
-          Get-ChildItem installer/output/Omega-Setup-*.exe -ErrorAction SilentlyContinue | Copy-Item -Destination artifacts
+          Get-ChildItem dist/installer/Omega-Windows-Assistant-Setup-v*.exe -ErrorAction SilentlyContinue | Copy-Item -Destination artifacts
           python -m omega.distribution.release create-metadata --repository-root . --output artifacts/build-metadata.json
           python -m omega.distribution.release create-checksums --directory artifacts --output artifacts/SHA256SUMS.txt
       - name: Verify final artifact set

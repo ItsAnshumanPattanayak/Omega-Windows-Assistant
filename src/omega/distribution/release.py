@@ -209,7 +209,7 @@ def verify_artifacts(directory: Path) -> tuple[str, ...]:
     portable_name = f"Omega-{APP_VERSION}-windows-x64.zip"
     allowed_distributables = {
         portable_name,
-        f"Omega-Setup-{APP_VERSION}.exe",
+        f"Omega-Windows-Assistant-Setup-v{APP_VERSION}.exe",
     }
     if portable_name not in {path.name for path in distributables}:
         raise ReleaseValidationError(

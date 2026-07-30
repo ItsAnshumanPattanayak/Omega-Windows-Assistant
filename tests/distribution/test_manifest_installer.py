@@ -73,6 +73,18 @@ def test_pyinstaller_spec_includes_only_reviewed_resource_groups() -> None:
         assert prohibited not in spec
     assert 'name="OmegaCLI"' in spec and 'name="Omega"' in spec
     assert "console=True" in spec and "console=False" in spec
+    for metadata in (
+        "CompanyName",
+        "FileDescription",
+        "FileVersion",
+        "ProductName",
+        "ProductVersion",
+        "InternalName",
+        "OriginalFilename",
+        "LegalCopyright",
+        "Comments",
+    ):
+        assert metadata in spec
 
 
 def test_safe_packaged_default_has_no_personal_or_model_values() -> None:
@@ -92,22 +104,42 @@ def test_installer_is_per_user_explicit_and_preserves_user_data() -> None:
     assert "postinstall skipifsilent unchecked" in script
     assert "UninstallDelete" not in script
     assert "{localappdata}\\Omega" in script
+    assert '#define MyAppName "Omega Windows Assistant"' in script
+    assert '#define MyAppPublisher "Anshuman Pattanayak"' in script
+    assert "AppVerName={#MyAppName} {#MyAppVersion}" in script
+    assert "OutputBaseFilename=Omega-Windows-Assistant-Setup-v{#MyAppVersion}" in script
+    assert "OutputDir=..\\dist\\installer" in script
+    assert "Launch Omega Windows Assistant by Anshuman Pattanayak" in script
     for prohibited in ("firewall", "scheduledtask", "runascurrentuser"):
         assert prohibited not in script.casefold()
 
 
 def test_build_scripts_use_safe_roots_and_do_not_download_tools() -> None:
-    windows = Path("scripts/build_windows.ps1").read_text(encoding="utf-8")
-    installer = Path("scripts/build_installer.ps1").read_text(encoding="utf-8")
+    windows = Path("scripts/build_windows_app.ps1").read_text(encoding="utf-8")
+    installer = Path("scripts/build_windows_installer.ps1").read_text(encoding="utf-8")
     verifier = Path("scripts/verify_package.ps1").read_text(encoding="utf-8")
-    assert "Remove-KnownBuildDirectory" in windows
+    assert "Remove-KnownGeneratedDirectory" in windows
     assert "git -C $RepositoryRoot rev-parse --show-toplevel" in windows
     assert "no:cacheprovider" in windows
-    assert "3.11 through 3.14" in windows
+    assert "Omega-build-manifest.json" in windows
     assert "Inno Setup 6 compiler was not found" in installer
+    assert "Omega-Windows-Assistant-Setup-v$ExpectedVersion.exe" in installer
+    assert "Get-FileHash" in installer
     assert "OMEGA_DATA_DIR" in verifier
     combined = (windows + installer + verifier).casefold()
     assert "pip install" not in combined
     assert "invoke-webrequest" not in combined
     assert "git clean" not in combined
     assert "reset --hard" not in combined
+
+
+def test_distribution_metadata_uses_official_branding() -> None:
+    from omega.distribution import APPLICATION_METADATA
+
+    metadata = APPLICATION_METADATA
+    assert metadata.name == "Omega Windows Assistant"
+    assert metadata.publisher == metadata.developer == "Anshuman Pattanayak"
+    assert metadata.version == "2.0.0"
+    assert metadata.support_url.endswith("/issues")
+    assert metadata.updates_url.endswith("/releases")
+    assert metadata.copyright == "Copyright (c) 2026 Anshuman Pattanayak"

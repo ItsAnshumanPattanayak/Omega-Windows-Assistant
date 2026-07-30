@@ -112,6 +112,27 @@ Official v2 portable package
 
 Version 2.0.0 has not yet been tagged or published. Installer and portable downloads become available only after verified artifacts are attached to an official GitHub Release.
 
+## Future Windows installer download
+
+The verified installer filename will be
+`Omega-Windows-Assistant-Setup-v2.0.0.exe`. It installs **Omega Windows Assistant**
+for the current Windows user under `%LOCALAPPDATA%\Programs\Omega`, creates a Start
+Menu shortcut, and offers an optional Desktop shortcut. Python, the source repository,
+and the development virtual environment are not required after installation.
+
+No public installer release exists yet. When an installer is attached to an official
+[Omega release](https://github.com/ItsAnshumanPattanayak/Omega-Windows-Assistant/releases),
+verify its published SHA-256 checksum before running it. Current local builds are
+unsigned and may trigger Windows SmartScreen; bypassing Windows security is not
+recommended. User data under `%LOCALAPPDATA%\Omega` is preserved during upgrades and
+uninstall. The large optional Vosk speech model is not bundled.
+
+## Developer
+
+**Anshuman Pattanayak**
+
+GitHub: https://github.com/ItsAnshumanPattanayak
+
 🌟 Feature Highlights
 
 <table>

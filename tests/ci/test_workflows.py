@@ -58,7 +58,8 @@ def test_windows_build_verifies_before_bounded_upload() -> None:
     text = _texts()["windows-build.yml"]
     assert "runs-on: windows-latest" in text
     assert 'python-version: "3.14"' in text
-    assert "./scripts/build_windows.ps1 -Python python -SkipChecks" in text
+    assert "./scripts/build_windows_app.ps1 -Python python -SkipChecks" in text
+    assert "./scripts/build_windows_installer.ps1" in text
     assert "verify-artifacts" in text
     assert text.index("verify-artifacts") < text.index("actions/upload-artifact@v4")
     assert "retention-days: 14" in text

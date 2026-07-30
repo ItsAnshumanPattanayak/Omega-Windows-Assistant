@@ -53,6 +53,7 @@ _SECRET_ASSIGNMENT = re.compile(
     rb"(?im)^\s*(?:api[_-]?key|access[_-]?token|refresh[_-]?token|password)\s*[:=]\s*[^\s#]{8,}"
 )
 _PRIVATE_KEY = re.compile(rb"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----")
+_DEVELOPER_PATH = re.compile(rb"(?i)(?:[a-z]:\\users\\[^\\\r\n]+|e:\\project omega)")
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,7 +97,9 @@ def verify_distribution(root: Path) -> DistributionVerification:
                     f"Distribution file could not be inspected: {relative.as_posix()}"
                 ) from error
             unsafe = bool(
-                _SECRET_ASSIGNMENT.search(payload) or _PRIVATE_KEY.search(payload)
+                _SECRET_ASSIGNMENT.search(payload)
+                or _PRIVATE_KEY.search(payload)
+                or _DEVELOPER_PATH.search(payload)
             )
         if unsafe:
             prohibited.append(relative.as_posix())

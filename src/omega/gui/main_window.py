@@ -9,7 +9,7 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 from typing import TYPE_CHECKING
 
 from omega.gui.controller import GuiController, GuiView
-from omega.gui.dialogs import ConfirmationDialog, SettingsDialog
+from omega.gui.dialogs import ConfirmationDialog, SettingsDialog, about_text
 from omega.gui.models import (
     ActivityItem,
     ConfirmationRequest,
@@ -545,15 +545,8 @@ class OmegaMainWindow(GuiView):
 
     def _help(self) -> None:
         messagebox.showinfo(
-            "About Omega",
-            (
-                "Omega is a safety-first Windows assistant.\n\n"
-                f'Activate with "{self.application.session.activation_phrase}".\n'
-                "Commands and confirmations use the same production session "
-                "and safety gateway as terminal mode.\n\n"
-                "Voice is optional, offline-first, and starts only when requested. "
-                "Browser automation is not available."
-            ),
+            "About Omega Windows Assistant",
+            about_text(self.application.session.activation_phrase),
             parent=self.root,
         )
 

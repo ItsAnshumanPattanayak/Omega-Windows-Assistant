@@ -6,7 +6,25 @@ import tkinter as tk
 from collections.abc import Callable
 from tkinter import messagebox, ttk
 
+from omega.distribution.metadata import APPLICATION_METADATA
 from omega.gui.models import ConfirmationRequest, GuiPreferences
+
+
+def about_text(activation_phrase: str) -> str:
+    """Return the branded, testable About text without creating a window."""
+
+    metadata = APPLICATION_METADATA
+    return (
+        f"{metadata.name}\n"
+        f"Version {metadata.version}\n\n"
+        f"Developed by {metadata.developer}\n\n"
+        "A safety-first, local-first Windows desktop assistant.\n\n"
+        f"GitHub:\n{metadata.repository_url}\n\n"
+        f"{metadata.copyright}\n\n"
+        f'Activate with "{activation_phrase}". Commands and confirmations use '
+        "the same production session and safety gateway as terminal mode.\n\n"
+        "Voice is optional and offline-first. Browser automation is not available."
+    )
 
 
 class ConfirmationDialog:

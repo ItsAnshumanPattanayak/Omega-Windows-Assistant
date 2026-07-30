@@ -5,6 +5,7 @@ from __future__ import annotations
 import inspect
 from datetime import UTC, datetime
 
+from omega.gui.dialogs import about_text
 from omega.gui.main_window import OmegaMainWindow
 from omega.gui.models import ConversationMessage, GuiPreferences, MessageKind
 
@@ -12,6 +13,16 @@ from omega.gui.models import ConversationMessage, GuiPreferences, MessageKind
 class AnyController:
     def __getattr__(self, _name: str):
         return lambda: None
+
+
+def test_about_text_contains_product_branding_and_safety_guidance() -> None:
+    content = about_text("Hello Omega")
+    assert "Omega Windows Assistant\nVersion 2.0.0" in content
+    assert "Developed by Anshuman Pattanayak" in content
+    assert "A safety-first, local-first Windows desktop assistant." in content
+    assert "https://github.com/ItsAnshumanPattanayak/Omega-Windows-Assistant" in content
+    assert 'Activate with "Hello Omega"' in content
+    assert "safety gateway" in content
 
 
 def test_controller_is_initialized_before_widget_build() -> None:

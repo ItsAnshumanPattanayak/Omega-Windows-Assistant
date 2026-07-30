@@ -14,7 +14,7 @@ from PyInstaller.utils.win32.versioninfo import (
     VSVersionInfo,
 )
 
-ROOT = Path(SPECPATH).resolve().parent.parent
+ROOT = Path(SPECPATH).resolve().parent
 sys.path.insert(0, str(ROOT / "src"))
 
 from omega.distribution.metadata import APPLICATION_METADATA
@@ -39,12 +39,17 @@ version_info = VSVersionInfo(
                     "040904B0",
                     [
                         StringStruct("CompanyName", APPLICATION_METADATA.publisher),
-                        StringStruct("FileDescription", APPLICATION_METADATA.description),
-                        StringStruct("FileVersion", APPLICATION_METADATA.version),
+                        StringStruct("FileDescription", APPLICATION_METADATA.name),
+                        StringStruct("FileVersion", f"{APPLICATION_METADATA.version}.0"),
                         StringStruct("InternalName", "Omega"),
-                        StringStruct("LegalCopyright", "Copyright Omega contributors"),
+                        StringStruct("OriginalFilename", "Omega.exe"),
+                        StringStruct("LegalCopyright", APPLICATION_METADATA.copyright),
                         StringStruct("ProductName", APPLICATION_METADATA.name),
                         StringStruct("ProductVersion", APPLICATION_METADATA.version),
+                        StringStruct(
+                            "Comments",
+                            "A safety-first, local-first Windows desktop assistant.",
+                        ),
                     ],
                 )
             ]

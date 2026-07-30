@@ -18,7 +18,9 @@ into a Windows distribution.
 
 ## Installed application
 
-Phase 28 defines a per-user Inno Setup installer. It installs application files under
+The branded production installer is named
+`Omega-Windows-Assistant-Setup-v2.0.0.exe`. It is developed and published by
+Anshuman Pattanayak. It installs application files under
 `%LOCALAPPDATA%\Programs\Omega`, creates Start Menu entries for the GUI and CLI, and
 offers an unchecked desktop shortcut. It does not install a service, driver, browser
 extension, certificate, firewall rule, scheduled task, or automatic startup entry.
@@ -50,7 +52,10 @@ runs existing SQLite migrations. It does not download models, request provider
 credentials, enable plugins, enable telemetry, or capture clipboard/screen content.
 
 Voice remains disabled until explicitly configured with locally installed optional
-dependencies and a user-supplied Vosk model. Local AI remains disabled and no model is
+dependencies and a user-supplied Vosk model under
+`%LOCALAPPDATA%\Omega\voice_models`. The large `vosk-model-en-us-0.22` family is not
+included in the installer and must be obtained separately from the official Vosk
+model catalogue. Local AI remains disabled and no model is
 bundled or downloaded. Email and calendar providers remain unconfigured. User plugins
 are not bundled and remain disabled by default.
 
@@ -74,6 +79,19 @@ beside the executable. Run `OmegaCLI.exe --security-check` and
 `OmegaCLI.exe --performance-check` for bounded local diagnostics. A missing Vosk model,
 local-AI runtime, provider account, or optional plugin is not an installation failure.
 
-Phase 28 builds are unsigned. Windows may display an unknown-publisher warning, and no
+Builds are unsigned unless a real code-signing certificate is provided. Windows may
+display SmartScreen or unknown-publisher warnings; bypassing Windows security is not
+recommended. Verify the adjacent checksum before installation:
+
+```powershell
+Get-FileHash .\Omega-Windows-Assistant-Setup-v2.0.0.exe -Algorithm SHA256
+Get-Content .\Omega-Windows-Assistant-Setup-v2.0.0.exe.sha256
+```
+
+For a clean-machine test, use a Windows 10/11 user account without Python, install for
+the current user, verify the Start Menu and optional Desktop shortcuts, open Help /
+About, run diagnostics with `OmegaCLI.exe`, confirm `%LOCALAPPDATA%\Omega` is writable,
+then uninstall from Installed Apps. Confirm application files and shortcuts are gone
+and user data remains. No
 claim is made about antivirus certification, Microsoft certification, or universal
 Windows compatibility.
