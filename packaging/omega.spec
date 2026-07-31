@@ -4,6 +4,19 @@
 from pathlib import Path
 import sys
 
+SPEC_FILE = Path(SPEC).resolve(strict=True)
+PACKAGING_ROOT = SPEC_FILE.parent
+ROOT = PACKAGING_ROOT.parent.resolve(strict=True)
+SOURCE_ROOT = (ROOT / "src").resolve(strict=True)
+ENTRYPOINT = (PACKAGING_ROOT / "entrypoint.py").resolve(strict=True)
+
+
+def source_path(*parts: str) -> str:
+    """Return one required repository source as an absolute path."""
+
+    return str(ROOT.joinpath(*parts).resolve(strict=True))
+
+
 from PyInstaller.utils.win32.versioninfo import (
     FixedFileInfo,
     StringFileInfo,
@@ -14,8 +27,7 @@ from PyInstaller.utils.win32.versioninfo import (
     VSVersionInfo,
 )
 
-ROOT = Path(SPECPATH).resolve().parent
-sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(SOURCE_ROOT))
 
 from omega.distribution.metadata import APPLICATION_METADATA
 
@@ -59,15 +71,15 @@ version_info = VSVersionInfo(
 )
 
 datas = [
-    (str(ROOT / "packaging" / "defaults" / "app_config.yaml"), "config"),
-    (str(ROOT / "config" / "application_aliases.json"), "config"),
-    (str(ROOT / "config" / "command_patterns.json"), "config"),
-    (str(ROOT / "config" / "permissions.json"), "config"),
-    (str(ROOT / "config" / "protected_paths.json"), "config"),
-    (str(ROOT / "docs" / "installation.md"), "docs"),
-    (str(ROOT / "docs" / "security.md"), "docs"),
-    (str(ROOT / "assets" / "videos" / "omega_core_loop.mp4"), "assets/videos"),
-    (str(ROOT / "LICENSE"), "."),
+    (source_path("packaging", "defaults", "app_config.yaml"), "config"),
+    (source_path("config", "application_aliases.json"), "config"),
+    (source_path("config", "command_patterns.json"), "config"),
+    (source_path("config", "permissions.json"), "config"),
+    (source_path("config", "protected_paths.json"), "config"),
+    (source_path("docs", "installation.md"), "docs"),
+    (source_path("docs", "security.md"), "docs"),
+    (source_path("assets", "videos", "omega_core_loop.mp4"), "assets/videos"),
+    (source_path("LICENSE"), "."),
 ]
 
 hidden_imports = [
@@ -87,8 +99,8 @@ hidden_imports = [
 ]
 
 analysis = Analysis(
-    [str(ROOT / "packaging" / "entrypoint.py")],
-    pathex=[str(ROOT / "src")],
+    [str(ENTRYPOINT)],
+    pathex=[str(SOURCE_ROOT)],
     binaries=[],
     datas=datas,
     hiddenimports=hidden_imports,

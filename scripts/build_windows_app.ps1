@@ -9,10 +9,20 @@ Set-StrictMode -Version Latest
 
 $RepositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $BuildRoot = [System.IO.Path]::GetFullPath((Join-Path $RepositoryRoot "build\pyinstaller"))
-$DistributionRoot = [System.IO.Path]::GetFullPath((Join-Path $RepositoryRoot "dist\Omega"))
+$DistPath = [System.IO.Path]::GetFullPath((Join-Path $RepositoryRoot "dist"))
+$DistributionRoot = [System.IO.Path]::GetFullPath((Join-Path $DistPath "Omega"))
 $VerificationRoot = [System.IO.Path]::GetFullPath((Join-Path $RepositoryRoot "build\package-verification"))
-$ManifestPath = [System.IO.Path]::GetFullPath((Join-Path $RepositoryRoot "dist\Omega-build-manifest.json"))
+$ManifestPath = [System.IO.Path]::GetFullPath((Join-Path $DistPath "Omega-build-manifest.json"))
+$SpecPath = [System.IO.Path]::GetFullPath((Join-Path $RepositoryRoot "packaging\omega.spec"))
+$EntryPointPath = [System.IO.Path]::GetFullPath((Join-Path $RepositoryRoot "packaging\entrypoint.py"))
 $ExpectedVersion = "2.0.0"
+
+if (-not (Test-Path -LiteralPath $SpecPath -PathType Leaf)) {
+    throw "The PyInstaller spec file is missing: $SpecPath"
+}
+if (-not (Test-Path -LiteralPath $EntryPointPath -PathType Leaf)) {
+    throw "The PyInstaller entrypoint is missing: $EntryPointPath"
+}
 
 if (-not $Python) {
     $VirtualPython = if ($env:VIRTUAL_ENV) {
@@ -70,8 +80,8 @@ try {
     Invoke-CheckedPython -Arguments @(
         "-m", "PyInstaller", "--noconfirm", "--clean",
         "--workpath", $BuildRoot,
-        "--distpath", (Join-Path $RepositoryRoot "dist"),
-        (Join-Path $RepositoryRoot "packaging\omega.spec")
+        "--distpath", $DistPath,
+        $SpecPath
     )
     & (Join-Path $RepositoryRoot "scripts\verify_package.ps1") -Python $Python
     if ($LASTEXITCODE -ne 0) { throw "Package verification failed." }

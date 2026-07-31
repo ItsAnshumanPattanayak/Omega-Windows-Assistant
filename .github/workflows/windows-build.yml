@@ -69,7 +69,7 @@ jobs:
         run: python -m pytest -p no:cacheprovider tests/distribution tests/ci
       - name: Build and verify one-folder bundle
         shell: pwsh
-        run: ./scripts/build_windows_app.ps1 -Python python -SkipChecks
+        run: ./scripts/build_windows.ps1 -Python python -SkipChecks
       - name: Build installer when available
         shell: pwsh
         run: |
