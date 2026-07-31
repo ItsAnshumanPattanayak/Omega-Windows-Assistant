@@ -5,6 +5,8 @@ import pytest
 from omega.core.exceptions import DistributionError
 from omega.distribution import require_safe_distribution, verify_distribution
 
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+
 
 def test_distribution_manifest_accepts_bounded_public_resources(tmp_path: Path) -> None:
     root = tmp_path / "Omega"
@@ -96,6 +98,34 @@ def test_pyinstaller_spec_includes_only_reviewed_resource_groups() -> None:
         assert metadata in spec
 
 
+@pytest.mark.parametrize("working_directory", ["repository", "scripts", "external"])
+def test_pyinstaller_paths_are_independent_of_current_working_directory(
+    working_directory: str,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    directories = {
+        "repository": REPOSITORY_ROOT,
+        "scripts": REPOSITORY_ROOT / "scripts",
+        "external": tmp_path,
+    }
+    monkeypatch.chdir(directories[working_directory])
+
+    spec_path = (REPOSITORY_ROOT / "packaging" / "omega.spec").resolve(strict=True)
+    packaging_root = spec_path.parent
+    repository_root = packaging_root.parent.resolve(strict=True)
+    entrypoint = (packaging_root / "entrypoint.py").resolve(strict=True)
+
+    assert repository_root == REPOSITORY_ROOT
+    assert entrypoint == REPOSITORY_ROOT / "packaging" / "entrypoint.py"
+
+    spec = spec_path.read_text(encoding="utf-8")
+    assert "Path(SPEC).resolve(strict=True)" in spec
+    assert "PACKAGING_ROOT = SPEC_FILE.parent" in spec
+    assert "ROOT = PACKAGING_ROOT.parent.resolve(strict=True)" in spec
+    assert "[str(ENTRYPOINT)]" in spec
+
+
 def test_safe_packaged_default_has_no_personal_or_model_values() -> None:
     content = Path("packaging/defaults/app_config.yaml").read_text(encoding="utf-8")
     assert "Anshuman" not in content
@@ -124,9 +154,18 @@ def test_installer_is_per_user_explicit_and_preserves_user_data() -> None:
 
 
 def test_build_scripts_use_safe_roots_and_do_not_download_tools() -> None:
+    wrapper = Path("scripts/build_windows.ps1").read_text(encoding="utf-8")
     windows = Path("scripts/build_windows_app.ps1").read_text(encoding="utf-8")
     installer = Path("scripts/build_windows_installer.ps1").read_text(encoding="utf-8")
     verifier = Path("scripts/verify_package.ps1").read_text(encoding="utf-8")
+    assert 'Join-Path $PSScriptRoot ".."' in wrapper
+    assert 'Join-Path $RepositoryRoot "packaging\\omega.spec"' in wrapper
+    assert 'Join-Path $RepositoryRoot "packaging\\entrypoint.py"' in wrapper
+    assert 'Join-Path $RepositoryRoot "build\\pyinstaller"' in wrapper
+    assert 'Join-Path $RepositoryRoot "dist"' in wrapper
+    assert "Push-Location $RepositoryRoot" in wrapper
+    assert "The PyInstaller spec file is missing" in wrapper
+    assert "The PyInstaller entrypoint is missing" in wrapper
     assert "Remove-KnownGeneratedDirectory" in windows
     assert "git -C $RepositoryRoot rev-parse --show-toplevel" in windows
     assert "no:cacheprovider" in windows
@@ -138,7 +177,7 @@ def test_build_scripts_use_safe_roots_and_do_not_download_tools() -> None:
     assert "Omega-Windows-Assistant-Setup-v$ExpectedVersion.exe" in installer
     assert "Get-FileHash" in installer
     assert "OMEGA_DATA_DIR" in verifier
-    combined = (windows + installer + verifier).casefold()
+    combined = (wrapper + windows + installer + verifier).casefold()
     assert "pip install" not in combined
     assert "invoke-webrequest" not in combined
     assert "git clean" not in combined
